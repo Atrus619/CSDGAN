@@ -3,6 +3,7 @@ import wget
 import torchvision
 import os
 import pandas as pd
+import zipfile
 
 
 def safe_mkdir(path):
@@ -64,7 +65,11 @@ def load_dataset(name):
         safe_mkdir(dir)
         if len(os.listdir(dir)) == 0:
             kaggle.api.competition_download_files('LANL-Earthquake-Prediction', dir)
-        data = pd.read_csv('data/Earthquake-LANL/train.csv.zip')
+        if not os.path.exists(dir + "/test"):
+            zip_ref = zipfile.ZipFile(dir + "/test.zip", 'r')
+            zip_ref.extractall(dir + "/test")
+            zip_ref.close()
+        data = pd.read_csv('data/lanl/train.csv.zip')
     elif name == 'mnist':
         mnist = torchvision.datasets.MNIST('data', train=True, download=True)
         mnist_test = torchvision.datasets.MNIST('data', train=False, download=True)
