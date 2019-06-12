@@ -9,15 +9,6 @@ import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Custom weights initialization called on Generator and Discriminator
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Linear') != -1:  # TODO: May need to mess around with this later
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
-
 
 # Helper function to repeatedly test and print outputs for a logistic regression
 def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None):
@@ -130,3 +121,43 @@ def plot_densities(X, y, title, scaler=None):
     f.subplots_adjust(top=0.9)
 
     plt.show()
+
+
+def training_plots(netD, netG, num_epochs):
+    f, axes = plt.subplots(2, 2, figsize=(12, 12), sharex=True)
+
+    axes[0, 0].title.set_text("Generator and Discriminator Loss During Training")
+    axes[0, 0].plot(netG.losses, label="G")
+    axes[0, 0].plot(netD.losses, label="D")
+    axes[0, 0].set_xlabel("iterations")
+    axes[0, 0].set_ylabel("Loss")
+    axes[0, 0].legend()
+
+    axes[0, 1].title.set_text("Average Discriminator Outputs During Training")
+    axes[0, 1].plot(netD.Avg_D_reals, label="R")
+    axes[0, 1].plot(netD.Avg_D_fakes, label="F")
+    axes[0, 1].plot(np.linspace(0, num_epochs, num_epochs), np.full(num_epochs, 0.5))
+    axes[0, 1].set_xlabel("iterations")
+    axes[0, 1].set_ylabel("proportion")
+    axes[0, 1].legend()
+
+    axes[1, 0].title.set_text('Gradient Norm History')
+    axes[1, 0].plot(netG.gnorm_total_hist, label="G")
+    axes[1, 0].plot(netD.gnorm_total_hist, label="D")
+    axes[1, 0].set_xlabel("iterations")
+    axes[1, 0].set_ylabel("norm")
+    axes[1, 0].legend()
+
+    axes[1, 1].title.set_text('Weight Norm History')
+    axes[1, 1].plot(netG.wnorm_total_hist, label="G")
+    axes[1, 1].plot(netD.wnorm_total_hist, label="D")
+    axes[1, 1].set_xlabel("iterations")
+    axes[1, 1].set_ylabel("norm")
+    axes[1, 1].legend()
+
+    st = f.suptitle("Training Diagnostic Plots", fontsize='x-large')
+    f.tight_layout()
+    st.set_y(0.96)
+    f.subplots_adjust(top=0.9)
+
+    f.show()
