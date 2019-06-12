@@ -161,3 +161,24 @@ def training_plots(netD, netG, num_epochs):
     f.subplots_adjust(top=0.9)
 
     f.show()
+
+
+def fake_data_training_plots(real_range, score_real, test_range, fake_scores):
+    f, axes = plt.subplots(1, 2, figsize=(8, 8))
+
+    axes[0].title.set_text('Sample Sizes')
+    labels = ['real' + str(real_range)] + ['fake' + str(x) for x in test_range]
+    axes[0].bar(x=labels, height=[real_range] + test_range)
+    axes[0].set_xticklabels(labels=labels, rotation='vertical')
+
+    axes[1].title.set_text('OOF Accuracy')
+    axes[1].bar(x=labels, height=[score_real] + fake_scores)
+    axes[1].set_xticklabels(labels=labels, rotation='vertical')
+    axes[1].set_ylim(0.8, 1.0)
+
+    st = f.suptitle("Fake Data Training Results", fontsize='x-large')
+    f.tight_layout()
+    st.set_y(0.96)
+    f.subplots_adjust(top=0.9)
+
+    f.show()

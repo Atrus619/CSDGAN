@@ -119,8 +119,8 @@ param_grid = {'tol': [1e-9, 1e-8, 1e-7, 1e-6, 1e-5],
 model_real, score_real = train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
 
 # Generate various levels of amounts of fake data and test how training compares
-test_range = [150]
-fake_bs = 75
+test_range = [150, 300, 600, 1200, 2400]
+fake_bs = bs
 fake_models = []
 fake_scores = []
 for size in test_range:
@@ -153,3 +153,6 @@ plot_densities(genned_data, genned_labels, "Fake Data", scaler)  # Fake data
 plot_densities(iris.drop(columns='species'), np.array(iris.species), "Full Real Data Set")  # All real data
 plot_densities(x_train, np.array(y_train), "Training Data", scaler)  # Real train data
 plot_densities(x_test, np.array(y_test), "Testing Data", scaler)  # Real test data
+
+# Visualize output of tests
+fake_data_training_plots(real_range=75, score_real=score_real, test_range=test_range, fake_scores=fake_scores)
