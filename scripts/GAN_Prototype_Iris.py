@@ -18,6 +18,9 @@ import random
 # TODO: Feature matching
 # TODO: Debug to make sure CGAN is working as intended
 
+# TODO: Convert labels to torch.nn.embedding? https://torchgan.readthedocs.io/en/stable/_modules/torchgan/models/conditional.html#ConditionalGANGenerator
+# TODO: Possibly change how inputs are concatenated? I think I should add them at the start!
+
 # Set random seem for reproducibility
 manualSeed = 999
 print("Random Seed: ", manualSeed)

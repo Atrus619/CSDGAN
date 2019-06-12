@@ -3,6 +3,7 @@ import torch
 from models.NetUtils import NetUtils
 import torch.optim as optim
 
+
 # Generator class
 class CGAN_Generator(nn.Module, NetUtils):
     def __init__(self, nz, H, out_dim, nc, bs, lr, beta1, beta2):
@@ -13,11 +14,9 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.fixed_noise = torch.randn(bs, nz, device=self.device)
 
         # Layers
-        self.fc1_1 = nn.Linear(nz, H, bias=True)
-        # self.fc1_1_bn = nn.BatchNorm1d(H)
-        self.fc1_2 = nn.Linear(nc, H, bias=True)
-        # self.fc1_2_bn = nn.BatchNorm1d(H)
-        self.output = nn.Linear(2*H, out_dim, bias=True)
+        self.fc1 = nn.Linear(nz + nc, H, bias=True)
+        # self.fc1_bn = nn.BatchNorm1d(H)
+        self.output = nn.Linear(H, out_dim, bias=True)
         self.act = nn.LeakyReLU(0.2)
 
         # Loss and Optimizer
@@ -25,7 +24,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2))
 
         # Record history of training
-        self.layer_list = [self.fc1_1, self.fc1_2, self.output]
+        self.layer_list = [self.fc1, self.output]
         self.init_hist()
         self.losses = []
         self.fixed_noise_outputs = []
@@ -41,9 +40,8 @@ class CGAN_Generator(nn.Module, NetUtils):
         :param labels: Label embedding
         :return: Row of data for iris data set (4 real values)
         """
-        x = self.act(self.fc1_1(noise))
-        y = self.act(self.fc1_2(labels))
-        x = torch.cat([x, y], -1)
+        x = torch.cat([noise, labels], 1)
+        x = self.act(self.fc1(x))
         return self.output(x)  # TODO: Make sure it is appropriate to not use an activation here
 
     def train_one_step(self, output, label):
@@ -71,11 +69,9 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.D_G_z1 = None
 
         # Layers
-        self.fc1_1 = nn.Linear(out_dim, H, bias=True)
-        # self.fc1_1_bn = nn.BatchNorm1d(H)
-        self.fc1_2 = nn.Linear(nc, H, bias=True)
-        # self.fc1_2_bn = nn.BatchNorm1d(H)
-        self.output = nn.Linear(2*H, 1, bias=True)
+        self.fc1 = nn.Linear(out_dim + nc, H, bias=True)
+        # self.fc1_bn = nn.BatchNorm1d(H)
+        self.output = nn.Linear(H, 1, bias=True)
         self.act = nn.LeakyReLU(0.2)
         self.m = nn.Sigmoid()
 
@@ -84,7 +80,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2))
 
         # Record history of training
-        self.layer_list = [self.fc1_1, self.fc1_2, self.output]
+        self.layer_list = [self.fc1, self.output]
         self.init_hist()
         self.losses = []
         self.Avg_D_reals = []
@@ -101,9 +97,8 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         :param labels: Label embedding
         :return: Binary classification (sigmoid activation on a single unit hidden layer)
         """
-        x = self.act(self.fc1_1(row))
-        y = self.act(self.fc1_2(labels))
-        x = torch.cat([x, y], -1)
+        x = torch.cat([row, labels], 1)
+        x = self.act(self.fc1(x))
         return self.m(self.output(x))
 
     def train_one_step_real(self, output, label):
