@@ -42,7 +42,7 @@ def gen_labels(size, num_classes, labels_list):
 
 
 # Helper to plot sepal length vs width
-def plot_scatters(X, y, title, scaler=None):
+def plot_scatters(X, y, title, scaler=None, alpha=1.0):
     if scaler:
         X = scaler.inverse_transform(X)
     inv = pd.DataFrame(X).rename(columns={0: 'sepal_len', 1: 'sepal_wid', 2: 'petal_len', 3: 'petal_wid'})
@@ -51,20 +51,18 @@ def plot_scatters(X, y, title, scaler=None):
     fig = plt.figure()
 
     plt.subplot(1, 2, 1)
-    plt.scatter(inv.sepal_len[inv.species == 'Iris-setosa'], inv.sepal_wid[inv.species == 'Iris-setosa'], c='r', label='setosa')
-    plt.scatter(inv.sepal_len[inv.species == 'Iris-versicolor'], inv.sepal_wid[inv.species == 'Iris-versicolor'], c='b',
-                label='versicolor')
-    plt.scatter(inv.sepal_len[inv.species == 'Iris-virginica'], inv.sepal_wid[inv.species == 'Iris-virginica'], c='g',
-                label='virginica')
+    plt.scatter(inv.sepal_len[inv.species == 'Iris-setosa'], inv.sepal_wid[inv.species == 'Iris-setosa'], c='r', label='setosa', alpha=alpha)
+    plt.scatter(inv.sepal_len[inv.species == 'Iris-versicolor'], inv.sepal_wid[inv.species == 'Iris-versicolor'], c='b', label='versicolor', alpha=alpha)
+    plt.scatter(inv.sepal_len[inv.species == 'Iris-virginica'], inv.sepal_wid[inv.species == 'Iris-virginica'], c='g', label='virginica', alpha=alpha)
     # plt.legend()
     plt.xlabel('sepal length')
     plt.ylabel('sepal width')
     plt.title('Sepal Length vs Width')
 
     plt.subplot(1, 2, 2)
-    plt.scatter(inv.petal_len[inv.species == 'Iris-setosa'], inv.petal_wid[inv.species == 'Iris-setosa'], c='r', label='setosa')
-    plt.scatter(inv.petal_len[inv.species == 'Iris-versicolor'], inv.petal_wid[inv.species == 'Iris-versicolor'], c='b', label='versicolor')
-    plt.scatter(inv.petal_len[inv.species == 'Iris-virginica'], inv.petal_wid[inv.species == 'Iris-virginica'], c='g', label='virginica')
+    plt.scatter(inv.petal_len[inv.species == 'Iris-setosa'], inv.petal_wid[inv.species == 'Iris-setosa'], c='r', label='setosa', alpha=alpha)
+    plt.scatter(inv.petal_len[inv.species == 'Iris-versicolor'], inv.petal_wid[inv.species == 'Iris-versicolor'], c='b', label='versicolor', alpha=alpha)
+    plt.scatter(inv.petal_len[inv.species == 'Iris-virginica'], inv.petal_wid[inv.species == 'Iris-virginica'], c='g', label='virginica', alpha=alpha)
 
     plt.legend()
     plt.xlabel('petal length')
@@ -130,12 +128,12 @@ def training_plots(netD, netG, num_epochs):
     axes[0, 0].plot(netG.losses, label="G")
     axes[0, 0].plot(netD.losses, label="D")
     axes[0, 0].set_xlabel("iterations")
-    axes[0, 0].set_ylabel("Loss")
+    axes[0, 0].set_ylabel("loss")
     axes[0, 0].legend()
 
     axes[0, 1].title.set_text("Average Discriminator Outputs During Training")
-    axes[0, 1].plot(netD.Avg_D_reals, label="R")
-    axes[0, 1].plot(netD.Avg_D_fakes, label="F")
+    axes[0, 1].plot(netD.Avg_D_reals, label="Real")
+    axes[0, 1].plot(netD.Avg_D_fakes, label="Fake")
     axes[0, 1].plot(np.linspace(0, num_epochs, num_epochs), np.full(num_epochs, 0.5))
     axes[0, 1].set_xlabel("iterations")
     axes[0, 1].set_ylabel("proportion")

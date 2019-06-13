@@ -31,7 +31,7 @@ iris = load_dataset('iris')
 iris.head()
 
 # Split 50-50 so we can demonstrate the effectiveness of additional data
-x_train, x_test, y_train, y_test = train_test_split(iris.drop(columns='species'), iris.species, test_size=0.5, stratify=iris.species, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(iris.drop(columns='species'), iris.species, test_size=0.5, stratify=iris.species, random_state=manualSeed)
 
 # Parameters
 nz = 32  # Size of generator noise input  # TODO: May need to mess around with this later
@@ -50,7 +50,7 @@ beta2 = 0.999
 # Set the device
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
-# Normalize inputs
+# Scale inputs
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
 x_train_tensor = torch.tensor(x_train, dtype=torch.float)
@@ -119,7 +119,7 @@ param_grid = {'tol': [1e-9, 1e-8, 1e-7, 1e-6, 1e-5],
 model_real, score_real = train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
 
 # Generate various levels of amounts of fake data and test how training compares
-test_range = [150, 300, 600, 1200, 2400]
+test_range = [75, 150, 300, 600, 1200]
 fake_bs = bs
 fake_models = []
 fake_scores = []
