@@ -1,25 +1,9 @@
-from scripts.data_loading import load_dataset
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.autograd import Variable
+from scripts.Utils.data_loading import load_dataset
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from models.VGAN import VGAN_Generator, VGAN_Discriminator
-from models.CGAN import CGAN_Generator, CGAN_Discriminator
-from utils import *
+from models.CGAN_iris import CGAN_Generator, CGAN_Discriminator
+from scripts.Utils.utils import *
 import random
-
-# TODO: Add noise to discriminator inputs
-# TODO: Wasserstein
-# TODO: Feature matching
-# TODO: Debug to make sure CGAN is working as intended
-
-# TODO: Convert labels to torch.nn.embedding? https://torchgan.readthedocs.io/en/stable/_modules/torchgan/models/conditional.html#ConditionalGANGenerator
-# TODO: Possibly change how inputs are concatenated? I think I should add them at the start!
 
 # Set random seem for reproducibility
 manualSeed = 999
@@ -27,14 +11,14 @@ print("Random Seed: ", manualSeed)
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 
-iris = load_dataset('iris')
-iris.head()
+wine = load_dataset('wine')
+wine.head()
 
 # Split 50-50 so we can demonstrate the effectiveness of additional data
-x_train, x_test, y_train, y_test = train_test_split(iris.drop(columns='species'), iris.species, test_size=0.5, stratify=iris.species, random_state=manualSeed)
+x_train, x_test, y_train, y_test = train_test_split(wine.drop(columns='class'), wine['class'], test_size=88, stratify=wine['class'], random_state=manualSeed)
 
 # Parameters
-nz = 32  # Size of generator noise input  # TODO: May need to mess around with this later
+nz = 64  # Size of generator noise input  # TODO: May need to mess around with this later
 H = 16  # Size of hidden network layer
 out_dim = x_train.shape[1]  # Size of output
 bs = x_train.shape[0]  # Full data set
@@ -106,6 +90,8 @@ for epoch in range(num_epochs):
 
 # Output plots
 training_plots(netD=netD, netG=netG, num_epochs=num_epochs)
+plot_layer_scatters(netG, title="Generator")
+plot_layer_scatters(netD, title="Discriminator")
 
 # Train various models with real/fake data.
 y_test_dummies = pd.get_dummies(y_test)
@@ -119,7 +105,7 @@ param_grid = {'tol': [1e-9, 1e-8, 1e-7, 1e-6, 1e-5],
 model_real, score_real = train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
 
 # Generate various levels of amounts of fake data and test how training compares
-test_range = [75, 150, 300, 600, 1200]
+test_range = [90, 180, 360, 720, 1440]
 fake_bs = bs
 fake_models = []
 fake_scores = []
@@ -144,15 +130,27 @@ for size in test_range:
     fake_scores.append(score_fake_tmp)
 
 # Visualize distributions
-plot_scatters(genned_data, genned_labels, "Fake Data", scaler)  # Fake data
-plot_scatters(iris.drop(columns='species'), np.array(iris.species), "Full Real Data Set")  # All real data
-plot_scatters(x_train, np.array(y_train), "Training Data", scaler)  # Real train data
-plot_scatters(x_test, np.array(y_test), "Testing Data", scaler)  # Real test data
+plot_scatter_matrix(genned_data, "Fake Data", wine.drop(columns='class'), scaler=scaler)
+plot_scatter_matrix(wine.drop(columns='class'), "Real Data", wine.drop(columns='class'), scaler=scaler)
 
-plot_densities(genned_data, genned_labels, "Fake Data", scaler)  # Fake data
-plot_densities(iris.drop(columns='species'), np.array(iris.species), "Full Real Data Set")  # All real data
-plot_densities(x_train, np.array(y_train), "Training Data", scaler)  # Real train data
-plot_densities(x_test, np.array(y_test), "Testing Data", scaler)  # Real test data
+# Conditional scatters
+# Class dict
+class_dict = {1: ('Class 1', 'r'),
+              2: ('Class 2', 'b'),
+              3: ('Class 3', 'g')}
+plot_conditional_scatter(x_real=np.concatenate((x_train, x_test), axis=0),
+                         y_real=np.concatenate((y_train, y_test), axis=0),
+                         x_fake=genned_data,
+                         y_fake=genned_labels,
+                         col1=4,
+                         col2=5,
+                         class_dict=class_dict,
+                         og_df=wine.drop(columns='class'),
+                         scaler=None,
+                         alpha=0.25)
+
+# Conditional distributions
+
 
 # Visualize output of tests
-fake_data_training_plots(real_range=75, score_real=score_real, test_range=test_range, fake_scores=fake_scores)
+fake_data_training_plots(real_range=bs, score_real=score_real, test_range=test_range, fake_scores=fake_scores)
