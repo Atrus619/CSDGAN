@@ -150,7 +150,16 @@ plot_conditional_scatter(x_real=np.concatenate((x_train, x_test), axis=0),
                          alpha=0.25,
                          save='wine/wine')
 
-# Conditional distributions
+# Conditional densities
+plot_conditional_density(x_real=np.concatenate((x_train, x_test), axis=0),
+                         y_real=np.concatenate((y_train, y_test), axis=0),
+                         x_fake=genned_data,
+                         y_fake=genned_labels,
+                         col=12,
+                         class_dict=class_dict,
+                         og_df=wine.drop(columns='class'),
+                         scaler=None,
+                         save='wine/wine')
 
 
 # Visualize output of tests

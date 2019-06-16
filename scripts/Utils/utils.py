@@ -93,7 +93,7 @@ def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_d
 
 
 # Plots a conditional density plot (labels are colors) to compare real and fake data side by side
-def plot_conditional_density(x_real, y_real, x_fake, y_fake, col1, col2, class_dict, og_df, scaler=None, alpha=1.0, save=None):
+def plot_conditional_density(x_real, y_real, x_fake, y_fake, col, class_dict, og_df, scaler=None, save=None):
     if scaler:
         x_real = scaler.inverse_transform(x_real)
         x_fake = scaler.inverse_transform(x_fake)
@@ -102,6 +102,20 @@ def plot_conditional_density(x_real, y_real, x_fake, y_fake, col1, col2, class_d
 
     axes[0].title.set_text("Real")
     axes[1].title.set_text("Fake")
+
+    for label in class_dict:
+        sns.distplot(a=x_real[:, col][y_real == label], label=class_dict[label][0], color=class_dict[label][1], ax=axes[0])
+        sns.distplot(a=x_fake[:, col][y_fake == label], label=class_dict[label][0], color=class_dict[label][1], ax=axes[1])
+
+    st = f.suptitle(og_df.columns[col] + ' conditional density plot', fontsize='x-large')
+    f.tight_layout()
+    st.set_y(0.96)
+    f.subplots_adjust(top=0.85)
+
+    f.show()
+
+    if save is not None:
+        f.savefig('plots/conditional_densities/' + save + '_' + og_df.columns[col] + '_conditional_density.png')
 
 
 # Helper to plot iris sepal length vs width
@@ -184,10 +198,10 @@ def iris_plot_densities(X, y, title, scaler=None, save=None):
     st.set_y(.95)
     f.subplots_adjust(top=0.9)
 
-    plt.show()
+    f.show()
 
     if save is not None:
-        plt.savefig('plots/conditional_densities/' + save + '_conditional_density.png')
+        f.savefig('plots/conditional_densities/' + save + '_conditional_density.png')
 
 
 def training_plots(netD, netG, num_epochs, save=None):
