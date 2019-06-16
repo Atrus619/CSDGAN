@@ -49,16 +49,19 @@ def gen_labels(size, num_classes, labels_list):
 
 
 # Plots scatter matrix of data set (real or fake)
-def plot_scatter_matrix(X, title, og_df, scaler=None):
+def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
     if scaler:
         X = scaler.inverse_transform(X)
     pd.plotting.scatter_matrix(pd.DataFrame(X, columns=og_df.columns), figsize=(15, 15))
     plt.suptitle(title, fontsize='x-large')
     plt.show()
 
+    if save is not None:
+        plt.savefig('plots/scatter_matrices/' + save + '_scatter_matrix.png')
 
-# Plots a conditional scatter plox (labels are colors) to compare real and fake data side by side
-def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_dict, og_df, scaler=None, alpha=1.0):
+
+# Plots a conditional scatter plot (labels are colors) to compare real and fake data side by side
+def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_dict, og_df, scaler=None, alpha=1.0, save=None):
     if scaler:
         x_real = scaler.inverse_transform(x_real)
         x_fake = scaler.inverse_transform(x_fake)
@@ -85,9 +88,24 @@ def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_d
 
     f.show()
 
+    if save is not None:
+        f.savefig('plots/conditional_scatters/' + save + '_' + og_df.columns[col1] + '_vs_' + og_df.columns[col2] + '_conditional_scatter.png')
+
+
+# Plots a conditional density plot (labels are colors) to compare real and fake data side by side
+def plot_conditional_density(x_real, y_real, x_fake, y_fake, col1, col2, class_dict, og_df, scaler=None, alpha=1.0, save=None):
+    if scaler:
+        x_real = scaler.inverse_transform(x_real)
+        x_fake = scaler.inverse_transform(x_fake)
+
+    f, axes = plt.subplots(1, 2, sharex=True, sharey=True)
+
+    axes[0].title.set_text("Real")
+    axes[1].title.set_text("Fake")
+
 
 # Helper to plot iris sepal length vs width
-def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0):
+def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0, save=None):
     if scaler:
         X = scaler.inverse_transform(X)
     inv = pd.DataFrame(X).rename(columns={0: 'sepal_len', 1: 'sepal_wid', 2: 'petal_len', 3: 'petal_wid'})
@@ -123,9 +141,12 @@ def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0):
 
     plt.show()
 
+    if save is not None:
+        plt.savefig('plots/conditional_scatters/' + save + '_conditional_scatter.png')
+
 
 # Helper to plot iris distributions of variables by class
-def iris_plot_densities(X, y, title, scaler=None):
+def iris_plot_densities(X, y, title, scaler=None, save=None):
     if scaler:
         X = scaler.inverse_transform(X)
     inv = pd.DataFrame(X).rename(columns={0: 'sepal_len', 1: 'sepal_wid', 2: 'petal_len', 3: 'petal_wid'})
@@ -165,8 +186,11 @@ def iris_plot_densities(X, y, title, scaler=None):
 
     plt.show()
 
+    if save is not None:
+        plt.savefig('plots/conditional_densities/' + save + '_conditional_density.png')
 
-def training_plots(netD, netG, num_epochs):
+
+def training_plots(netD, netG, num_epochs, save=None):
     f, axes = plt.subplots(2, 2, figsize=(12, 12), sharex=True)
 
     axes[0, 0].title.set_text("Generator and Discriminator Loss During Training")
@@ -205,8 +229,11 @@ def training_plots(netD, netG, num_epochs):
 
     f.show()
 
+    if save is not None:
+        f.savefig('plots/training_plots/' + save + '_training_plot.png')
 
-def fake_data_training_plots(real_range, score_real, test_range, fake_scores):
+
+def fake_data_training_plots(real_range, score_real, test_range, fake_scores, save=None):
     f, axes = plt.subplots(1, 2, figsize=(8, 8))
 
     axes[0].title.set_text('Sample Sizes')
@@ -226,8 +253,11 @@ def fake_data_training_plots(real_range, score_real, test_range, fake_scores):
 
     f.show()
 
+    if save is not None:
+        f.savefig('plots/fake_data_training_plots/' + save + '_fake_data_training_plot.png')
 
-def plot_layer_scatters(net, figsize=(20, 10), title=None):
+
+def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
     f, axes = plt.subplots(len(net.layer_list), 4, figsize=figsize, sharex=True)
 
     axes[0, 0].title.set_text("Weight Norms")
@@ -256,3 +286,6 @@ def plot_layer_scatters(net, figsize=(20, 10), title=None):
     f.subplots_adjust(top=0.9)
 
     f.show()
+
+    if save is not None:
+        f.savefig('plots/layer_scatters/' + save + '_layer_scatter.png')

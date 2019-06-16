@@ -89,9 +89,9 @@ for epoch in range(num_epochs):
             netG.fixed_noise_outputs.append(scaler.inverse_transform(fake))
 
 # Output plots
-training_plots(netD=netD, netG=netG, num_epochs=num_epochs)
-plot_layer_scatters(netG, title="Generator")
-plot_layer_scatters(netD, title="Discriminator")
+training_plots(netD=netD, netG=netG, num_epochs=num_epochs, save='wine')
+plot_layer_scatters(netG, title="Generator", save='wine_gen')
+plot_layer_scatters(netD, title="Discriminator", save='wine_discrim')
 
 # Train various models with real/fake data.
 y_test_dummies = pd.get_dummies(y_test)
@@ -130,8 +130,8 @@ for size in test_range:
     fake_scores.append(score_fake_tmp)
 
 # Visualize distributions
-plot_scatter_matrix(genned_data, "Fake Data", wine.drop(columns='class'), scaler=scaler)
-plot_scatter_matrix(wine.drop(columns='class'), "Real Data", wine.drop(columns='class'), scaler=scaler)
+plot_scatter_matrix(genned_data, "Fake Data", wine.drop(columns='class'), scaler=scaler, save='wine_fake')
+plot_scatter_matrix(wine.drop(columns='class'), "Real Data", wine.drop(columns='class'), scaler=scaler, save='wine_real')
 
 # Conditional scatters
 # Class dict
@@ -142,12 +142,13 @@ plot_conditional_scatter(x_real=np.concatenate((x_train, x_test), axis=0),
                          y_real=np.concatenate((y_train, y_test), axis=0),
                          x_fake=genned_data,
                          y_fake=genned_labels,
-                         col1=4,
-                         col2=5,
+                         col1=12,
+                         col2=11,
                          class_dict=class_dict,
                          og_df=wine.drop(columns='class'),
                          scaler=None,
-                         alpha=0.25)
+                         alpha=0.25,
+                         save='wine/wine')
 
 # Conditional distributions
 
