@@ -1,7 +1,7 @@
 from scripts.Utils.data_loading import load_dataset
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from models.CGAN_iris import CGAN_Generator, CGAN_Discriminator
+from models.CGAN_wine import CGAN_Generator, CGAN_Discriminator
 from scripts.Utils.utils import *
 import random
 
@@ -10,6 +10,7 @@ manualSeed = 999
 print("Random Seed: ", manualSeed)
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
+
 
 wine = load_dataset('wine')
 wine.head()
@@ -25,6 +26,9 @@ bs = x_train.shape[0]  # Full data set
 nc = 3  # 3 different types of label in this problem
 num_batches = 1
 num_epochs = 10000
+print_interval = 1000
+exp_name = 'experiments/wine_1x16_wd_1e-4'
+safe_mkdir(exp_name)
 
 # Adam optimizer hyperparameters
 lr = 2e-4
@@ -32,7 +36,8 @@ beta1 = 0.5
 beta2 = 0.999
 
 # Set the device
-device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+# device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+device = 'cpu'
 
 # Scale inputs
 scaler = StandardScaler()
@@ -42,8 +47,8 @@ y_train_dummies = pd.get_dummies(y_train)
 y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
 
 # Instantiate nets
-netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, lr=lr, beta1=beta1, beta2=beta2).to(device)
-netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, lr=lr, beta1=beta1, beta2=beta2).to(device)
+netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=1e-4).to(device)
+netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, device=device, wd=1e-4).to(device)
 
 # Print models
 print(netG)
@@ -81,7 +86,7 @@ for epoch in range(num_epochs):
         netG.update_history()
 
         # Output training stats
-        if epoch % 1000 == 0 or (epoch == num_epochs-1):
+        if epoch % print_interval == 0 or (epoch == num_epochs-1):
             print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                   % (epoch+1, num_epochs, netD.loss.item(), netG.loss.item(), netD.D_x, netD.D_G_z1, netG.D_G_z2))
             with torch.no_grad():
@@ -89,9 +94,9 @@ for epoch in range(num_epochs):
             netG.fixed_noise_outputs.append(scaler.inverse_transform(fake))
 
 # Output plots
-training_plots(netD=netD, netG=netG, num_epochs=num_epochs, save='wine')
-plot_layer_scatters(netG, title="Generator", save='wine_gen')
-plot_layer_scatters(netD, title="Discriminator", save='wine_discrim')
+training_plots(netD=netD, netG=netG, num_epochs=num_epochs, save=exp_name)
+plot_layer_scatters(netG, title="Generator", save=exp_name)
+plot_layer_scatters(netD, title="Discriminator", save=exp_name)
 
 # Train various models with real/fake data.
 y_test_dummies = pd.get_dummies(y_test)
@@ -130,8 +135,8 @@ for size in test_range:
     fake_scores.append(score_fake_tmp)
 
 # Visualize distributions
-plot_scatter_matrix(genned_data, "Fake Data", wine.drop(columns='class'), scaler=scaler, save='wine_fake')
-plot_scatter_matrix(wine.drop(columns='class'), "Real Data", wine.drop(columns='class'), scaler=scaler, save='wine_real')
+plot_scatter_matrix(genned_data, "Fake Data", wine.drop(columns='class'), scaler=scaler, save=exp_name)
+plot_scatter_matrix(wine.drop(columns='class'), "Real Data", wine.drop(columns='class'), scaler=None, save=exp_name)
 
 # Conditional scatters
 # Class dict
@@ -142,25 +147,25 @@ plot_conditional_scatter(x_real=np.concatenate((x_train, x_test), axis=0),
                          y_real=np.concatenate((y_train, y_test), axis=0),
                          x_fake=genned_data,
                          y_fake=genned_labels,
-                         col1=12,
-                         col2=11,
+                         col1=2,
+                         col2=3,
                          class_dict=class_dict,
                          og_df=wine.drop(columns='class'),
-                         scaler=None,
+                         scaler=scaler,
                          alpha=0.25,
-                         save='wine/wine')
+                         save=exp_name)
 
 # Conditional densities
 plot_conditional_density(x_real=np.concatenate((x_train, x_test), axis=0),
                          y_real=np.concatenate((y_train, y_test), axis=0),
                          x_fake=genned_data,
                          y_fake=genned_labels,
-                         col=12,
+                         col=1,
                          class_dict=class_dict,
                          og_df=wine.drop(columns='class'),
-                         scaler=None,
-                         save='wine/wine')
+                         scaler=scaler,
+                         save=exp_name)
 
 
 # Visualize output of tests
-fake_data_training_plots(real_range=bs, score_real=score_real, test_range=test_range, fake_scores=fake_scores)
+fake_data_training_plots(real_range=bs, score_real=score_real, test_range=test_range, fake_scores=fake_scores, save=exp_name)

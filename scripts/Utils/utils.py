@@ -17,6 +17,14 @@ def fix_wd():
         os.chdir('..')
 
 
+def safe_mkdir(path):
+    """ Create a directory if there isn't one already. """
+    try:
+        os.mkdir(path)
+    except OSError:
+        pass
+
+
 # Helper function to repeatedly test and print outputs for a logistic regression
 def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None):
     lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
@@ -57,7 +65,8 @@ def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
     plt.show()
 
     if save is not None:
-        plt.savefig('plots/scatter_matrices/' + save + '_scatter_matrix.png')
+        safe_mkdir(save + '/scatter_matrices')
+        plt.savefig(save + '/scatter_matrices/' + title + '_scatter_matrix.png')
 
 
 # Plots a conditional scatter plot (labels are colors) to compare real and fake data side by side
@@ -89,7 +98,8 @@ def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_d
     f.show()
 
     if save is not None:
-        f.savefig('plots/conditional_scatters/' + save + '_' + og_df.columns[col1] + '_vs_' + og_df.columns[col2] + '_conditional_scatter.png')
+        safe_mkdir(save + '/conditional_scatters')
+        f.savefig(save + '/conditional_scatters/' + og_df.columns[col1] + '_vs_' + og_df.columns[col2] + '_conditional_scatter.png')
 
 
 # Plots a conditional density plot (labels are colors) to compare real and fake data side by side
@@ -115,7 +125,8 @@ def plot_conditional_density(x_real, y_real, x_fake, y_fake, col, class_dict, og
     f.show()
 
     if save is not None:
-        f.savefig('plots/conditional_densities/' + save + '_' + og_df.columns[col] + '_conditional_density.png')
+        safe_mkdir(save + '/conditional_densities')
+        f.savefig(save + '/conditional_densities/' + og_df.columns[col] + '_conditional_density.png')
 
 
 # Helper to plot iris sepal length vs width
@@ -156,7 +167,8 @@ def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0, save=None):
     plt.show()
 
     if save is not None:
-        plt.savefig('plots/conditional_scatters/' + save + '_conditional_scatter.png')
+        safe_mkdir(save + '/conditional_scatters')
+        plt.savefig(save + '/conditional_scatters/' + title + '_conditional_scatter.png')
 
 
 # Helper to plot iris distributions of variables by class
@@ -201,7 +213,8 @@ def iris_plot_densities(X, y, title, scaler=None, save=None):
     f.show()
 
     if save is not None:
-        f.savefig('plots/conditional_densities/' + save + '_conditional_density.png')
+        safe_mkdir(save + '/conditional_densities')
+        f.savefig(save + '/conditional_densities/' + title + '_conditional_density.png')
 
 
 def training_plots(netD, netG, num_epochs, save=None):
@@ -244,7 +257,8 @@ def training_plots(netD, netG, num_epochs, save=None):
     f.show()
 
     if save is not None:
-        f.savefig('plots/training_plots/' + save + '_training_plot.png')
+        safe_mkdir(save + '/training_plots')
+        f.savefig(save + '/training_plots/training_plot.png')
 
 
 def fake_data_training_plots(real_range, score_real, test_range, fake_scores, save=None):
@@ -268,7 +282,8 @@ def fake_data_training_plots(real_range, score_real, test_range, fake_scores, sa
     f.show()
 
     if save is not None:
-        f.savefig('plots/fake_data_training_plots/' + save + '_fake_data_training_plot.png')
+        safe_mkdir(save + '/fake_data_training_plots')
+        f.savefig(save + '/fake_data_training_plots/fake_data_training_plot.png')
 
 
 def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
@@ -302,4 +317,5 @@ def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
     f.show()
 
     if save is not None:
-        f.savefig('plots/layer_scatters/' + save + '_layer_scatter.png')
+        safe_mkdir(save + '/layer_scatters')
+        f.savefig(save + '/layer_scatters/' + title + '_layer_scatter.png')
