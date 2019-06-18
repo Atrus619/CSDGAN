@@ -16,7 +16,8 @@ class CGAN_Generator(nn.Module, NetUtils):
         # Layers
         self.fc1 = nn.Linear(nz + nc, H, bias=True)
         # self.fc1_bn = nn.BatchNorm1d(H)
-        self.fc2 = nn.Linear(H, H, bias=True)
+        # self.fc2 = nn.Linear(H, H, bias=True)
+        # self.fc3 = nn.Linear(H, H, bias=True)
         self.output = nn.Linear(H, out_dim, bias=True)
         self.act = nn.LeakyReLU(0.2)
 
@@ -43,7 +44,8 @@ class CGAN_Generator(nn.Module, NetUtils):
         """
         x = torch.cat([noise, labels], 1)
         x = self.act(self.fc1(x))
-        x = self.act(self.fc2(x))
+        # x = self.act(self.fc2(x))
+        # x = self.act(self.fc3(x))
         return self.output(x)  # TODO: Make sure it is appropriate to not use an activation here
 
     def train_one_step(self, output, label):

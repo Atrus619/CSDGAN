@@ -20,14 +20,14 @@ x_train, x_test, y_train, y_test = train_test_split(wine.drop(columns='class'), 
 
 # Parameters
 nz = 64  # Size of generator noise input  # TODO: May need to mess around with this later
-H = 16  # Size of hidden network layer
+H = 32  # Size of hidden network layer
 out_dim = x_train.shape[1]  # Size of output
 bs = x_train.shape[0]  # Full data set
 nc = 3  # 3 different types of label in this problem
 num_batches = 1
 num_epochs = 10000
 print_interval = 1000
-exp_name = 'experiments/wine_1x16_wd_1e-4'
+exp_name = 'experiments/wine_1x32_wd_0'
 safe_mkdir(exp_name)
 
 # Adam optimizer hyperparameters
@@ -47,8 +47,8 @@ y_train_dummies = pd.get_dummies(y_train)
 y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
 
 # Instantiate nets
-netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=1e-4).to(device)
-netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, device=device, wd=1e-4).to(device)
+netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0).to(device)
+netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, device=device, wd=0).to(device)
 
 # Print models
 print(netG)
@@ -58,6 +58,22 @@ print(netD)
 real_label = 1
 fake_label = 0
 
+# Train on real data
+y_test_dummies = pd.get_dummies(y_test)
+print("Dummy columns match?", all(y_train_dummies.columns == y_test_dummies.columns))
+x_test = scaler.transform(x_test)
+labels_list = [x for x in y_train_dummies.columns]
+param_grid = {'tol': [1e-9],
+              'C': [0.5],
+              'l1_ratio': [0]}
+model_real, score_real = train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
+
+# For diagnostics
+test_range = [90, 180, 360, 720, 1440]
+stored_models = []
+stored_scores = []
+
+# Train GAN
 print("Starting Training Loop...")
 for epoch in range(num_epochs):
     for i in range(num_batches):  # Only one batch per epoch since our data is horrifically small
@@ -85,54 +101,32 @@ for epoch in range(num_epochs):
         netG.train_one_step(output, label)
         netG.update_history()
 
-        # Output training stats
-        if epoch % print_interval == 0 or (epoch == num_epochs-1):
-            print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                  % (epoch+1, num_epochs, netD.loss.item(), netG.loss.item(), netD.D_x, netD.D_G_z1, netG.D_G_z2))
-            with torch.no_grad():
-                fake = netG(netG.fixed_noise, real_classes).detach().cpu()
-            netG.fixed_noise_outputs.append(scaler.inverse_transform(fake))
+    # Output training stats
+    if epoch % print_interval == 0 or (epoch == num_epochs-1):
+        print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                % (epoch+1, num_epochs, netD.loss.item(), netG.loss.item(), netD.D_x, netD.D_G_z1, netG.D_G_z2))
+        with torch.no_grad():
+            # Generate various levels of amounts of fake data and test how training compares
+            tmp_models, tmp_scores = evaluate_training_progress(test_range=test_range, fake_bs=bs, nz=nz, nc=nc, out_dim=out_dim, netG=netG,
+                                                                x_test=x_test, y_test=y_test, manualSeed=manualSeed, labels_list=labels_list,
+                                                                param_grid=param_grid, device=device)
+        stored_models += tmp_models
+        stored_scores += tmp_scores
+
+# Plot evaluation over time
+plot_training_progress(stored_scores=stored_scores, test_range=test_range, num_saves=len(stored_scores) // len(test_range), save=exp_name)
+
+# Example parsing a model for stats
+parse_models(stored_models=stored_models, epoch=5000, print_interval=print_interval, test_range=test_range,
+             ind=0, x_test=x_test, y_test=y_test, labels=labels_list)
 
 # Output plots
 training_plots(netD=netD, netG=netG, num_epochs=num_epochs, save=exp_name)
 plot_layer_scatters(netG, title="Generator", save=exp_name)
 plot_layer_scatters(netD, title="Discriminator", save=exp_name)
 
-# Train various models with real/fake data.
-y_test_dummies = pd.get_dummies(y_test)
-print("Dummy columns match?", all(y_train_dummies.columns == y_test_dummies.columns))
-x_test = scaler.transform(x_test)
-labels_list = [x for x in y_train_dummies.columns]
-param_grid = {'tol': [1e-9, 1e-8, 1e-7, 1e-6, 1e-5],
-              'C': [0.5, 0.75, 1, 1.25],
-              'l1_ratio': [0, 0.25, 0.5, 0.75, 1]}
-
-model_real, score_real = train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
-
-# Generate various levels of amounts of fake data and test how training compares
-test_range = [90, 180, 360, 720, 1440]
-fake_bs = bs
-fake_models = []
-fake_scores = []
-for size in test_range:
-    num_batches = size // fake_bs + 1
-    genned_data = np.empty((0, out_dim))
-    genned_labels = np.empty(0)
-    rem = size
-    while rem > 0:
-        curr_size = min(fake_bs, rem)
-        noise = torch.randn(curr_size, nz, device=device)
-        fake_labels, output_labels = gen_labels(size=curr_size, num_classes=nc, labels_list=labels_list)
-        fake_labels = fake_labels.to(device)
-        rem -= curr_size
-        fake_data = netG(noise, fake_labels).cpu().detach().numpy()
-        genned_data = np.concatenate((genned_data, fake_data))
-        genned_labels = np.concatenate((genned_labels, output_labels))
-    print("For size of:", size)
-    model_fake_tmp, score_fake_tmp = train_test_logistic_reg(genned_data, genned_labels, x_test, y_test,
-                                                             param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
-    fake_models.append(model_fake_tmp)
-    fake_scores.append(score_fake_tmp)
+# Generate one last set of fake data for diagnostics
+genned_data, genned_labels = gen_fake_data(netG=netG, bs=600, nz=nz, nc=nc, labels_list=labels_list, device=device)
 
 # Visualize distributions
 plot_scatter_matrix(genned_data, "Fake Data", wine.drop(columns='class'), scaler=scaler, save=exp_name)

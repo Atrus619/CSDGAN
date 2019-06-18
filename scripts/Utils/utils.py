@@ -25,17 +25,80 @@ def safe_mkdir(path):
         pass
 
 
+def gen_fake_data(netG, bs, nz, nc, labels_list, device):
+    noise = torch.randn(bs, nz, device=device)
+    fake_labels, output_labels = gen_labels(size=bs, num_classes=nc, labels_list=labels_list)
+    fake_labels = fake_labels.to(device)
+    fake_data = netG(noise, fake_labels).cpu().detach().numpy()
+    return fake_data, output_labels
+
+
+# Train a model on fake data and evaluate on test data in order to evaluate network as it trains
+def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_test, y_test, manualSeed, labels_list, param_grid, device):
+    fake_scores = []
+    fake_models = []
+    for size in test_range:
+        genned_data = np.empty((0, out_dim))
+        genned_labels = np.empty(0)
+        rem = size
+        while rem > 0:
+            curr_size = min(fake_bs, rem)
+            fake_data, output_labels = gen_fake_data(netG=netG, bs=curr_size, nz=nz, nc=nc, labels_list=labels_list, device=device)
+            rem -= curr_size
+            genned_data = np.concatenate((genned_data, fake_data))
+            genned_labels = np.concatenate((genned_labels, output_labels))
+        model_fake_tmp, score_fake_tmp = train_test_logistic_reg(x_train=genned_data, y_train=genned_labels, x_test=x_test, y_test=y_test,
+                                                                 param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list, verbose=0)
+        fake_models.append(model_fake_tmp)
+        fake_scores.append(score_fake_tmp)
+    return fake_models, fake_scores
+
+
+# Plot progress so far on training
+def plot_training_progress(stored_scores, test_range, num_saves, save=None):
+    ys = np.empty((num_saves, len(test_range)))
+    xs = np.empty((num_saves, len(test_range)))
+    barWidth = 1 / (len(test_range) + 1)
+    for i in range(len(test_range)):
+        ys[:, i] = np.array(stored_scores[i:num_saves*len(test_range):len(test_range)])
+        xs[:, i] = np.arange(num_saves) + barWidth * i
+        plt.bar(xs[:, i], ys[:, i], width=barWidth, edgecolor='white', label=test_range[i])
+
+    plt.xlabel('Epoch', fontweight='bold')
+    plt.xticks([r + barWidth for r in range(num_saves)], list(range(num_saves)))
+    plt.title('Evaluation Over Training Epochs')
+    plt.legend(loc=0)
+    plt.show()
+
+    if save is not None:
+        safe_mkdir(save + '/training_progress')
+        plt.savefig(save + '/training_progress/' + 'training_progress.png')
+
+
+
+# Helper/diagnostic function to return stats for a specific model
+def parse_models(stored_models, epoch, print_interval, test_range, ind, x_test, y_test, labels):
+    tmp_model = stored_models[epoch // print_interval * (len(test_range)-1) + ind]
+    best_score = tmp_model.score(x_test, y_test)
+    predictions = tmp_model.predict(x_test)
+    print("Accuracy:", best_score)
+    print("Best Parameters:", tmp_model.best_params_)
+    print(classification_report(y_test, predictions, labels=labels))
+    print(confusion_matrix(y_test, predictions, labels=labels))
+
+
 # Helper function to repeatedly test and print outputs for a logistic regression
-def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None):
+def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None, verbose=1):
     lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
     lr_cv = GridSearchCV(lr, param_grid=param_grid, n_jobs=-1, cv=cv)
     lr_cv.fit(x_train, y_train)
     best_score = lr_cv.score(x_test, y_test)
-    print("Accuracy:", best_score)
-    print("Best Parameters:", lr_cv.best_params_)
     predictions = lr_cv.predict(x_test)
-    print(classification_report(y_test, predictions, labels=labels))
-    print(confusion_matrix(y_test, predictions, labels=labels))
+    if verbose == 1:
+        print("Accuracy:", best_score)
+        print("Best Parameters:", lr_cv.best_params_)
+        print(classification_report(y_test, predictions, labels=labels))
+        print(confusion_matrix(y_test, predictions, labels=labels))
     return [lr_cv, best_score]
 
 
