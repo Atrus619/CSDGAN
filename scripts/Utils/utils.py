@@ -3,6 +3,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import StandardScaler
 import numpy as np
 import pandas as pd
 import torch
@@ -67,7 +68,7 @@ def plot_training_progress(stored_scores, test_range, num_saves, save=None):
     plt.xlabel('Epoch', fontweight='bold')
     plt.xticks([r + barWidth for r in range(num_saves)], list(range(num_saves)))
     plt.title('Evaluation Over Training Epochs')
-    plt.legend(loc=0)
+    plt.legend(loc=3)
     plt.show()
 
     if save is not None:
@@ -97,7 +98,7 @@ def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, 
         print("Accuracy:", best_score)
         print("Best Parameters:", lr_cv.best_params_)
         print(classification_report(y_test, predictions, labels=labels))
-        print(confusion_matrix(y_test, predictions, labels=labels))
+        print(confusion_matrix(np.array(y_test), predictions, labels=labels))
     return [lr_cv, best_score]
 
 
@@ -119,7 +120,11 @@ def gen_labels(size, num_classes, labels_list):
 
 
 # Plots scatter matrix of data set (real or fake)
-def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
+def plot_scatter_matrix(X, title, og_df, scaler=None, cont_inputs=None, save=None):
+    if cont_inputs:
+        X_mask = np.array([x in cont_inputs for x in og_df.columns])
+        X = np.array(X)[:, X_mask]
+        og_df = og_df.iloc[:, X_mask]
     if scaler:
         X = scaler.inverse_transform(X)
     pd.plotting.scatter_matrix(pd.DataFrame(X, columns=og_df.columns), figsize=(15, 15))
@@ -381,3 +386,13 @@ def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
     if save is not None:
         safe_mkdir(save + '/layer_scatters')
         f.savefig(save + '/layer_scatters/' + title + '_layer_scatter.png')
+
+
+def scale_cont_inputs(df, cont_inputs, scaler=None):
+    if scaler is None:
+        scaler = StandardScaler()
+        df_cont = scaler.fit_transform(df[cont_inputs])
+    else:
+        df_cont = scaler.transform(df[cont_inputs])
+    df_cat = df.drop(columns=cont_inputs)
+    return np.concatenate((df_cont, df_cat), axis=1), scaler
