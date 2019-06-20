@@ -75,10 +75,9 @@ def plot_training_progress(stored_scores, test_range, num_saves, save=None):
         plt.savefig(save + '/training_progress/' + 'training_progress.png')
 
 
-
 # Helper/diagnostic function to return stats for a specific model
 def parse_models(stored_models, epoch, print_interval, test_range, ind, x_test, y_test, labels):
-    tmp_model = stored_models[epoch // print_interval * (len(test_range)-1) + ind]
+    tmp_model = stored_models[epoch // print_interval * len(test_range)-1 + ind]
     best_score = tmp_model.score(x_test, y_test)
     predictions = tmp_model.predict(x_test)
     print("Accuracy:", best_score)

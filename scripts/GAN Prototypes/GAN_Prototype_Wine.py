@@ -11,7 +11,7 @@ print("Random Seed: ", manualSeed)
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 
-
+# Import data
 wine = load_dataset('wine')
 wine.head()
 
@@ -72,6 +72,7 @@ model_real, score_real = train_test_logistic_reg(x_train, y_train, x_test, y_tes
 test_range = [90, 180, 360, 720, 1440]
 stored_models = []
 stored_scores = []
+best_score = 0
 
 # Train GAN
 print("Starting Training Loop...")
@@ -110,15 +111,22 @@ for epoch in range(num_epochs):
             tmp_models, tmp_scores = evaluate_training_progress(test_range=test_range, fake_bs=bs, nz=nz, nc=nc, out_dim=out_dim, netG=netG,
                                                                 x_test=x_test, y_test=y_test, manualSeed=manualSeed, labels_list=labels_list,
                                                                 param_grid=param_grid, device=device)
+        if max(tmp_scores) > best_score:
+            best_score = max(tmp_scores)
+            torch.save(netG.state_dict(), exp_name + "/best_netG.pt")
         stored_models += tmp_models
         stored_scores += tmp_scores
+
+# Load best model
+best_netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0).to(device)
+best_netG.load_state_dict(torch.load(exp_name + "/best_netG.pt"))
 
 # Plot evaluation over time
 plot_training_progress(stored_scores=stored_scores, test_range=test_range, num_saves=len(stored_scores) // len(test_range), save=exp_name)
 
 # Example parsing a model for stats
-parse_models(stored_models=stored_models, epoch=5000, print_interval=print_interval, test_range=test_range,
-             ind=0, x_test=x_test, y_test=y_test, labels=labels_list)
+parse_models(stored_models=stored_models, epoch=9000, print_interval=print_interval, test_range=test_range,
+             ind=3, x_test=x_test, y_test=y_test, labels=labels_list)
 
 # Output plots
 training_plots(netD=netD, netG=netG, num_epochs=num_epochs, save=exp_name)
@@ -126,7 +134,8 @@ plot_layer_scatters(netG, title="Generator", save=exp_name)
 plot_layer_scatters(netD, title="Discriminator", save=exp_name)
 
 # Generate one last set of fake data for diagnostics
-genned_data, genned_labels = gen_fake_data(netG=netG, bs=600, nz=nz, nc=nc, labels_list=labels_list, device=device)
+genned_data, genned_labels = gen_fake_data(netG=best_netG, bs=360, nz=nz, nc=nc, labels_list=labels_list, device=device)
+model_fake, score_fake = train_test_logistic_reg(genned_data, genned_labels, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
 
 # Visualize distributions
 plot_scatter_matrix(genned_data, "Fake Data", wine.drop(columns='class'), scaler=scaler, save=exp_name)
@@ -141,8 +150,8 @@ plot_conditional_scatter(x_real=np.concatenate((x_train, x_test), axis=0),
                          y_real=np.concatenate((y_train, y_test), axis=0),
                          x_fake=genned_data,
                          y_fake=genned_labels,
-                         col1=2,
-                         col2=3,
+                         col1=11,
+                         col2=12,
                          class_dict=class_dict,
                          og_df=wine.drop(columns='class'),
                          scaler=scaler,
@@ -154,12 +163,10 @@ plot_conditional_density(x_real=np.concatenate((x_train, x_test), axis=0),
                          y_real=np.concatenate((y_train, y_test), axis=0),
                          x_fake=genned_data,
                          y_fake=genned_labels,
-                         col=1,
+                         col=10,
                          class_dict=class_dict,
                          og_df=wine.drop(columns='class'),
                          scaler=scaler,
                          save=exp_name)
 
 
-# Visualize output of tests
-fake_data_training_plots(real_range=bs, score_real=score_real, test_range=test_range, fake_scores=fake_scores, save=exp_name)
