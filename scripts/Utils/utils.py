@@ -68,7 +68,7 @@ def plot_training_progress(stored_scores, test_range, num_saves, save=None):
     plt.xlabel('Epoch', fontweight='bold')
     plt.xticks([r + barWidth for r in range(num_saves)], list(range(num_saves)))
     plt.title('Evaluation Over Training Epochs')
-    plt.legend(loc=3)
+    plt.legend(loc=4)
     plt.show()
 
     if save is not None:
@@ -127,7 +127,7 @@ def plot_scatter_matrix(X, title, og_df, scaler=None, cont_inputs=None, save=Non
         og_df = og_df.iloc[:, X_mask]
     if scaler:
         X = scaler.inverse_transform(X)
-    pd.plotting.scatter_matrix(pd.DataFrame(X, columns=og_df.columns), figsize=(15, 15))
+    pd.plotting.scatter_matrix(pd.DataFrame(X, columns=og_df.columns), figsize=(12, 12))
     plt.suptitle(title, fontsize='x-large')
     plt.show()
 

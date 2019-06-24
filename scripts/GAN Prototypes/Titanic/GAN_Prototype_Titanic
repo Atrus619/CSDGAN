@@ -1,6 +1,4 @@
-from scripts.Utils.data_loading import load_dataset
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from models.CGAN_titanic import CGAN_Generator, CGAN_Discriminator
 from scripts.Utils.utils import *
 import random
@@ -19,8 +17,27 @@ titanic.head()
 titanic = pd.get_dummies(titanic)
 titanic = pd.get_dummies(titanic, columns=['Pclass'])
 
+# Initialize masks for special data types
+continuous_inputs = ['Fare', 'Age', 'SibSp', 'Parch']
+cat_mask = ~np.array([x in continuous_inputs for x in titanic.drop(columns='Survived').columns])
+non_integer_inputs = ['Fare', 'Age']
+int_mask = ~np.array([x in non_integer_inputs for x in titanic.drop(columns='Survived').columns])
+
+# Rearrange so that non-integers go first
+cols = titanic.columns.tolist()
+cols_start = ['Survived'] + non_integer_inputs
+cols = cols_start + [x for x in cols if x not in cols_start]
+titanic = titanic[cols]
+
 # Split 50-50 so we can demonstrate the effectiveness of additional data
-x_train, x_test, y_train, y_test = train_test_split(titanic.drop(columns='Survived'), titanic['Survived'], test_size=445, stratify=titanic['Survived'], random_state=manualSeed)
+x_train, x_test, y_train, y_test = train_test_split(titanic.drop(columns='Survived'), titanic['Survived'],
+                                                    test_size=445, stratify=titanic['Survived'], random_state=manualSeed)
+
+# Scale continuous inputs
+x_train, scaler = scale_cont_inputs(x_train, continuous_inputs)
+x_train_tensor = torch.tensor(x_train, dtype=torch.float)
+y_train_dummies = pd.get_dummies(y_train)
+y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
 
 # Parameters
 nz = 64  # Size of generator noise input  # TODO: May need to mess around with this later
@@ -43,15 +60,8 @@ beta2 = 0.999
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 # device = 'cpu'
 
-# Scale continuous inputs
-continuous_inputs = ['SibSp', 'Parch', 'Fare', 'Age']
-x_train, scaler = scale_cont_inputs(x_train, continuous_inputs)
-x_train_tensor = torch.tensor(x_train, dtype=torch.float)
-y_train_dummies = pd.get_dummies(y_train)
-y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
-
 # Instantiate nets
-netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0).to(device)
+netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=cat_mask).to(device)
 netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, device=device, wd=0).to(device)
 
 # Print models
@@ -128,21 +138,21 @@ if best_score > score_real:
 else:
     print("Failure. GAN did not beat real data...")
 
-# Load best model
-best_netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0).to(device)
-best_netG.load_state_dict(torch.load(exp_name + "/best_netG.pt"))
-
 # Plot evaluation over time
 plot_training_progress(stored_scores=stored_scores, test_range=test_range, num_saves=len(stored_scores) // len(test_range), save=exp_name)
 
 # Example parsing a model for stats
-parse_models(stored_models=stored_models, epoch=9000, print_interval=print_interval, test_range=test_range,
-             ind=3, x_test=x_test, y_test=y_test, labels=labels_list)
+parse_models(stored_models=stored_models, epoch=0, print_interval=print_interval, test_range=test_range,
+             ind=14, x_test=x_test, y_test=y_test, labels=labels_list)
 
 # Output plots
 training_plots(netD=netD, netG=netG, num_epochs=num_epochs, save=exp_name)
 plot_layer_scatters(netG, title="Generator", save=exp_name)
 plot_layer_scatters(netD, title="Discriminator", save=exp_name)
+
+# Load best model
+best_netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=cat_mask).to(device)
+best_netG.load_state_dict(torch.load(exp_name + "/best_netG.pt"))
 
 # Generate one last set of fake data for diagnostics
 genned_data, genned_labels = gen_fake_data(netG=best_netG, bs=test_range[0], nz=nz, nc=nc, labels_list=labels_list, device=device)

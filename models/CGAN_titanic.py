@@ -6,12 +6,17 @@ import torch.optim as optim
 
 # Generator class
 class CGAN_Generator(nn.Module, NetUtils):
-    def __init__(self, device, nz, H, out_dim, nc, bs, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, device, nz, H, out_dim, nc, bs, lr=2e-4, beta1=0.5, beta2=0.999, wd=0, cat_mask=None):
         super(CGAN_Generator, self).__init__()
         self.device = device
         self.loss = None
         self.D_G_z2 = None
         self.fixed_noise = torch.randn(bs, nz, device=self.device)
+        self.scaler = scaler
+
+        # Masks
+        self.cat = torch.Tensor(cat_mask).nonzero()
+        self.cont = torch.Tensor(~cat_mask).nonzero()
 
         # Layers
         self.fc1 = nn.Linear(nz + nc, H, bias=True)
@@ -20,8 +25,10 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.fc3 = nn.Linear(H, H, bias=True)
         self.output = nn.Linear(H, out_dim, bias=True)
         self.act = nn.LeakyReLU(0.2)
+        self.sig = nn.Sigmoid()
 
         # Loss and Optimizer
+        # TODO: Try Wasserstein distance instead of BCE Loss
         self.loss_fn = nn.BCELoss()  # BCE Loss
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
@@ -37,7 +44,6 @@ class CGAN_Generator(nn.Module, NetUtils):
     def forward(self, noise, labels):
         """
         Single dense hidden layer network.
-        TODO: May want to adjust ReLU or add batch normalization later.
         :param noise: Random Noise vector Z
         :param labels: Label embedding
         :return: Row of data for iris data set (4 real values)
@@ -46,7 +52,29 @@ class CGAN_Generator(nn.Module, NetUtils):
         x = self.act(self.fc1(x))
         x = self.act(self.fc2(x))
         x = self.act(self.fc3(x))
-        return self.output(x)  # TODO: Make sure it is appropriate to not use an activation here
+        x = self.output(x)
+        return self.output_processing(x)
+
+    def output_processing(self, input_layer):
+        """
+        TODO: Softmax for each categorical variable - https://medium.com/jungle-book/towards-data-set-augmentation-with-gans-9dd64e9628e6
+        :param input_layer: fully connected input layer with size out_dim
+        :return: output of forward pass
+        """
+        cont = input_layer[:, self.cont].squeeze()
+        cont = self.scaler.inverse_transform(cont)
+
+        cat = input_layer[:, self.cat].squeeze()
+        cat = self.sig(cat)
+
+        halfway = torch.cat([cont, cat], 1)
+
+        ints = halfway[:, self.int_mask].squeeze()
+        ints = torch.round(ints)
+
+        non_ints = halfway[:, self.non_int_mask].squeeze()
+
+        return torch.cat([non_ints, ints], 1)
 
     def train_one_step(self, output, label):
         self.zero_grad()
@@ -95,9 +123,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
 
     def forward(self, row, labels):
         """
-        Single dense hidden layer network.
-        TODO: May want to adjust ReLU or add batch normalization later.
-        :param row: Row of data from iris data set (4 real values)
+        :param row: Row of input data to discriminate on
         :param labels: Label embedding
         :return: Binary classification (sigmoid activation on a single unit hidden layer)
         """

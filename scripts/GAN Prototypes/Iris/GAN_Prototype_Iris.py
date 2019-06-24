@@ -1,17 +1,8 @@
 from scripts.Utils.data_loading import load_dataset
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from models.CGAN_iris import CGAN_Generator, CGAN_Discriminator
 from scripts.Utils.utils import *
 import random
-
-# TODO: Add noise to discriminator inputs
-# TODO: Wasserstein
-# TODO: Feature matching
-# TODO: Debug to make sure CGAN is working as intended
-
-# TODO: Convert labels to torch.nn.embedding? https://torchgan.readthedocs.io/en/stable/_modules/torchgan/models/conditional.html#ConditionalGANGenerator
-# TODO: Possibly change how inputs are concatenated? I think I should add them at the start!
 
 # Set random seem for reproducibility
 manualSeed = 999

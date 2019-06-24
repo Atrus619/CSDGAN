@@ -1,6 +1,5 @@
 from scripts.Utils.data_loading import load_dataset
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from models.CGAN_wine import CGAN_Generator, CGAN_Discriminator
 from scripts.Utils.utils import *
 import random
