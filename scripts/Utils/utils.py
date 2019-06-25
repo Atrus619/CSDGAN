@@ -1,4 +1,5 @@
 import torch.nn as nn
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
@@ -396,3 +397,18 @@ def scale_cont_inputs(df, cont_inputs, scaler=None):
         df_cont = scaler.transform(df[cont_inputs])
     df_cat = df.drop(columns=cont_inputs)
     return np.concatenate((df_cont, df_cat), axis=1), scaler
+
+
+def encode_categoricals_custom(df, x_train, x_test, cat_inputs, cat_mask):
+    le_dict = {}
+    for x in cat_inputs:
+        le_dict[x] = LabelEncoder()
+        le_dict[x] = le_dict[x].fit(df[x])
+        x_train[x] = le_dict[x].transform(x_train[x])
+        x_test[x] = le_dict[x].transform(x_test[x])
+
+    ohe = OneHotEncoder(categorical_features=cat_mask, sparse=False)
+    ohe.fit(pd.concat([x_train, x_test], axis=0))
+    x_train = ohe.transform(x_train)
+    x_test = ohe.transform(x_test)
+    return le_dict, ohe, x_train, x_test

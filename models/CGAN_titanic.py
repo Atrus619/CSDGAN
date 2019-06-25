@@ -12,7 +12,6 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.loss = None
         self.D_G_z2 = None
         self.fixed_noise = torch.randn(bs, nz, device=self.device)
-        self.scaler = scaler
 
         # Masks
         self.cat = torch.Tensor(cat_mask).nonzero()
@@ -25,7 +24,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.fc3 = nn.Linear(H, H, bias=True)
         self.output = nn.Linear(H, out_dim, bias=True)
         self.act = nn.LeakyReLU(0.2)
-        self.sig = nn.Sigmoid()
+        self.sig = nn.Softmax()
 
         # Loss and Optimizer
         # TODO: Try Wasserstein distance instead of BCE Loss
@@ -62,9 +61,11 @@ class CGAN_Generator(nn.Module, NetUtils):
         :return: output of forward pass
         """
         cont = input_layer[:, self.cont].squeeze()
-        cont = self.scaler.inverse_transform(cont)
 
         cat = input_layer[:, self.cat].squeeze()
+        for c in cat.shape[1]:
+            pass
+            # tmp =
         cat = self.sig(cat)
 
         halfway = torch.cat([cont, cat], 1)

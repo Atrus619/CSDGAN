@@ -13,15 +13,21 @@ torch.manual_seed(manualSeed)
 titanic = pd.read_csv('data/titanic/cleaned.csv')
 titanic.head()
 
-# Let's convert all of our categorical variables to dummies
-titanic = pd.get_dummies(titanic)
-titanic = pd.get_dummies(titanic, columns=['Pclass'])
-
 # Initialize masks for special data types
-continuous_inputs = ['Fare', 'Age', 'SibSp', 'Parch']
-cat_mask = ~np.array([x in continuous_inputs for x in titanic.drop(columns='Survived').columns])
+cont_inputs = ['Fare', 'Age', 'SibSp', 'Parch']
+cat_inputs = np.array([x for x in titanic.drop(columns='Survived').columns if x not in cont_inputs])
+cat_mask = ~np.array([x in cont_inputs for x in titanic.drop(columns='Survived').columns])
 non_integer_inputs = ['Fare', 'Age']
 int_mask = ~np.array([x in non_integer_inputs for x in titanic.drop(columns='Survived').columns])
+
+# Split 50-50 so we can demonstrate the effectiveness of additional data
+x_train, x_test, y_train, y_test = train_test_split(titanic.drop(columns='Survived'), titanic['Survived'],
+                                                    test_size=445, stratify=titanic['Survived'], random_state=manualSeed)
+
+# Let's convert all of our categorical variables to dummies
+le_dict, ohe, x_train, x_test = encode_categoricals_custom(titanic, x_train, x_test, cat_inputs, cat_mask)
+
+# TODO: Update CGAN_titanic to create softmax per the transformations saved here...
 
 # Rearrange so that non-integers go first
 cols = titanic.columns.tolist()
@@ -29,12 +35,8 @@ cols_start = ['Survived'] + non_integer_inputs
 cols = cols_start + [x for x in cols if x not in cols_start]
 titanic = titanic[cols]
 
-# Split 50-50 so we can demonstrate the effectiveness of additional data
-x_train, x_test, y_train, y_test = train_test_split(titanic.drop(columns='Survived'), titanic['Survived'],
-                                                    test_size=445, stratify=titanic['Survived'], random_state=manualSeed)
-
 # Scale continuous inputs
-x_train, scaler = scale_cont_inputs(x_train, continuous_inputs)
+x_train, scaler = scale_cont_inputs(x_train, cont_inputs)
 x_train_tensor = torch.tensor(x_train, dtype=torch.float)
 y_train_dummies = pd.get_dummies(y_train)
 y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
