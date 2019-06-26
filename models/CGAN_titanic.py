@@ -6,12 +6,13 @@ import torch.optim as optim
 
 # Generator class
 class CGAN_Generator(nn.Module, NetUtils):
-    def __init__(self, device, nz, H, out_dim, nc, bs, lr=2e-4, beta1=0.5, beta2=0.999, wd=0, cat_mask=None):
+    def __init__(self, device, nz, H, out_dim, nc, bs, lr=2e-4, beta1=0.5, beta2=0.999, wd=0, cat_mask=None, le_dict=None):
         super(CGAN_Generator, self).__init__()
         self.device = device
         self.loss = None
         self.D_G_z2 = None
-        self.fixed_noise = torch.randn(bs, nz, device=self.device)
+        self.le_dict = le_dict
+        # self.fixed_noise = torch.randn(bs, nz, device=self.device)
 
         # Masks
         self.cat = torch.Tensor(cat_mask).nonzero()
@@ -24,7 +25,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.fc3 = nn.Linear(H, H, bias=True)
         self.output = nn.Linear(H, out_dim, bias=True)
         self.act = nn.LeakyReLU(0.2)
-        self.sig = nn.Softmax()
+        self.sm = nn.Softmax(dim=-1)
 
         # Loss and Optimizer
         # TODO: Try Wasserstein distance instead of BCE Loss
@@ -35,7 +36,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.layer_list = [self._modules[x] for x in self._modules if self._modules[x].__class__.__name__.find('Linear') != -1]  # Return list of linear layers
         self.init_hist()
         self.losses = []
-        self.fixed_noise_outputs = []
+        # self.fixed_noise_outputs = []
 
         # Initialize weights
         self.weights_init()
@@ -63,19 +64,14 @@ class CGAN_Generator(nn.Module, NetUtils):
         cont = input_layer[:, self.cont].squeeze()
 
         cat = input_layer[:, self.cat].squeeze()
-        for c in cat.shape[1]:
-            pass
-            # tmp =
-        cat = self.sig(cat)
+        catted = torch.empty_like(cat)
+        curr = 0
+        for _, le in self.le_dict.items():
+            newcurr = curr + len(le.classes_)
+            catted[:, curr:newcurr] = self.sm(cat[:, curr:newcurr])
+            curr = newcurr
 
-        halfway = torch.cat([cont, cat], 1)
-
-        ints = halfway[:, self.int_mask].squeeze()
-        ints = torch.round(ints)
-
-        non_ints = halfway[:, self.non_int_mask].squeeze()
-
-        return torch.cat([non_ints, ints], 1)
+        return torch.cat([catted, cont], 1)
 
     def train_one_step(self, output, label):
         self.zero_grad()

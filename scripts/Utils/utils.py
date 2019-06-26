@@ -389,14 +389,14 @@ def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
         f.savefig(save + '/layer_scatters/' + title + '_layer_scatter.png')
 
 
-def scale_cont_inputs(df, cont_inputs, scaler=None):
+def scale_cont_inputs(arr, preprocessed_cat_mask, scaler=None):
     if scaler is None:
         scaler = StandardScaler()
-        df_cont = scaler.fit_transform(df[cont_inputs])
+        arr_cont = scaler.fit_transform(arr[:, ~preprocessed_cat_mask])
     else:
-        df_cont = scaler.transform(df[cont_inputs])
-    df_cat = df.drop(columns=cont_inputs)
-    return np.concatenate((df_cont, df_cat), axis=1), scaler
+        arr_cont = scaler.transform(arr[:, ~preprocessed_cat_mask])
+    arr_cat = arr[:, preprocessed_cat_mask]
+    return np.concatenate((arr_cat, arr_cont), axis=1), scaler
 
 
 def encode_categoricals_custom(df, x_train, x_test, cat_inputs, cat_mask):
@@ -412,3 +412,22 @@ def encode_categoricals_custom(df, x_train, x_test, cat_inputs, cat_mask):
     x_train = ohe.transform(x_train)
     x_test = ohe.transform(x_test)
     return le_dict, ohe, x_train, x_test
+
+
+def create_preprocessed_cat_mask(le_dict, x_train):
+    count = 0
+    for _, le in le_dict.items():
+        count += len(le.classes_)
+    return np.concatenate([np.full(count, True), np.full(x_train.shape[1] - count, False)])
+
+
+def process_fake_output(raw_fake_output, le_dict):
+    curr = 0
+    new_fake_output = torch.empty_like(raw_fake_output)
+    for _, le in le_dict.items():
+        n = len(le.classes_)
+        newcurr = curr + n
+        max_idx = torch.argmax(raw_fake_output[:, curr:newcurr], 1)
+        new_fake_output[:, curr:newcurr] = torch.eye(n)[max_idx]
+        curr = newcurr
+    return new_fake_output

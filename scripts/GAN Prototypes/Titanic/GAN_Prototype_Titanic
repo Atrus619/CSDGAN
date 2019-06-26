@@ -13,9 +13,16 @@ torch.manual_seed(manualSeed)
 titanic = pd.read_csv('data/titanic/cleaned.csv')
 titanic.head()
 
-# Initialize masks for special data types
+# Rearrange so that categoricals go first
 cont_inputs = ['Fare', 'Age', 'SibSp', 'Parch']
 cat_inputs = np.array([x for x in titanic.drop(columns='Survived').columns if x not in cont_inputs])
+
+cols = titanic.columns.tolist()
+cols_start = ['Survived'] + list(cat_inputs)
+cols = cols_start + [x for x in cols if x not in cols_start]
+titanic = titanic[cols]
+
+# Initialize masks for special data types
 cat_mask = ~np.array([x in cont_inputs for x in titanic.drop(columns='Survived').columns])
 non_integer_inputs = ['Fare', 'Age']
 int_mask = ~np.array([x in non_integer_inputs for x in titanic.drop(columns='Survived').columns])
@@ -26,20 +33,16 @@ x_train, x_test, y_train, y_test = train_test_split(titanic.drop(columns='Surviv
 
 # Let's convert all of our categorical variables to dummies
 le_dict, ohe, x_train, x_test = encode_categoricals_custom(titanic, x_train, x_test, cat_inputs, cat_mask)
-
-# TODO: Update CGAN_titanic to create softmax per the transformations saved here...
-
-# Rearrange so that non-integers go first
-cols = titanic.columns.tolist()
-cols_start = ['Survived'] + non_integer_inputs
-cols = cols_start + [x for x in cols if x not in cols_start]
-titanic = titanic[cols]
+preprocessed_cat_mask = create_preprocessed_cat_mask(le_dict=le_dict, x_train=x_train)
 
 # Scale continuous inputs
-x_train, scaler = scale_cont_inputs(x_train, cont_inputs)
+x_train, scaler = scale_cont_inputs(x_train, preprocessed_cat_mask)
 x_train_tensor = torch.tensor(x_train, dtype=torch.float)
 y_train_dummies = pd.get_dummies(y_train)
 y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
+
+y_test_dummies = pd.get_dummies(y_test)
+x_test, _ = scale_cont_inputs(x_test, preprocessed_cat_mask, scaler=scaler)
 
 # Parameters
 nz = 64  # Size of generator noise input  # TODO: May need to mess around with this later
@@ -50,7 +53,7 @@ nc = 2  # 2 different types of label in this problem
 num_batches = 1
 num_epochs = 10000
 print_interval = 1000
-exp_name = 'experiments/titanic_3x32_wd_0'
+exp_name = 'experiments/titanic_3x32_wd_0_test_softmax'
 safe_mkdir(exp_name)
 
 # Adam optimizer hyperparameters
@@ -59,11 +62,11 @@ beta1 = 0.5
 beta2 = 0.999
 
 # Set the device
-device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-# device = 'cpu'
+# device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+device = 'cpu'
 
 # Instantiate nets
-netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=cat_mask).to(device)
+netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=preprocessed_cat_mask, le_dict=le_dict).to(device)
 netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, device=device, wd=0).to(device)
 
 # Print models
@@ -75,8 +78,6 @@ real_label = 1
 fake_label = 0
 
 # Train on real data
-y_test_dummies = pd.get_dummies(y_test)
-x_test, _ = scale_cont_inputs(x_test, continuous_inputs, scaler=scaler)
 labels_list = [x for x in y_train_dummies.columns]
 param_grid = {'tol': [1e-7],
               'C': [0.5],
@@ -106,6 +107,7 @@ for epoch in range(num_epochs):
         # All fake batch next
         noise = torch.randn(bs, nz, device=device)  # Generate batch of latent vectors
         fake = netG(noise, real_classes)  # Fake image batch with netG
+        fake = process_fake_output(fake, le_dict)  # TODO: Continue from here and make sure it's working!!!
         label.fill_(fake_label)
         output = netD(fake.detach(), real_classes).view(-1)
         netD.train_one_step_fake(output, label)
