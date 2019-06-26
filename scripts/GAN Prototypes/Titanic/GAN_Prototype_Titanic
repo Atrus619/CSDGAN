@@ -107,7 +107,7 @@ for epoch in range(num_epochs):
         # All fake batch next
         noise = torch.randn(bs, nz, device=device)  # Generate batch of latent vectors
         fake = netG(noise, real_classes)  # Fake image batch with netG
-        fake = process_fake_output(fake, le_dict)  # TODO: Continue from here and make sure it's working!!!
+        # fake = process_fake_output(fake, le_dict)
         label.fill_(fake_label)
         output = netD(fake.detach(), real_classes).view(-1)
         netD.train_one_step_fake(output, label)
@@ -128,7 +128,7 @@ for epoch in range(num_epochs):
             # Generate various levels of amounts of fake data and test how training compares
             tmp_models, tmp_scores = evaluate_training_progress(test_range=test_range, fake_bs=bs, nz=nz, nc=nc, out_dim=out_dim, netG=netG,
                                                                 x_test=x_test, y_test=y_test, manualSeed=manualSeed, labels_list=labels_list,
-                                                                param_grid=param_grid, device=device)
+                                                                param_grid=param_grid, device=device, le_dict=le_dict)
         if max(tmp_scores) > best_score:
             best_score = max(tmp_scores)
             torch.save(netG.state_dict(), exp_name + "/best_netG.pt")
@@ -155,16 +155,16 @@ plot_layer_scatters(netG, title="Generator", save=exp_name)
 plot_layer_scatters(netD, title="Discriminator", save=exp_name)
 
 # Load best model
-best_netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=cat_mask).to(device)
+best_netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=preprocessed_cat_mask, le_dict=le_dict).to(device)
 best_netG.load_state_dict(torch.load(exp_name + "/best_netG.pt"))
 
 # Generate one last set of fake data for diagnostics
 genned_data, genned_labels = gen_fake_data(netG=best_netG, bs=test_range[0], nz=nz, nc=nc, labels_list=labels_list, device=device)
 model_fake, score_fake = train_test_logistic_reg(genned_data, genned_labels, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
 
-# Visualize distributions
-plot_scatter_matrix(genned_data, "Fake Data", titanic.drop(columns='Survived'), scaler=scaler, cont_inputs=continuous_inputs, save=exp_name)
-plot_scatter_matrix(titanic.drop(columns='Survived'), "Real Data", titanic.drop(columns='Survived'), scaler=None, cont_inputs=continuous_inputs, save=exp_name)
+# Visualize distributions  # TODO: Get this part working
+plot_scatter_matrix(genned_data[:, ~preprocessed_cat_mask], "Fake Data", titanic[cont_inputs], scaler=scaler, save=exp_name)
+plot_scatter_matrix(titanic[cont_inputs], "Real Data", titanic[cont_inputs], scaler=None, save=exp_name)
 
 # Conditional scatters
 # Class dict

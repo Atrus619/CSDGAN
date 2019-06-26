@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from models.NetUtils import NetUtils
+from models.NetUtils import NetUtils, CustomCatGANLayer
 import torch.optim as optim
 
 
@@ -11,21 +11,18 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.device = device
         self.loss = None
         self.D_G_z2 = None
-        self.le_dict = le_dict
+        self.CCGL = CustomCatGANLayer(cat_mask=cat_mask, le_dict=le_dict)
+        self.out_dim = out_dim
         # self.fixed_noise = torch.randn(bs, nz, device=self.device)
-
-        # Masks
-        self.cat = torch.Tensor(cat_mask).nonzero()
-        self.cont = torch.Tensor(~cat_mask).nonzero()
 
         # Layers
         self.fc1 = nn.Linear(nz + nc, H, bias=True)
         # self.fc1_bn = nn.BatchNorm1d(H)
         self.fc2 = nn.Linear(H, H, bias=True)
         self.fc3 = nn.Linear(H, H, bias=True)
-        self.output = nn.Linear(H, out_dim, bias=True)
+        self.output = nn.Linear(H, self.out_dim, bias=True)
         self.act = nn.LeakyReLU(0.2)
-        self.sm = nn.Softmax(dim=-1)
+        self.sm = nn.Softmax(dim=-2)
 
         # Loss and Optimizer
         # TODO: Try Wasserstein distance instead of BCE Loss
@@ -53,25 +50,8 @@ class CGAN_Generator(nn.Module, NetUtils):
         x = self.act(self.fc2(x))
         x = self.act(self.fc3(x))
         x = self.output(x)
-        return self.output_processing(x)
-
-    def output_processing(self, input_layer):
-        """
-        TODO: Softmax for each categorical variable - https://medium.com/jungle-book/towards-data-set-augmentation-with-gans-9dd64e9628e6
-        :param input_layer: fully connected input layer with size out_dim
-        :return: output of forward pass
-        """
-        cont = input_layer[:, self.cont].squeeze()
-
-        cat = input_layer[:, self.cat].squeeze()
-        catted = torch.empty_like(cat)
-        curr = 0
-        for _, le in self.le_dict.items():
-            newcurr = curr + len(le.classes_)
-            catted[:, curr:newcurr] = self.sm(cat[:, curr:newcurr])
-            curr = newcurr
-
-        return torch.cat([catted, cont], 1)
+        x = self.CCGL(x)
+        return x.view(-1, self.out_dim)
 
     def train_one_step(self, output, label):
         self.zero_grad()

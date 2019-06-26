@@ -1,4 +1,5 @@
-import torch as nn
+import torch.nn as nn
+import torch
 
 
 # Contains utils to be inherited by other nets in this project
@@ -59,3 +60,33 @@ class NetUtils:
         elif classname.find('BatchNorm') != -1:
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant_(m.bias.data, 0)
+
+
+class CustomCatGANLayer(nn.Module):
+    def __init__(self, cat_mask, le_dict):
+        super(CustomCatGANLayer, self).__init__()
+        # Softmax activation
+        self.sm = nn.Softmax(dim=-2)
+        # Masks
+        self.cat = torch.Tensor(cat_mask).nonzero()
+        self.cont = torch.Tensor(~cat_mask).nonzero()
+        # Label encoding dictionary
+        self.le_dict = le_dict
+
+    def forward(self, input_layer):
+        """
+        Softmax for each categorical variable - https://medium.com/jungle-book/towards-data-set-augmentation-with-gans-9dd64e9628e6
+        :param input_layer: fully connected input layer with size out_dim
+        :return: output of forward pass
+        """
+        cont = input_layer[:, self.cont]
+
+        cat = input_layer[:, self.cat]
+        catted = torch.empty_like(cat)
+        curr = 0
+        for _, le in self.le_dict.items():
+            newcurr = curr + len(le.classes_)
+            catted[:, curr:newcurr] = self.sm(cat[:, curr:newcurr])
+            curr = newcurr
+
+        return torch.cat([catted, cont], 1)

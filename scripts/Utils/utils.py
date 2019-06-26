@@ -36,7 +36,7 @@ def gen_fake_data(netG, bs, nz, nc, labels_list, device):
 
 
 # Train a model on fake data and evaluate on test data in order to evaluate network as it trains
-def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_test, y_test, manualSeed, labels_list, param_grid, device):
+def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_test, y_test, manualSeed, labels_list, param_grid, device, le_dict=None):
     fake_scores = []
     fake_models = []
     for size in test_range:
@@ -49,6 +49,8 @@ def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_tes
             rem -= curr_size
             genned_data = np.concatenate((genned_data, fake_data))
             genned_labels = np.concatenate((genned_labels, output_labels))
+        if le_dict is not None:
+            genned_data = process_fake_output(genned_data, le_dict)
         model_fake_tmp, score_fake_tmp = train_test_logistic_reg(x_train=genned_data, y_train=genned_labels, x_test=x_test, y_test=y_test,
                                                                  param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list, verbose=0)
         fake_models.append(model_fake_tmp)
@@ -121,11 +123,7 @@ def gen_labels(size, num_classes, labels_list):
 
 
 # Plots scatter matrix of data set (real or fake)
-def plot_scatter_matrix(X, title, og_df, scaler=None, cont_inputs=None, save=None):
-    if cont_inputs:
-        X_mask = np.array([x in cont_inputs for x in og_df.columns])
-        X = np.array(X)[:, X_mask]
-        og_df = og_df.iloc[:, X_mask]
+def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
     if scaler:
         X = scaler.inverse_transform(X)
     pd.plotting.scatter_matrix(pd.DataFrame(X, columns=og_df.columns), figsize=(12, 12))
@@ -423,11 +421,11 @@ def create_preprocessed_cat_mask(le_dict, x_train):
 
 def process_fake_output(raw_fake_output, le_dict):
     curr = 0
-    new_fake_output = torch.empty_like(raw_fake_output)
+    new_fake_output = np.copy(raw_fake_output)
     for _, le in le_dict.items():
         n = len(le.classes_)
         newcurr = curr + n
-        max_idx = torch.argmax(raw_fake_output[:, curr:newcurr], 1)
-        new_fake_output[:, curr:newcurr] = torch.eye(n)[max_idx]
+        max_idx = np.argmax(raw_fake_output[:, curr:newcurr], 1)
+        new_fake_output[:, curr:newcurr] = np.eye(n)[max_idx]
         curr = newcurr
     return new_fake_output
