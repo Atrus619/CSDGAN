@@ -14,8 +14,9 @@ titanic = pd.read_csv('data/titanic/cleaned.csv')
 titanic.head()
 
 # Rearrange so that categoricals go first
-cont_inputs = ['Fare', 'Age', 'SibSp', 'Parch']
+cont_inputs = ['SibSp', 'Parch', 'Fare', 'Age']
 cat_inputs = np.array([x for x in titanic.drop(columns='Survived').columns if x not in cont_inputs])
+int_inputs = ['SibSp', 'Parch']
 
 cols = titanic.columns.tolist()
 cols_start = ['Survived'] + list(cat_inputs)
@@ -24,8 +25,6 @@ titanic = titanic[cols]
 
 # Initialize masks for special data types
 cat_mask = ~np.array([x in cont_inputs for x in titanic.drop(columns='Survived').columns])
-non_integer_inputs = ['Fare', 'Age']
-int_mask = ~np.array([x in non_integer_inputs for x in titanic.drop(columns='Survived').columns])
 
 # Split 50-50 so we can demonstrate the effectiveness of additional data
 x_train, x_test, y_train, y_test = train_test_split(titanic.drop(columns='Survived'), titanic['Survived'],
@@ -159,14 +158,32 @@ best_netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=dev
 best_netG.load_state_dict(torch.load(exp_name + "/best_netG.pt"))
 
 # Generate one last set of fake data for diagnostics
-genned_data, genned_labels = gen_fake_data(netG=best_netG, bs=test_range[0], nz=nz, nc=nc, labels_list=labels_list, device=device)
-model_fake, score_fake = train_test_logistic_reg(genned_data, genned_labels, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
+genned_data, genned_labels = gen_fake_data(netG=best_netG, bs=test_range[0], nz=nz, nc=nc, labels_list=labels_list, device=device, stratify=[0.8, 0.2])
+genned_data = process_fake_output(genned_data, le_dict)
+model_fake, score_fake = train_test_logistic_reg(genned_data, genned_labels, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed,
+                                                 labels=labels_list)
 
-# Visualize distributions  # TODO: Get this part working
-plot_scatter_matrix(genned_data[:, ~preprocessed_cat_mask], "Fake Data", titanic[cont_inputs], scaler=scaler, save=exp_name)
+# Transform fake data back to original form
+genned_data_df = fully_process_fake_output(processed_fake_output=genned_data,
+                                           genned_labels=genned_labels,
+                                           label_name='Survived',
+                                           preprocessed_cat_mask=preprocessed_cat_mask,
+                                           ohe=ohe,
+                                           le_dict=le_dict,
+                                           scaler=scaler,
+                                           cat_inputs=cat_inputs,
+                                           cont_inputs=cont_inputs,
+                                           int_inputs=int_inputs)
+# Visualize distributions
+plot_scatter_matrix(genned_data_df[cont_inputs], "Fake Data", titanic[cont_inputs], scaler=None, save=exp_name)
 plot_scatter_matrix(titanic[cont_inputs], "Real Data", titanic[cont_inputs], scaler=None, save=exp_name)
 
-# Conditional scatters
+# Visualize categoricals
+sns.catplot(data=titanic, x='Sex', y='Survived', hue='Pclass', kind='bar')
+sns.catplot(data=genned_data_df, x='Sex', y='Survived', hue='Pclass', kind='bar')
+compare_cats(real=titanic, fake=genned_data_df, x='Sex', y='Survived', hue='Pclass', save=exp_name)
+
+# Conditional scatters  # TODO: Fix this up, then get experimenting for performance!
 # Class dict
 class_dict = {1: ('Class 1', 'r'),
               2: ('Class 2', 'b'),

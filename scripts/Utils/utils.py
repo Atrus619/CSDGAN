@@ -11,6 +11,7 @@ import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import random
 
 
 # Helper function to set working directory to the primary one
@@ -27,12 +28,39 @@ def safe_mkdir(path):
         pass
 
 
-def gen_fake_data(netG, bs, nz, nc, labels_list, device):
+def gen_fake_data(netG, bs, nz, nc, labels_list, device, stratify=None):
     noise = torch.randn(bs, nz, device=device)
-    fake_labels, output_labels = gen_labels(size=bs, num_classes=nc, labels_list=labels_list)
+    fake_labels, output_labels = gen_labels(size=bs, num_classes=nc, labels_list=labels_list, stratify=stratify)
     fake_labels = fake_labels.to(device)
     fake_data = netG(noise, fake_labels).cpu().detach().numpy()
     return fake_data, output_labels
+
+
+# Helper function to generate a labeled tensor for the CGAN based on an equal distribution of classes
+def gen_labels(size, num_classes, labels_list, stratify=None):
+    if stratify is None:
+        assert size // num_classes == size / num_classes, "Make sure size is divisible by num_classes"
+        stratify = np.full(num_classes, 1 / num_classes)
+    else:
+        assert np.sum(stratify) == 1, "Make sure stratify sums to 1"
+    counts = np.round(np.dot(stratify, size), decimals=0).astype('int')
+    while np.sum(counts) != size:
+        if np.sum(counts) > size:
+            counts[random.choice(range(num_classes))] -= 1
+        else:
+            counts[random.choice(range(num_classes))] += 1
+    output_one_hot = np.empty((0, num_classes))
+    one_hot = pd.get_dummies(labels_list)
+    output_labels = np.empty(0)
+    for i in range(num_classes):
+        tmp_one_hot = np.empty((counts[i], num_classes))
+        tmp_labels = np.full(counts[i], labels_list[i])
+        output_labels = np.concatenate((output_labels, tmp_labels), axis=0)
+        for j in range(num_classes):
+            tmp_one_hot[:, j] = one_hot.iloc[i, j]
+        output_one_hot = np.concatenate((output_one_hot, tmp_one_hot), axis=0)
+        output_one_hot = torch.tensor(output_one_hot, dtype=torch.float)
+    return [output_one_hot, output_labels]
 
 
 # Train a model on fake data and evaluate on test data in order to evaluate network as it trains
@@ -103,23 +131,6 @@ def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, 
         print(classification_report(y_test, predictions, labels=labels))
         print(confusion_matrix(np.array(y_test), predictions, labels=labels))
     return [lr_cv, best_score]
-
-
-# Helper function to generate a labeled tensor for the CGAN based on an equal distribution of classes
-def gen_labels(size, num_classes, labels_list):
-    assert size // num_classes == size / num_classes, "Make sure size is divisible by num_classes"
-    output_one_hot = np.empty((0, num_classes))
-    one_hot = pd.get_dummies(labels_list)
-    output_labels = np.empty(0)
-    for i in range(num_classes):
-        tmp_one_hot = np.empty((size // num_classes, num_classes))
-        tmp_labels = np.full((size // num_classes), labels_list[i])
-        output_labels = np.concatenate((output_labels, tmp_labels), axis=0)
-        for j in range(num_classes):
-            tmp_one_hot[:, j] = one_hot.iloc[i, j]
-        output_one_hot = np.concatenate((output_one_hot, tmp_one_hot), axis=0)
-        output_one_hot = torch.tensor(output_one_hot, dtype=torch.float)
-    return [output_one_hot, output_labels]
 
 
 # Plots scatter matrix of data set (real or fake)
@@ -429,3 +440,53 @@ def process_fake_output(raw_fake_output, le_dict):
         new_fake_output[:, curr:newcurr] = np.eye(n)[max_idx]
         curr = newcurr
     return new_fake_output
+
+
+def fully_process_fake_output(processed_fake_output, genned_labels, label_name, preprocessed_cat_mask, ohe, le_dict, scaler, cat_inputs, cont_inputs, int_inputs):
+    df = pd.DataFrame(index=range(processed_fake_output.shape[0]), columns=list(cat_inputs) + list(cont_inputs))
+
+    # Split into cat and cont variables
+    cat_arr = processed_fake_output[:, preprocessed_cat_mask]
+    cont_arr = processed_fake_output[:, ~preprocessed_cat_mask]
+
+    # Inverse transform categorical variables
+    numerics = ohe.inverse_transform(cat_arr)
+    for i, le in enumerate(le_dict.items()):
+        df[le[0]] = le[1].inverse_transform(numerics[:, i].astype('int'))
+
+    # Inverse transform continuous variables
+    og_cont_arr = scaler.inverse_transform(cont_arr)
+    df[cont_inputs] = og_cont_arr
+
+    # Round integer inputs
+    df[int_inputs] = df[int_inputs].round(decimals=0)
+
+    # Add labels
+    df[label_name] = genned_labels
+
+    return df
+
+
+def compare_cats(real, fake, x, y, hue, save=None):
+    f, axes = plt.subplots(1, 2, figsize=(8, 8), sharey=True)
+
+    axes[0].title.set_text('Fake Data')
+    axes[1].title.set_text('Real Data')
+
+    sns.catplot(data=real, x=x, y=y, hue=hue, kind='bar', ax=axes[0])
+    sns.catplot(data=fake, x=x, y=y, hue=hue, kind='bar', ax=axes[1])
+
+    sup = "Comparing {0} by {1} and {2}".format(y, x, hue)
+    st = f.suptitle(sup, fontsize='x-large')
+    f.tight_layout()
+    st.set_y(0.96)
+    f.subplots_adjust(top=0.9)
+
+    # Quick n' dirty solution to sns.catplot creating its own blank subplots
+    plt.close(2)
+    plt.close(3)
+    f.show()
+
+    if save is not None:
+        safe_mkdir(save + '/compare_cats')
+        f.savefig(save + '/compare_cats/' + x + '_' + hue + '_cat_comparison.png')
