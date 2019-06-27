@@ -36,7 +36,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         # self.fixed_noise_outputs = []
 
         # Initialize weights
-        self.weights_init()
+        self.custom_weights_init()
 
     def forward(self, noise, labels):
         """
@@ -64,6 +64,16 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.update_gnormz(2)
         self.update_wnormz(2)
         self.losses.append(self.loss.item())
+
+    def custom_weights_init(self):
+        for layer_name in self._modules:
+            m = self._modules[layer_name]
+            classname = m.__class__.__name__
+            if classname.find('Linear') != -1:
+                nn.init.uniform_(m.weight.data, -0.5, 0.5)
+            elif classname.find('BatchNorm') != -1:
+                nn.init.normal_(m.weight.data, 1.0, 0.02)
+                nn.init.constant_(m.bias.data, 0)
 
 
 # Discriminator class

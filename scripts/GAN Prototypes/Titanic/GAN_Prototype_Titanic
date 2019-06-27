@@ -13,7 +13,7 @@ torch.manual_seed(manualSeed)
 titanic = pd.read_csv('data/titanic/cleaned.csv')
 titanic.head()
 
-# Rearrange so that categoricals go first
+# Rearrange so that categorical vars go first
 cont_inputs = ['SibSp', 'Parch', 'Fare', 'Age']
 cat_inputs = np.array([x for x in titanic.drop(columns='Survived').columns if x not in cont_inputs])
 int_inputs = ['SibSp', 'Parch']
@@ -52,7 +52,7 @@ nc = 2  # 2 different types of label in this problem
 num_batches = 1
 num_epochs = 10000
 print_interval = 1000
-exp_name = 'experiments/titanic_3x32_wd_0_test_softmax'
+exp_name = 'experiments/titanic_3x32_wd_0_uniform_init_only_gen2'
 safe_mkdir(exp_name)
 
 # Adam optimizer hyperparameters
@@ -61,8 +61,8 @@ beta1 = 0.5
 beta2 = 0.999
 
 # Set the device
-# device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-device = 'cpu'
+device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+# device = 'cpu'
 
 # Instantiate nets
 netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=preprocessed_cat_mask, le_dict=le_dict).to(device)
@@ -76,9 +76,13 @@ print(netD)
 real_label = 1
 fake_label = 0
 
+# Stratification
+train_avg = y_train.mean()
+stratify = [1-train_avg, train_avg]
+
 # Train on real data
 labels_list = [x for x in y_train_dummies.columns]
-param_grid = {'tol': [1e-7],
+param_grid = {'tol': [1e-5],
               'C': [0.5],
               'l1_ratio': [0]}
 model_real, score_real = train_test_logistic_reg(x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test,
@@ -127,7 +131,7 @@ for epoch in range(num_epochs):
             # Generate various levels of amounts of fake data and test how training compares
             tmp_models, tmp_scores = evaluate_training_progress(test_range=test_range, fake_bs=bs, nz=nz, nc=nc, out_dim=out_dim, netG=netG,
                                                                 x_test=x_test, y_test=y_test, manualSeed=manualSeed, labels_list=labels_list,
-                                                                param_grid=param_grid, device=device, le_dict=le_dict)
+                                                                param_grid=param_grid, device=device, le_dict=le_dict, stratify=stratify)
         if max(tmp_scores) > best_score:
             best_score = max(tmp_scores)
             torch.save(netG.state_dict(), exp_name + "/best_netG.pt")
@@ -142,11 +146,12 @@ else:
     print("Failure. GAN did not beat real data...")
 
 # Plot evaluation over time
-plot_training_progress(stored_scores=stored_scores, test_range=test_range, num_saves=len(stored_scores) // len(test_range), save=exp_name)
+plot_training_progress(stored_scores=stored_scores, test_range=test_range, num_saves=len(stored_scores) // len(test_range),
+                       real_data_score=score_real, save=exp_name)
 
 # Example parsing a model for stats
 parse_models(stored_models=stored_models, epoch=0, print_interval=print_interval, test_range=test_range,
-             ind=14, x_test=x_test, y_test=y_test, labels=labels_list)
+             ind=49, x_test=x_test, y_test=y_test, labels=labels_list)
 
 # Output plots
 training_plots(netD=netD, netG=netG, num_epochs=num_epochs, save=exp_name)
@@ -158,7 +163,7 @@ best_netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=dev
 best_netG.load_state_dict(torch.load(exp_name + "/best_netG.pt"))
 
 # Generate one last set of fake data for diagnostics
-genned_data, genned_labels = gen_fake_data(netG=best_netG, bs=test_range[0], nz=nz, nc=nc, labels_list=labels_list, device=device, stratify=[0.8, 0.2])
+genned_data, genned_labels = gen_fake_data(netG=best_netG, bs=test_range[3], nz=nz, nc=nc, labels_list=labels_list, device=device, stratify=stratify)
 genned_data = process_fake_output(genned_data, le_dict)
 model_fake, score_fake = train_test_logistic_reg(genned_data, genned_labels, x_test, y_test, param_grid=param_grid, cv=5, random_state=manualSeed,
                                                  labels=labels_list)
@@ -179,36 +184,33 @@ plot_scatter_matrix(genned_data_df[cont_inputs], "Fake Data", titanic[cont_input
 plot_scatter_matrix(titanic[cont_inputs], "Real Data", titanic[cont_inputs], scaler=None, save=exp_name)
 
 # Visualize categoricals
-sns.catplot(data=titanic, x='Sex', y='Survived', hue='Pclass', kind='bar')
-sns.catplot(data=genned_data_df, x='Sex', y='Survived', hue='Pclass', kind='bar')
 compare_cats(real=titanic, fake=genned_data_df, x='Sex', y='Survived', hue='Pclass', save=exp_name)
 
-# Conditional scatters  # TODO: Fix this up, then get experimenting for performance!
+# Conditional scatters
 # Class dict
-class_dict = {1: ('Class 1', 'r'),
-              2: ('Class 2', 'b'),
-              3: ('Class 3', 'g')}
-plot_conditional_scatter(x_real=np.concatenate((x_train, x_test), axis=0),
-                         y_real=np.concatenate((y_train, y_test), axis=0),
-                         x_fake=genned_data,
-                         y_fake=genned_labels,
-                         col1=11,
-                         col2=12,
+class_dict = {0: ('Died', 'r'),
+              1: ('Survived', 'b')}
+plot_conditional_scatter(x_real=titanic[cont_inputs].values,
+                         y_real=titanic['Survived'].values,
+                         x_fake=genned_data_df[cont_inputs].values,
+                         y_fake=genned_data_df['Survived'].values,
+                         col1=1,
+                         col2=2,
                          class_dict=class_dict,
-                         og_df=wine.drop(columns='class'),
-                         scaler=scaler,
+                         og_df=titanic[cont_inputs],
+                         scaler=None,
                          alpha=0.25,
                          save=exp_name)
 
 # Conditional densities
-plot_conditional_density(x_real=np.concatenate((x_train, x_test), axis=0),
-                         y_real=np.concatenate((y_train, y_test), axis=0),
-                         x_fake=genned_data,
-                         y_fake=genned_labels,
-                         col=10,
+plot_conditional_density(x_real=titanic[cont_inputs].values,
+                         y_real=titanic['Survived'].values,
+                         x_fake=genned_data_df[cont_inputs].values,
+                         y_fake=genned_data_df['Survived'].values,
+                         col=1,
                          class_dict=class_dict,
-                         og_df=wine.drop(columns='class'),
-                         scaler=scaler,
+                         og_df=titanic[cont_inputs],
+                         scaler=None,
                          save=exp_name)
 
 

@@ -64,7 +64,7 @@ def gen_labels(size, num_classes, labels_list, stratify=None):
 
 
 # Train a model on fake data and evaluate on test data in order to evaluate network as it trains
-def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_test, y_test, manualSeed, labels_list, param_grid, device, le_dict=None):
+def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_test, y_test, manualSeed, labels_list, param_grid, device, le_dict=None, stratify=None):
     fake_scores = []
     fake_models = []
     for size in test_range:
@@ -73,7 +73,7 @@ def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_tes
         rem = size
         while rem > 0:
             curr_size = min(fake_bs, rem)
-            fake_data, output_labels = gen_fake_data(netG=netG, bs=curr_size, nz=nz, nc=nc, labels_list=labels_list, device=device)
+            fake_data, output_labels = gen_fake_data(netG=netG, bs=curr_size, nz=nz, nc=nc, labels_list=labels_list, device=device, stratify=stratify)
             rem -= curr_size
             genned_data = np.concatenate((genned_data, fake_data))
             genned_labels = np.concatenate((genned_labels, output_labels))
@@ -86,8 +86,23 @@ def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_tes
     return fake_models, fake_scores
 
 
+# Helper function to repeatedly test and print outputs for a logistic regression
+def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None, verbose=1):
+    lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
+    lr_cv = GridSearchCV(lr, param_grid=param_grid, n_jobs=-1, cv=cv, iid=True)
+    lr_cv.fit(x_train, y_train)
+    best_score = lr_cv.score(x_test, y_test)
+    predictions = lr_cv.predict(x_test)
+    if verbose == 1:
+        print("Accuracy:", best_score)
+        print("Best Parameters:", lr_cv.best_params_)
+        print(classification_report(y_test, predictions, labels=labels))
+        print(confusion_matrix(np.array(y_test), predictions, labels=labels))
+    return [lr_cv, best_score]
+
+
 # Plot progress so far on training
-def plot_training_progress(stored_scores, test_range, num_saves, save=None):
+def plot_training_progress(stored_scores, test_range, num_saves, real_data_score, save=None):
     ys = np.empty((num_saves, len(test_range)))
     xs = np.empty((num_saves, len(test_range)))
     barWidth = 1 / (len(test_range) + 1)
@@ -96,6 +111,8 @@ def plot_training_progress(stored_scores, test_range, num_saves, save=None):
         xs[:, i] = np.arange(num_saves) + barWidth * i
         plt.bar(xs[:, i], ys[:, i], width=barWidth, edgecolor='white', label=test_range[i])
 
+    line_len = 2*len(test_range)+1
+    plt.plot(np.linspace(0, line_len, line_len), np.full(line_len, real_data_score), linestyle='dashed', color='r')
     plt.xlabel('Epoch', fontweight='bold')
     plt.xticks([r + barWidth for r in range(num_saves)], list(range(num_saves)))
     plt.title('Evaluation Over Training Epochs')
@@ -116,21 +133,6 @@ def parse_models(stored_models, epoch, print_interval, test_range, ind, x_test, 
     print("Best Parameters:", tmp_model.best_params_)
     print(classification_report(y_test, predictions, labels=labels))
     print(confusion_matrix(y_test, predictions, labels=labels))
-
-
-# Helper function to repeatedly test and print outputs for a logistic regression
-def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None, verbose=1):
-    lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
-    lr_cv = GridSearchCV(lr, param_grid=param_grid, n_jobs=-1, cv=cv)
-    lr_cv.fit(x_train, y_train)
-    best_score = lr_cv.score(x_test, y_test)
-    predictions = lr_cv.predict(x_test)
-    if verbose == 1:
-        print("Accuracy:", best_score)
-        print("Best Parameters:", lr_cv.best_params_)
-        print(classification_report(y_test, predictions, labels=labels))
-        print(confusion_matrix(np.array(y_test), predictions, labels=labels))
-    return [lr_cv, best_score]
 
 
 # Plots scatter matrix of data set (real or fake)
@@ -443,7 +445,10 @@ def process_fake_output(raw_fake_output, le_dict):
 
 
 def fully_process_fake_output(processed_fake_output, genned_labels, label_name, preprocessed_cat_mask, ohe, le_dict, scaler, cat_inputs, cont_inputs, int_inputs):
-    df = pd.DataFrame(index=range(processed_fake_output.shape[0]), columns=list(cat_inputs) + list(cont_inputs))
+    df = pd.DataFrame(index=range(processed_fake_output.shape[0]), columns=[label_name] + list(cat_inputs) + list(cont_inputs))
+
+    # Add labels
+    df[label_name] = genned_labels.astype('int')
 
     # Split into cat and cont variables
     cat_arr = processed_fake_output[:, preprocessed_cat_mask]
@@ -459,16 +464,13 @@ def fully_process_fake_output(processed_fake_output, genned_labels, label_name, 
     df[cont_inputs] = og_cont_arr
 
     # Round integer inputs
-    df[int_inputs] = df[int_inputs].round(decimals=0)
-
-    # Add labels
-    df[label_name] = genned_labels
+    df[int_inputs] = df[int_inputs].round(decimals=0).astype('int')
 
     return df
 
 
 def compare_cats(real, fake, x, y, hue, save=None):
-    f, axes = plt.subplots(1, 2, figsize=(8, 8), sharey=True)
+    f, axes = plt.subplots(1, 2, figsize=(8, 8), sharey=True, sharex=True)
 
     axes[0].title.set_text('Fake Data')
     axes[1].title.set_text('Real Data')

@@ -53,13 +53,15 @@ class NetUtils:
         self.wnorm_total_hist.append(total_norm)
 
     # Custom weights initialization called on Generator and Discriminator
-    def weights_init(m):
-        classname = m.__class__.__name__
-        if classname.find('Linear') != -1:  # TODO: May need to mess around with this later
-            nn.init.normal_(m.weight.data, 0.0, 0.02)
-        elif classname.find('BatchNorm') != -1:
-            nn.init.normal_(m.weight.data, 1.0, 0.02)
-            nn.init.constant_(m.bias.data, 0)
+    def weights_init(self):
+        for layer_name in self._modules:
+            m = self._modules[layer_name]
+            classname = m.__class__.__name__
+            if classname.find('Linear') != -1:  # TODO: May need to mess around with this later
+                nn.init.normal_(m.weight.data, 0.0, 0.02)
+            elif classname.find('BatchNorm') != -1:
+                nn.init.normal_(m.weight.data, 1.0, 0.02)
+                nn.init.constant_(m.bias.data, 0)
 
 
 class CustomCatGANLayer(nn.Module):
