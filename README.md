@@ -16,9 +16,9 @@ The two most important applications of generating synthetic data are as follows:
 
 ## Getting Started
 1. Fork the project
-2. Clone the repository: '$git clone https://github.com/Atrus619/Synthetic_Data_GAN_Capstone'
-3. Create a virtual environment: '$python3 -m venv /path/to/new/virtual/env'
-4. Install dependencies: '$pip install -r requirements.txt'
+2. Clone the repository: `$git clone https://github.com/Atrus619/Synthetic_Data_GAN_Capstone`
+3. Create a virtual environment: `$python3 -m venv /path/to/new/virtual/env`
+4. Install dependencies: `$pip install -r requirements.txt`
 
 While it helps to have a GPU, most of these models will train on a CPU without a noticeable decrease in computation time. In fact, depending on your CPU, some of these models are actually trained faster on a CPU.
 
