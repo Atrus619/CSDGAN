@@ -33,13 +33,16 @@ The code contains helper functions to automatically download the data sets and s
 Add information about virtual environment and loading dependencies
 
 ## How to Use?
-TBD
+While all of the code is yours to explore, I recommend starting out by checking out the notebooks included in the scripts folder. 
+1. The Exploration Notebooks walk through the EDA of each data set, as well as some of the cleaning/preprocessing involved before training the models.
+2. The CGAN Notebooks walk through how to train the successful GAN models. 
+3. From there, you are free to dive into the model architectures themselves (contained in the models folder), as well as the various helper functions used to visualize and better understand the training process and model quality.
 
 ## How to Contribute
-TBD
+I would love to hear from users who were able to modify the architectures or training hyperparameters to produce better performing models. Additionally, proposing new data sets and even uploading implementations that are successful would be a great contribution!
 
 ## Credits
-TBD
+I would like to give credits to the countless open source researchers and bloggers who made this work possible by selflessly sharing their work so that I could learn from their experiences.
 
 ## License
-TBD
+MIT License
