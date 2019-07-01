@@ -6,21 +6,26 @@ import torch.optim as optim
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
-    def __init__(self, device, nz, H, out_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, device, nz, num_channels, ngf, ndf, x_dim, nc, train_gen, val_gen, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super(CGAN, self).__init__()
         self.device = device
         self.nz = nz
-        self.H = H
-        self.out_dim = out_dim
+        self.ngf = ngf
+        self.ndf = ndf
+        self.x_dim = x_dim
         self.nc = nc
+
+        self.train_gen = train_gen
+        self.val_gen = val_gen
+
         self.lr = lr
         self.beta1 = beta1
         self.beta2 = beta2
         self.wd = wd
 
-        self.netG = CGAN_Generator(nz=self.nz, H=self.H, out_dim=self.out_dim, nc=self.nc,
+        self.netG = CGAN_Generator(nz=self.nz, num_channels=num_channels, ngf=self.ngf, x_dim=self.x_dim, nc=self.nc, device=self.device,
                                    lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
-        self.netD = CGAN_Discriminator(H=self.H, out_dim=self.out_dim, nc=self.nc,
+        self.netD = CGAN_Discriminator(ndf=self.ndf, x_dim=self.x_dim, nc=self.nc,
                                        lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
 
         self.real_label = 1
@@ -29,6 +34,9 @@ class CGAN(nn.Module):
         self.epoch = 0
 
     def assemble_img_grid(self, imgs):
+        pass
+
+    def eval_fake_data(self):
         pass
 
     def train_one_step(self, x_train, y_train):
@@ -69,26 +77,39 @@ class CGAN(nn.Module):
         # Update best scores and models
 
 
-    def train(self, num_epochs, x_train, y_train, eval_freq):
+    def train_gan(self, num_epochs, eval_freq):
         for epoch in range(num_epochs):
-            pass
+            for x, y in self.train_gen:
+                x, y = x.to(self.device), y.to(self.device)
+                self.train_one_step(x, y)
+            self.epoch += 1
+            if self.epoch % eval_freq == 0 or (self.epoch == num_epochs-1):
+                self.eval_once(num_epochs)
 
 
 # Generator class
 class CGAN_Generator(nn.Module, NetUtils):
-    def __init__(self, nz, H, out_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, nz, ngf, num_channels, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super(CGAN_Generator, self).__init__()
         self.loss = None
         self.D_G_z2 = None
-        self.out_dim = out_dim
-        self.fixed_noise = torch.randn(64, nz, device=self.device)
-
+        self.x_dim = x_dim
+        self.fixed_noise = torch.randn(64, nz, device=device)
+        # TODO: Fix the dimensions of the network using: https://pytorch.org/docs/stable/nn.html
         # Layers
-        self.fc1 = nn.Linear(nz + nc, H, bias=True)
-        # self.fc1_bn = nn.BatchNorm1d(H)
-        self.fc2 = nn.Linear(H, H, bias=True)
-        self.fc3 = nn.Linear(H, H, bias=True)
-        self.output = nn.Linear(H, self.out_dim, bias=True)
+        # Noise with category inputs
+        self.ct1 = nn.ConvTranspose2d(in_channels=nz+nc, out_channels=ngf*4, kernel_size=4, stride=1, padding=0, bias=True)
+        self.ct1_bn = nn.BatchNorm2d(ngf*4)
+        # Intermediate size of (ngf*4) x 4 x 4
+        self.ct2 = nn.ConvTranspose2d(in_channels=ngf*4, out_channels=ngf*2, kernel_size=4, stride=2, padding=1, bias=True)
+        self.ct2_bn = nn.BatchNorm2d(ngf*2)
+        # Intermediate size of (ngf*2) x 8 x 8
+        self.ct3 = nn.ConvTranspose2d(in_channels=ngf*2, out_channels=ngf, kernel_size=4, stride=2, padding=1, bias=True)
+        self.ct3_bn = nn.BatchNorm2d(ngf)
+        # Intermediate size of (ngf*1) x 16 x 16
+        self.output = nn.ConvTranspose2d(in_channels=ngf, out_channels=num_channels, kernel_size=4, stride=2, padding=1, bias=True)
+        # Output size of num_channels x 32 x 32
+        # Activations
         self.act = nn.LeakyReLU(0.2)
         self.sm = nn.Softmax(dim=-2)
 
@@ -119,7 +140,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         x = self.act(self.fc3(x))
         x = self.output(x)
         x = self.CCGL(x)
-        return x.view(-1, self.out_dim)
+        return x.view(-1, self.x_dim)
 
     def train_one_step(self, output, label):
         self.zero_grad()
@@ -146,7 +167,7 @@ class CGAN_Generator(nn.Module, NetUtils):
 
 # Discriminator class
 class CGAN_Discriminator(nn.Module, NetUtils):
-    def __init__(self, H, out_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, ndf, x_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super(CGAN_Discriminator, self).__init__()
         self.loss_real = None
         self.loss_fake = None
@@ -155,7 +176,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.D_G_z1 = None
 
         # Layers
-        self.fc1 = nn.Linear(out_dim + nc, H, bias=True)
+        self.fc1 = nn.Linear(x_dim + nc, H, bias=True)
         # self.fc1_bn = nn.BatchNorm1d(H)
         self.output = nn.Linear(H, 1, bias=True)
         self.act = nn.LeakyReLU(0.2)
