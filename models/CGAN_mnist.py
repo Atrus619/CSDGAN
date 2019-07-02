@@ -1,12 +1,15 @@
 import torch.nn as nn
 import torch
-from models.NetUtils import NetUtils, CustomCatGANLayer
+from models.NetUtils import NetUtils
 import torch.optim as optim
-
+import torchvision.utils as vutils
+import matplotlib.pyplot as plt
+import numpy as np
+# TODO: Write eval_fake_data method!!!
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
-    def __init__(self, device, nz, num_channels, ngf, ndf, x_dim, nc, train_gen, val_gen, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, train_gen, val_gen, test_gen, device, nz, num_channels, ngf, ndf, x_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super(CGAN, self).__init__()
         self.device = device
         self.nz = nz
@@ -25,7 +28,7 @@ class CGAN(nn.Module):
 
         self.netG = CGAN_Generator(nz=self.nz, num_channels=num_channels, ngf=self.ngf, x_dim=self.x_dim, nc=self.nc, device=self.device,
                                    lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
-        self.netD = CGAN_Discriminator(ndf=self.ndf, x_dim=self.x_dim, nc=self.nc,
+        self.netD = CGAN_Discriminator(ndf=self.ndf, num_channels=num_channels, nc=self.nc,
                                        lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
 
         self.real_label = 1
@@ -33,8 +36,16 @@ class CGAN(nn.Module):
 
         self.epoch = 0
 
-    def assemble_img_grid(self, imgs):
-        pass
+        self.fixed_imgs = []
+        self.stored_models = []
+        self.stored_scores = []
+
+    def gen_fixed_img_grid(self):
+        fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
+        return vutils.make_grid(tensor=fixed_imgs, nrow=self.nc, normalize=True).detach().cpu()
+
+    def display_fixed_imgs(self, index):
+        plt.imshow(np.transpose(self.fixed_imgs[index], (1, 2, 0)))
 
     def eval_fake_data(self):
         pass
@@ -69,13 +80,14 @@ class CGAN(nn.Module):
 
         with torch.no_grad():
             # Generate sample of fake images to store for later
-            pass
-
+            self.fixed_imgs.append(self.gen_fixed_img_grid())
+            # Print out current fixed fake images to monitor training progress
+            self.display_fixed_imgs(-1)
             # Generate various levels of amounts of fake data and test how training compares
-
+            self.eval_fake_data()
 
         # Update best scores and models
-
+        pass
 
     def train_gan(self, num_epochs, eval_freq):
         for epoch in range(num_epochs):
@@ -94,24 +106,26 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.loss = None
         self.D_G_z2 = None
         self.x_dim = x_dim
-        self.fixed_noise = torch.randn(64, nz, device=device)
-        # TODO: Fix the dimensions of the network using: https://pytorch.org/docs/stable/nn.html
+        self.nc = nc
+        self.nz = nz
+        self.ngf = ngf
+        # 10x10, 10 examples of each of the 10 labels
+        self.fixed_count_per_label = 10
+        self.fixed_noise = torch.randn(100, nz, device=device)
+        self.fixed_labels = self.init_fixed_labels().to(device)
+
         # Layers
-        # Noise with category inputs
-        self.ct1 = nn.ConvTranspose2d(in_channels=nz+nc, out_channels=ngf*4, kernel_size=4, stride=1, padding=0, bias=True)
-        self.ct1_bn = nn.BatchNorm2d(ngf*4)
-        # Intermediate size of (ngf*4) x 4 x 4
-        self.ct2 = nn.ConvTranspose2d(in_channels=ngf*4, out_channels=ngf*2, kernel_size=4, stride=2, padding=1, bias=True)
-        self.ct2_bn = nn.BatchNorm2d(ngf*2)
-        # Intermediate size of (ngf*2) x 8 x 8
-        self.ct3 = nn.ConvTranspose2d(in_channels=ngf*2, out_channels=ngf, kernel_size=4, stride=2, padding=1, bias=True)
-        self.ct3_bn = nn.BatchNorm2d(ngf)
-        # Intermediate size of (ngf*1) x 16 x 16
-        self.output = nn.ConvTranspose2d(in_channels=ngf, out_channels=num_channels, kernel_size=4, stride=2, padding=1, bias=True)
-        # Output size of num_channels x 32 x 32
+        # Noise with one-hot encoded category conditional inputs
+        self.fc1 = nn.Linear(in_features=self.nz + self.nc, out_features=7*7*ngf*2, bias=True)
+        # Intermediate size of (ngf*2) x 7 x 7
+        self.ct1 = nn.ConvTranspose2d(in_channels=self.ngf*2, out_channels=self.ngf, kernel_size=4, stride=2, padding=1, bias=True)
+        self.ct1_bn = nn.BatchNorm2d(ngf)
+        # Intermediate size of (ngf*1) x 14 x 14
+        self.output = nn.ConvTranspose2d(in_channels=self.ngf, out_channels=num_channels, kernel_size=4, stride=2, padding=1, bias=True)
+        # Output size of num_channels x 28 x 28
         # Activations
         self.act = nn.LeakyReLU(0.2)
-        self.sm = nn.Softmax(dim=-2)
+        self.m = nn.Tanh()
 
         # Loss and Optimizer
         # TODO: Try Wasserstein distance instead of BCE Loss
@@ -119,28 +133,33 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
         # Record history of training
-        self.layer_list = [self._modules[x] for x in self._modules if self._modules[x].__class__.__name__.find('Linear') != -1]  # Return list of linear layers
+        self.layer_list = [self._modules[x] for x in self._modules if self._modules[x].__class__.__name__.find('ConvTranspose2d') != -1]  # Return list of linear layers
         self.init_hist()
         self.losses = []
-        # self.fixed_noise_outputs = []
 
         # Initialize weights
         self.custom_weights_init()
+
+    def init_fixed_labels(self):
+        tmp = torch.empty((self.nc * self.fixed_count_per_label, 1), dtype=torch.int64)
+        for i in range(self.nc):
+            tmp[i*self.fixed_count_per_label:((i+1)*self.fixed_count_per_label), ] = torch.full((self.fixed_count_per_label, 1), i)
+        fixed_labels = torch.zeros(self.nc * self.fixed_count_per_label, self.nc)
+        fixed_labels.scatter_(1, tmp, 1)
+        return fixed_labels
 
     def forward(self, noise, labels):
         """
         Single dense hidden layer network.
         :param noise: Random Noise vector Z
         :param labels: Label embedding
-        :return: Row of data for iris data set (4 real values)
+        :return: MNIST img with values squashed by tanh to be between -1 and 1
         """
         x = torch.cat([noise, labels], 1)
         x = self.act(self.fc1(x))
-        x = self.act(self.fc2(x))
-        x = self.act(self.fc3(x))
-        x = self.output(x)
-        x = self.CCGL(x)
-        return x.view(-1, self.x_dim)
+        x = x.reshape(-1, self.ngf*2, 7, 7)
+        x = self.act(self.ct1_bn(self.ct1(x)))
+        return self.m(self.output(x))
 
     def train_one_step(self, output, label):
         self.zero_grad()
@@ -167,18 +186,33 @@ class CGAN_Generator(nn.Module, NetUtils):
 
 # Discriminator class
 class CGAN_Discriminator(nn.Module, NetUtils):
-    def __init__(self, ndf, x_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, ndf, nc, num_channels, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super(CGAN_Discriminator, self).__init__()
         self.loss_real = None
         self.loss_fake = None
         self.loss = None
         self.D_x = None
         self.D_G_z1 = None
+        self.nc = nc
+        self.ndf = ndf
+        self.fc_labels_size = 128
+        self.agg_size = 512
 
-        # Layers
-        self.fc1 = nn.Linear(x_dim + nc, H, bias=True)
-        # self.fc1_bn = nn.BatchNorm1d(H)
-        self.output = nn.Linear(H, 1, bias=True)
+        # Convolutional layers
+        # Image input size of num_channels x 28 x 28
+        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.ndf, kernel_size=4, stride=2, padding=1, bias=True)
+        self.cn1_bn = nn.BatchNorm2d(self.ndf)
+        # Intermediate size of ndf x 14 x 14
+        self.cn2 = nn.Conv2d(in_channels=self.ndf, out_channels=self.ndf*2, kernel_size=4, stride=2, padding=1, bias=True)
+        self.cn2_bn = nn.BatchNorm2d(self.ndf*2)
+        # Intermediate size of ndf*2 x 7 x 7
+
+        # FC layers
+        self.fc_labels = nn.Linear(in_features=self.nc, out_features=self.fc_labels_size, bias=True)
+        self.fc_agg = nn.Linear(in_features=self.ndf*2*7*7+self.fc_labels_size, out_features=self.agg_size, bias=True)
+        self.fc_output = nn.Linear(in_features=self.agg_size, out_features=1, bias=True)
+
+        # Activations
         self.act = nn.LeakyReLU(0.2)
         self.m = nn.Sigmoid()
 
@@ -187,7 +221,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
         # Record history of training
-        self.layer_list = [self._modules[x] for x in self._modules if self._modules[x].__class__.__name__.find('Linear') != -1]  # Return list of linear layers
+        self.layer_list = [self._modules[x] for x in self._modules if self._modules[x].__class__.__name__.find('Conv2d') != -1]  # Return list of linear layers
         self.init_hist()
         self.losses = []
         self.Avg_D_reals = []
@@ -196,15 +230,19 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         # Initialize weights
         self.weights_init()
 
-    def forward(self, row, labels):
+    def forward(self, img, labels):
         """
-        :param row: Row of input data to discriminate on
+        :param img: Input image of size 28 x 28
         :param labels: Label embedding
         :return: Binary classification (sigmoid activation on a single unit hidden layer)
         """
-        x = torch.cat([row, labels], 1)
-        x = self.act(self.fc1(x))
-        return self.m(self.output(x))
+        x = self.act(self.cn1_bn(self.cn1(img)))
+        x = self.act(self.cn2_bn(self.cn2(x)))
+        x = x.view(-1, self.ndf*2*7*7)
+        y = self.act(self.fc_labels(labels))
+        agg = torch.cat((x, y), 1)
+        agg = self.act(self.fc_agg(agg))
+        return self.m(self.fc_output(agg))
 
     def train_one_step_real(self, output, label):
         self.zero_grad()

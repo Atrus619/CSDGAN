@@ -1,10 +1,11 @@
 import torch.nn as nn
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
+
 import numpy as np
 import pandas as pd
 import torch
@@ -492,3 +493,21 @@ def compare_cats(real, fake, x, y, hue, save=None):
     if save is not None:
         safe_mkdir(save + '/compare_cats')
         f.savefig(save + '/compare_cats/' + x + '_' + hue + '_cat_comparison.png')
+
+
+def train_val_test_split(x, y, splits, random_state=None):
+    """
+    Performs a train/validation/test split on x and y, stratified, based on desired splits
+    :param x: independent var
+    :param y: dependent var
+    :param splits: proportion of total data to be assigned to train/validation/test set
+    :param random_state: Optional random state
+    :return:
+    """
+    assert sum(splits) == 1.0, "Please make sure sum of splits is equal to 1"
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=splits[2], stratify=y, random_state=random_state)
+    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=splits[1] / splits[0], stratify=y_train, random_state=random_state)
+    x_train, y_train, x_val, y_val, x_test, y_test = torch.from_numpy(x_train), torch.from_numpy(y_train), \
+                                                     torch.from_numpy(x_val), torch.from_numpy(y_val), \
+                                                     torch.from_numpy(x_test), torch.from_numpy(y_test)
+    return x_train, y_train, x_val, y_val, x_test, y_test

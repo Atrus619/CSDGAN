@@ -14,10 +14,20 @@ random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 
 # Import data
+# Desired Train/Validation/Test split
+splits = [0.15, 0.05, 0.80]
+
+# Load data and split
 mnist = load_dataset('mnist')
-x_train, y_train, x_test, y_test = mnist[0].data, mnist[0].targets, mnist[1].data, mnist[1].targets
-x_train, x_val, y_train, y_val = train_test_split(x_train.numpy(), y_train.numpy(), test_size=0.2, stratify=y_train.numpy(), random_state=manualSeed)
-x_train, y_train, x_val, y_val = torch.from_numpy(x_train), torch.from_numpy(y_train), torch.from_numpy(x_val), torch.from_numpy(y_val)
+x_comb, y_comb = torch.cat((mnist[0].data, mnist[1].data), 0).numpy(), torch.cat((mnist[0].targets, mnist[1].targets), 0).numpy()
+x_train, y_train, x_val, y_val, x_test, y_test = train_val_test_split(x_comb, y_comb, splits, manualSeed)
+
+# Print resulting sizes
+print("Train:", x_train.shape)
+print("Validate: ", x_val.shape)
+print("Test: ", x_test.shape)
+
+# Print an example image
 print(y_train[0])
 plt.imshow(x_train[0], cmap='gray')
 
@@ -45,5 +55,11 @@ training_generator = data.DataLoader(training_set, **training_params)
 validation_set = MNIST_Dataset(x_val, y_val)
 validation_generator = data.DataLoader(validation_set, **training_params)
 
+test_set = MNIST_Dataset(x_test, y_test)
+test_generator = data.DataLoader(test_set, **training_params)
+
 # Define GAN
-CGAN = CGAN(**CGAN_params)
+CGAN = CGAN(training_generator, validation_generator, test_generator, **CGAN_params)
+
+asdf = CGAN.netG(CGAN.netG.fixed_noise, CGAN.netG.fixed_labels)
+CGAN.netD(asdf, CGAN.netG.fixed_labels)
