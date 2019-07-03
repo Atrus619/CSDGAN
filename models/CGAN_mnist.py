@@ -5,52 +5,79 @@ import torch.optim as optim
 import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 import numpy as np
-# TODO: Write eval_fake_data method!!!
+
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
-    def __init__(self, train_gen, val_gen, test_gen, device, nz, num_channels, ngf, ndf, x_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, netE_filepath,
+                 netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
+                 netD_nf, netD_lr, netD_beta1, netD_beta2, netD_wd,
+                 netE_lr, netE_beta1, netE_beta2, netE_wd,
+                 fake_data_set_size, fake_bs):
         super(CGAN, self).__init__()
-        self.device = device
-        self.nz = nz
-        self.ngf = ngf
-        self.ndf = ndf
-        self.x_dim = x_dim
-        self.nc = nc
 
         self.train_gen = train_gen
         self.val_gen = val_gen
+        self.test_gen = test_gen
+        self.fake_gen = None  # Initialized through init_fake_gen method
 
-        self.lr = lr
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.wd = wd
+        self.device = device
+        self.x_dim = x_dim
+        self.nc = nc
+        self.nz = nz
+        self.num_channels = num_channels
+        self.netE_filepath = netE_filepath
 
-        self.netG = CGAN_Generator(nz=self.nz, num_channels=num_channels, ngf=self.ngf, x_dim=self.x_dim, nc=self.nc, device=self.device,
-                                   lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
-        self.netD = CGAN_Discriminator(ndf=self.ndf, num_channels=num_channels, nc=self.nc,
-                                       lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
-        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=val_gen, test_gen=test_gen, device=self.device, num_channels=num_channels, nc=nc,
-                                   lr=lr, beta1=beta1, beta2=beta2, wd=wd)
+        self.fake_data_set_size = fake_data_set_size
+        self.fake_bs = fake_bs
+
+        self.netG = CGAN_Generator(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device,
+                                   lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
+        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc,
+                                       lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
+
+        self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
+        self.netE = None  # Initialized through init_evaluator method
 
         self.real_label = 1
         self.fake_label = 0
 
         self.epoch = 0
 
-        self.fixed_imgs = []
-        self.stored_models = []
-        self.stored_scores = []
+        self.fixed_imgs = {}
+        self.stored_scores = {}
 
     def gen_fixed_img_grid(self):
         fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
         return vutils.make_grid(tensor=fixed_imgs, nrow=self.nc, normalize=True).detach().cpu()
 
-    def display_fixed_imgs(self, index):
-        plt.imshow(np.transpose(self.fixed_imgs[index], (1, 2, 0)))
+    def display_fixed_imgs(self, epoch):
+        plt.imshow(np.transpose(self.fixed_imgs[epoch], (1, 2, 0)))
 
-    def eval_fake_data(self):
+    def init_evaluator(self, train_gen):
+        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=self.val_gen, test_gen=self.test_gen, device=self.device, num_channels=self.num_channels, nc=self.nc,
+                                   **self.netE_params)
+
+    def init_fake_gen(self, size, batch_size):
+        # TODO: Implement this
         pass
+
+    def load_netE(self, epoch):
+        # Loads a previously stored netE (likely the one that performed the best)
+        self.netE.load_state_dict(torch.load(self.netE_filepath + "/Epoch_" + epoch + "_Evaluator.pt"))
+
+    def test_model(self, train_gen, num_epochs, es=None):
+        """
+        Train a CNN evaluator from scratch
+        :param train_gen: Specified train_gen, can either be real training generator or a created one from netG
+        :param num_epochs: Number of epochs to train for
+        :param es: Early-stopping, None by default
+        :return: Best performance on test set
+        """
+        self.init_evaluator(train_gen)
+        self.netE.train_evaluator(num_epochs=num_epochs, eval_freq=1, es=es)
+        torch.save(self.netE.state_dict, self.netE_filepath + "/Epoch_" + self.epoch + "_Evaluator.pt")
+        self.stored_scores[self.epoch] = self.netE.eval_once(self.test_gen)
 
     def train_one_step(self, x_train, y_train):
         bs = x_train.shape[0]
@@ -78,7 +105,7 @@ class CGAN(nn.Module):
     def eval_once(self, num_epochs):
         # Print metrics of interest
         print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                % (self.epoch+1, num_epochs, self.netD.loss.item(), self.netG.loss.item(), self.netD.D_x, self.netD.D_G_z1, self.netG.D_G_z2))
+              % (self.epoch + 1, num_epochs, self.netD.loss.item(), self.netG.loss.item(), self.netD.D_x, self.netD.D_G_z1, self.netG.D_G_z2))
 
         with torch.no_grad():
             # Generate sample of fake images to store for later
@@ -97,20 +124,26 @@ class CGAN(nn.Module):
                 x, y = x.to(self.device), y.to(self.device)
                 self.train_one_step(x, y)
             self.epoch += 1
-            if self.epoch % eval_freq == 0 or (self.epoch == num_epochs-1):
+            if self.epoch % eval_freq == 0 or (self.epoch == num_epochs - 1):
                 self.eval_once(num_epochs)
+                self.init_fake_gen(size=self.fake_data_set_size, batch_size=self.fake_bs)
+                self.test_model(train_gen=self.fake_gen, num_epochs=30, es=3)
+                print("Evaluator Score:", self.stored_scores[self.epoch])
+
+                self.fixed_imgs[self.epoch] = self.gen_fixed_img_grid()
+                self.display_fixed_imgs(self.epoch)
 
 
 # Generator class
 class CGAN_Generator(nn.Module, NetUtils):
-    def __init__(self, nz, ngf, num_channels, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, nz, nf, num_channels, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super(CGAN_Generator, self).__init__()
         self.loss = None
         self.D_G_z2 = None
         self.x_dim = x_dim
         self.nc = nc
         self.nz = nz
-        self.ngf = ngf
+        self.nf = nf
         # 10x10, 10 examples of each of the 10 labels
         self.fixed_count_per_label = 10
         self.fixed_noise = torch.randn(100, nz, device=device)
@@ -118,12 +151,12 @@ class CGAN_Generator(nn.Module, NetUtils):
 
         # Layers
         # Noise with one-hot encoded category conditional inputs
-        self.fc1 = nn.Linear(in_features=self.nz + self.nc, out_features=7*7*ngf*2, bias=True)
-        # Intermediate size of (ngf*2) x 7 x 7
-        self.ct1 = nn.ConvTranspose2d(in_channels=self.ngf*2, out_channels=self.ngf, kernel_size=4, stride=2, padding=1, bias=True)
-        self.ct1_bn = nn.BatchNorm2d(ngf)
-        # Intermediate size of (ngf*1) x 14 x 14
-        self.output = nn.ConvTranspose2d(in_channels=self.ngf, out_channels=num_channels, kernel_size=4, stride=2, padding=1, bias=True)
+        self.fc1 = nn.Linear(in_features=self.nz + self.nc, out_features=7 * 7 * nf * 2, bias=True)
+        # Intermediate size of (nf*2) x 7 x 7
+        self.ct1 = nn.ConvTranspose2d(in_channels=self.nf * 2, out_channels=self.nf, kernel_size=4, stride=2, padding=1, bias=True)
+        self.ct1_bn = nn.BatchNorm2d(self.nf)
+        # Intermediate size of (nf*1) x 14 x 14
+        self.output = nn.ConvTranspose2d(in_channels=self.nf, out_channels=num_channels, kernel_size=4, stride=2, padding=1, bias=True)
         # Output size of num_channels x 28 x 28
         # Activations
         self.act = nn.LeakyReLU(0.2)
@@ -140,12 +173,12 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.losses = []
 
         # Initialize weights
-        self.custom_weights_init()
+        self.weights_init()
 
     def init_fixed_labels(self):
         tmp = torch.empty((self.nc * self.fixed_count_per_label, 1), dtype=torch.int64)
         for i in range(self.nc):
-            tmp[i*self.fixed_count_per_label:((i+1)*self.fixed_count_per_label), ] = torch.full((self.fixed_count_per_label, 1), i)
+            tmp[i * self.fixed_count_per_label:((i + 1) * self.fixed_count_per_label), ] = torch.full((self.fixed_count_per_label, 1), i)
         fixed_labels = torch.zeros(self.nc * self.fixed_count_per_label, self.nc)
         fixed_labels.scatter_(1, tmp, 1)
         return fixed_labels
@@ -159,7 +192,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         """
         x = torch.cat([noise, labels], 1)
         x = self.act(self.fc1(x))
-        x = x.reshape(-1, self.ngf*2, 7, 7)
+        x = x.reshape(-1, self.nf * 2, 7, 7)
         x = self.act(self.ct1_bn(self.ct1(x)))
         return self.m(self.output(x))
 
@@ -188,7 +221,7 @@ class CGAN_Generator(nn.Module, NetUtils):
 
 # Discriminator class
 class CGAN_Discriminator(nn.Module, NetUtils):
-    def __init__(self, ndf, nc, num_channels, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, nf, nc, num_channels, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super(CGAN_Discriminator, self).__init__()
         self.loss_real = None
         self.loss_fake = None
@@ -196,22 +229,22 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.D_x = None
         self.D_G_z1 = None
         self.nc = nc
-        self.ndf = ndf
+        self.nf = nf
         self.fc_labels_size = 128
         self.agg_size = 512
 
         # Convolutional layers
         # Image input size of num_channels x 28 x 28
-        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.ndf, kernel_size=4, stride=2, padding=1, bias=True)
-        self.cn1_bn = nn.BatchNorm2d(self.ndf)
-        # Intermediate size of ndf x 14 x 14
-        self.cn2 = nn.Conv2d(in_channels=self.ndf, out_channels=self.ndf*2, kernel_size=4, stride=2, padding=1, bias=True)
-        self.cn2_bn = nn.BatchNorm2d(self.ndf*2)
-        # Intermediate size of ndf*2 x 7 x 7
+        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.nf, kernel_size=4, stride=2, padding=1, bias=True)
+        self.cn1_bn = nn.BatchNorm2d(self.nf)
+        # Intermediate size of nf x 14 x 14
+        self.cn2 = nn.Conv2d(in_channels=self.nf, out_channels=self.nf * 2, kernel_size=4, stride=2, padding=1, bias=True)
+        self.cn2_bn = nn.BatchNorm2d(self.nf * 2)
+        # Intermediate size of nf*2 x 7 x 7
 
         # FC layers
         self.fc_labels = nn.Linear(in_features=self.nc, out_features=self.fc_labels_size, bias=True)
-        self.fc_agg = nn.Linear(in_features=self.ndf*2*7*7+self.fc_labels_size, out_features=self.agg_size, bias=True)
+        self.fc_agg = nn.Linear(in_features=self.nf * 2 * 7 * 7 + self.fc_labels_size, out_features=self.agg_size, bias=True)
         self.fc_output = nn.Linear(in_features=self.agg_size, out_features=1, bias=True)
 
         # Activations
@@ -240,7 +273,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         """
         x = self.act(self.cn1_bn(self.cn1(img)))
         x = self.act(self.cn2_bn(self.cn2(x)))
-        x = x.view(-1, self.ndf*2*7*7)
+        x = x.view(-1, self.nf * 2 * 7 * 7)
         y = self.act(self.fc_labels(labels))
         agg = torch.cat((x, y), 1)
         agg = self.act(self.fc_agg(agg))
@@ -289,7 +322,7 @@ class CGAN_Evaluator(nn.Module):
 
         self.mp = nn.MaxPool2d(kernel_size=2, stride=1)
 
-        self.fc1 = nn.Linear(in_features=14*14*20, out_features=64)
+        self.fc1 = nn.Linear(in_features=14 * 14 * 20, out_features=64)
         self.output = nn.Linear(in_features=64, out_features=nc)
 
         # Activations
@@ -313,7 +346,7 @@ class CGAN_Evaluator(nn.Module):
         x = self.do2d(self.act(self.cn1_bn(self.cn1(x))))
         x = self.do2d(self.act(self.cn2_bn(self.cn2(x))))
         x = self.mp(x)
-        x = x.view(-1, 14*14*20)
+        x = x.view(-1, 14 * 14 * 20)
         x = self.do1d(self.act(self.fc1(x)))
         return self.m(self.output(x))
 
@@ -344,7 +377,7 @@ class CGAN_Evaluator(nn.Module):
         for epoch in range(num_epochs):
             self.train_losses.append(self.train_one_epoch())
 
-            if epoch % eval_freq == 0 or (epoch == num_epochs-1):
+            if epoch % eval_freq == 0 or (epoch == num_epochs - 1):
                 self.val_losses.append(self.eval_once(self.val_gen))
 
                 if es:

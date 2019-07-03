@@ -12,6 +12,8 @@ manualSeed = 999
 print("Random Seed: ", manualSeed)
 random.seed(manualSeed)
 torch.manual_seed(manualSeed)
+netE_filepath = 'scripts/GAN Prototypes/MNIST/Stored Evaluators'
+safe_mkdir(netE_filepath)
 
 # Import data
 # Desired Train/Validation/Test split
@@ -32,21 +34,39 @@ print(y_train[0])
 plt.imshow(x_train[0], cmap='gray')
 
 # Define parameters
-training_params = {'batch_size': 64,
+bs = 64
+training_params = {'batch_size': bs,
                    'shuffle': True,
                    'num_workers': 6}
 
 CGAN_params = {'device': torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu"),  # GPU if exists, else CPU
-               'nz': 64,  # Size of noise vector
-               'num_channels': 1,  # Number of channels in image
-               'ngf': 32,  # Number of generator feature maps
-               'ndf': 32,  # Number of discriminator feature maps
                'x_dim': (x_train.shape[1], x_train.shape[2]),  # Dimensions of input images
                'nc': 10,  # Number of output classes
-               'lr': 2e-4,  # Learning rate for adam optimizer
-               'beta1': 0.5,  # Beta1 for adam optimizer
-               'beta2': 0.999,  # Beta2 for adam optimizer
-               'wd': 0}  # Weight decay for network (regularization)
+               'nz': 64,  # Size of noise vector
+               'num_channels': 1,  # Number of channels in image
+               # Store historical netE
+               'netE_filepath': netE_filepath,
+               # Number of feature maps
+               'netG_nf': 32,
+               'netD_nf': 32,
+               # Learning rate for adam optimizer
+               'netG_lr': 2e-4,
+               'netD_lr': 2e-4,
+               'netE_lr': 2e-4,
+               # Betas for adam optimizer
+               'netG_beta1': 0.5,
+               'netG_beta2': 0.999,
+               'netD_beta1': 0.5,
+               'netD_beta2': 0.999,
+               'netE_beta1': 0.5,
+               'netE_beta2': 0.999,
+               # Weight decay for network (regularization)
+               'netG_wd': 0,
+               'netD_wd': 0,
+               'netE_wd': 0,
+               # Fake data generator parameters
+               'fake_data_set_size': 50000,
+               'fake_bs': bs}
 
 # Define generators
 training_set = MNIST_Dataset(x_train, y_train)

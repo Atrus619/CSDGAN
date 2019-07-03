@@ -11,3 +11,17 @@ class MNIST_Dataset(data.Dataset):
 
     def __getitem__(self, index):
         return self.X[index], self.y[index]
+
+
+# TODO: Use a generator instead of a loader
+class Fake_MNIST_Dataset(data.Dataset):
+    def __init__(self, netG, labels, size):
+        self.netG = netG
+        self.labels = labels
+        self.size = size
+
+    def __len__(self):
+        return self.size
+
+    def __getitem__(self, index):
+        pass
