@@ -30,6 +30,8 @@ class CGAN(nn.Module):
                                    lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
         self.netD = CGAN_Discriminator(ndf=self.ndf, num_channels=num_channels, nc=self.nc,
                                        lr=self.lr, beta1=self.beta1, beta2=self.beta2, wd=self.wd).to(self.device)
+        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=val_gen, test_gen=test_gen, device=self.device, num_channels=num_channels, nc=nc,
+                                   lr=lr, beta1=beta1, beta2=beta2, wd=wd)
 
         self.real_label = 1
         self.fake_label = 0
@@ -265,3 +267,87 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.losses.append(self.loss.item())
         self.Avg_D_reals.append(self.D_x)
         self.Avg_D_fakes.append(self.D_G_z1)
+
+
+# Evaluator class
+class CGAN_Evaluator(nn.Module):
+    def __init__(self, train_gen, val_gen, test_gen, device, num_channels, nc, lr, beta1, beta2, wd):
+        super(CGAN_Evaluator, self).__init__()
+
+        # Generators
+        self.train_gen = train_gen
+        self.val_gen = val_gen
+        self.test_gen = test_gen
+
+        self.device = device
+
+        # Layers
+        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=10, kernel_size=5, stride=1, padding=0, bias=True)
+        self.cn1_bn = nn.BatchNorm2d(10)
+        self.cn2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=5, stride=1, padding=0, bias=True)
+        self.cn2_bn = nn.BatchNorm2d(20)
+
+        self.mp = nn.MaxPool2d(kernel_size=2, stride=1)
+
+        self.fc1 = nn.Linear(in_features=14*14*20, out_features=64)
+        self.output = nn.Linear(in_features=64, out_features=nc)
+
+        # Activations
+        self.do2d = nn.Dropout2d(0.2)
+        self.do1d = nn.Dropout(0.2)
+        self.act = nn.LeakyReLU(0.2)
+        self.m = nn.Softmax()
+
+        # Loss and Optimizer
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
+
+        # Initialize weights
+        self.weights_init()
+
+        # Record history
+        self.train_losses = []
+        self.val_losses = []
+
+    def forward(self, x):
+        x = self.do2d(self.act(self.cn1_bn(self.cn1(x))))
+        x = self.do2d(self.act(self.cn2_bn(self.cn2(x))))
+        x = self.mp(x)
+        x = x.view(-1, 14*14*20)
+        x = self.do1d(self.act(self.fc1(x)))
+        return self.m(self.output(x))
+
+    def process_batch(self, x, labels):
+        forward = self.forward(x)
+        loss = self.loss_fn(forward, labels)
+        return loss
+
+    def train_one_epoch(self):
+        self.train()
+        train_loss = 0
+        for batch, labels in self.train_gen:
+            batch, labels = batch.to(self.device), labels.to(self.device)
+            self.zero_grad()
+            train_loss += self.process_batch(batch, labels)
+        return train_loss / len(self.train_gen)
+
+    def eval_once(self, gen):
+        self.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for batch, labels in gen:
+                batch, labels = batch.to(self.device), labels.to(self.device)
+                val_loss += self.process_batch(batch, labels)
+        return val_loss / len(gen)
+
+    def train_evaluator(self, num_epochs, eval_freq, es=None):
+        for epoch in range(num_epochs):
+            self.train_losses.append(self.train_one_epoch())
+
+            if epoch % eval_freq == 0 or (epoch == num_epochs-1):
+                self.val_losses.append(self.eval_once(self.val_gen))
+
+                if es:
+                    if np.argmax(self.val_losses) < epoch - es:
+                        return True
+        return True
