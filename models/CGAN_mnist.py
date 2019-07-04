@@ -5,6 +5,8 @@ import torch.optim as optim
 import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 import numpy as np
+from PytorchDatasets.MNIST_Dataset import Fake_MNIST_Dataset
+from torch.utils import data
 
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
@@ -19,7 +21,15 @@ class CGAN(nn.Module):
         self.train_gen = train_gen
         self.val_gen = val_gen
         self.test_gen = test_gen
-        self.fake_gen = None  # Initialized through init_fake_gen method
+
+        self.fake_shuffle = True
+        self.fake_num_workers = 6
+        self.fake_data_set_size = fake_data_set_size
+        self.fake_bs = fake_bs
+        self.fake_train_set = None  # Initialized through init_fake_gen method
+        self.fake_train_gen = None  # Initialized through init_fake_gen method
+        self.fake_val_set = None  # Initialized through init_fake_gen method
+        self.fake_val_gen = None  # Initialized through init_fake_gen method
 
         self.device = device
         self.x_dim = x_dim
@@ -27,9 +37,6 @@ class CGAN(nn.Module):
         self.nz = nz
         self.num_channels = num_channels
         self.netE_filepath = netE_filepath
-
-        self.fake_data_set_size = fake_data_set_size
-        self.fake_bs = fake_bs
 
         self.netG = CGAN_Generator(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device,
                                    lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
@@ -53,37 +60,46 @@ class CGAN(nn.Module):
 
     def display_fixed_imgs(self, epoch):
         plt.imshow(np.transpose(self.fixed_imgs[epoch], (1, 2, 0)))
+        plt.show()
 
-    def init_evaluator(self, train_gen):
-        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=self.val_gen, test_gen=self.test_gen, device=self.device, num_channels=self.num_channels, nc=self.nc,
-                                   **self.netE_params)
+    def init_evaluator(self, train_gen, val_gen):
+        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, num_channels=self.num_channels, nc=self.nc,
+                                   **self.netE_params).to(self.device)
 
-    def init_fake_gen(self, size, batch_size):
-        # TODO: Implement this
-        pass
+    def init_fake_gen(self):
+        # Initializes fake training set and validation set to be same size
+        self.fake_train_set = Fake_MNIST_Dataset(self.netG, self.fake_data_set_size, self.nz, self.nc, self.device)
+        self.fake_train_gen = data.DataLoader(self.fake_train_set, batch_size=self.fake_bs, shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
+
+        self.fake_val_set = Fake_MNIST_Dataset(self.netG, self.fake_data_set_size, self.nz, self.nc, self.device)
+        self.fake_val_gen = data.DataLoader(self.fake_val_set, batch_size=self.fake_bs, shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
 
     def load_netE(self, epoch):
         # Loads a previously stored netE (likely the one that performed the best)
         self.netE.load_state_dict(torch.load(self.netE_filepath + "/Epoch_" + epoch + "_Evaluator.pt"))
 
-    def test_model(self, train_gen, num_epochs, es=None):
+    def test_model(self, train_gen, val_gen, num_epochs, es=None):
         """
         Train a CNN evaluator from scratch
         :param train_gen: Specified train_gen, can either be real training generator or a created one from netG
+        :param val_gen: Same as above ^
         :param num_epochs: Number of epochs to train for
         :param es: Early-stopping, None by default
         :return: Best performance on test set
         """
-        self.init_evaluator(train_gen)
+        self.init_evaluator(train_gen, val_gen)
         self.netE.train_evaluator(num_epochs=num_epochs, eval_freq=1, es=es)
-        torch.save(self.netE.state_dict, self.netE_filepath + "/Epoch_" + self.epoch + "_Evaluator.pt")
-        self.stored_scores[self.epoch] = self.netE.eval_once(self.test_gen)
+        torch.save(self.netE.state_dict, self.netE_filepath + "/Epoch_" + str(self.epoch) + "_Evaluator.pt")
+        self.stored_scores[self.epoch] = self.netE.eval_once(self.test_gen).detach().cpu().numpy()
 
     def train_one_step(self, x_train, y_train):
         bs = x_train.shape[0]
+        self.netG.train()
+        self.netD.train()
+        y_train = y_train.float()  # Convert to float so that it can interact with float weights correctly
 
         # Update Discriminator, all real batch
-        labels = torch.full((bs,), self.real_label, self.device)
+        labels = torch.full(size=(bs,), fill_value=self.real_label, device=self.device)
         real_forward_pass = self.netD(x_train, y_train).view(-1)
         self.netD.train_one_step_real(real_forward_pass, labels)
 
@@ -102,36 +118,41 @@ class CGAN(nn.Module):
         self.netG.train_one_step(gen_fake_forward_pass, labels)
         self.netG.update_history()
 
-    def eval_once(self, num_epochs):
+    def print_progress(self, num_epochs):
         # Print metrics of interest
         print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
               % (self.epoch + 1, num_epochs, self.netD.loss.item(), self.netG.loss.item(), self.netD.D_x, self.netD.D_G_z1, self.netG.D_G_z2))
 
         with torch.no_grad():
             # Generate sample of fake images to store for later
-            self.fixed_imgs.append(self.gen_fixed_img_grid())
+            self.fixed_imgs[self.epoch] = self.gen_fixed_img_grid()
             # Print out current fixed fake images to monitor training progress
-            self.display_fixed_imgs(-1)
-            # Generate various levels of amounts of fake data and test how training compares
-            self.eval_fake_data()
-
-        # Update best scores and models
-        pass
+            self.display_fixed_imgs(self.epoch)
 
     def train_gan(self, num_epochs, eval_freq):
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
                 x, y = x.to(self.device), y.to(self.device)
                 self.train_one_step(x, y)
-            self.epoch += 1
             if self.epoch % eval_freq == 0 or (self.epoch == num_epochs - 1):
-                self.eval_once(num_epochs)
-                self.init_fake_gen(size=self.fake_data_set_size, batch_size=self.fake_bs)
-                self.test_model(train_gen=self.fake_gen, num_epochs=30, es=3)
+                self.print_progress(num_epochs)
+                self.init_fake_gen()
+                self.test_model(train_gen=self.fake_train_gen, val_gen=self.fake_val_gen, num_epochs=30, es=3)
                 print("Evaluator Score:", self.stored_scores[self.epoch])
 
                 self.fixed_imgs[self.epoch] = self.gen_fixed_img_grid()
                 self.display_fixed_imgs(self.epoch)
+            self.epoch += 1
+
+    def gen_one_img(self, label):
+        # Generates a 28x28 image based on the desired class label index (integer 0-9)
+        assert 0 <= label <= 9 and type(label) is int, "Make sure label is an integer between 0 and 9 (inclusive)."
+        noise = torch.randn(1, self.nz, device=self.device)
+        processed_label = torch.zeros([1, 10], dtype=torch.uint8, device='cpu')
+        label = torch.full((1, 1), label, dtype=torch.int64)
+        processed_label = processed_label.scatter(1, label, 1).float().to(self.device)
+        output = self.netG(noise, processed_label).view(28, 28).detach().cpu().numpy()
+        return output
 
 
 # Generator class
@@ -160,7 +181,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         # Output size of num_channels x 28 x 28
         # Activations
         self.act = nn.LeakyReLU(0.2)
-        self.m = nn.Tanh()
+        self.m = nn.Sigmoid()
 
         # Loss and Optimizer
         # TODO: Try Wasserstein distance instead of BCE Loss
@@ -187,8 +208,8 @@ class CGAN_Generator(nn.Module, NetUtils):
         """
         Single dense hidden layer network.
         :param noise: Random Noise vector Z
-        :param labels: Label embedding
-        :return: MNIST img with values squashed by tanh to be between -1 and 1
+        :param labels: Label embedding of labels
+        :return: MNIST img with values squashed by sigmoid to be between 0 and 1
         """
         x = torch.cat([noise, labels], 1)
         x = self.act(self.fc1(x))
@@ -252,7 +273,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.m = nn.Sigmoid()
 
         # Loss and Optimizer
-        self.loss_fn = nn.BCELoss()  # BCE Loss
+        self.loss_fn = nn.BCELoss()  # BCE Loss combined with sigmoid for numeric stability
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
         # Record history of training
@@ -303,7 +324,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
 
 
 # Evaluator class
-class CGAN_Evaluator(nn.Module):
+class CGAN_Evaluator(nn.Module, NetUtils):
     def __init__(self, train_gen, val_gen, test_gen, device, num_channels, nc, lr, beta1, beta2, wd):
         super(CGAN_Evaluator, self).__init__()
 
@@ -315,12 +336,12 @@ class CGAN_Evaluator(nn.Module):
         self.device = device
 
         # Layers
-        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=10, kernel_size=5, stride=1, padding=0, bias=True)
+        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=10, kernel_size=5, stride=1, padding=2, bias=True)
         self.cn1_bn = nn.BatchNorm2d(10)
-        self.cn2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=5, stride=1, padding=0, bias=True)
+        self.cn2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=5, stride=1, padding=2, bias=True)
         self.cn2_bn = nn.BatchNorm2d(20)
 
-        self.mp = nn.MaxPool2d(kernel_size=2, stride=1)
+        self.mp = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.fc1 = nn.Linear(in_features=14 * 14 * 20, out_features=64)
         self.output = nn.Linear(in_features=64, out_features=nc)
@@ -329,9 +350,9 @@ class CGAN_Evaluator(nn.Module):
         self.do2d = nn.Dropout2d(0.2)
         self.do1d = nn.Dropout(0.2)
         self.act = nn.LeakyReLU(0.2)
-        self.m = nn.Softmax()
 
         # Loss and Optimizer
+        self.loss = None
         self.loss_fn = nn.CrossEntropyLoss()
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
@@ -348,11 +369,11 @@ class CGAN_Evaluator(nn.Module):
         x = self.mp(x)
         x = x.view(-1, 14 * 14 * 20)
         x = self.do1d(self.act(self.fc1(x)))
-        return self.m(self.output(x))
+        return self.output(x)  # No softmax activation needed because it is built into CrossEntropyLoss in pytorch
 
     def process_batch(self, x, labels):
-        forward = self.forward(x)
-        loss = self.loss_fn(forward, labels)
+        fwd = self.forward(x)
+        loss = self.loss_fn(fwd, torch.argmax(labels, 1))
         return loss
 
     def train_one_epoch(self):
@@ -361,7 +382,10 @@ class CGAN_Evaluator(nn.Module):
         for batch, labels in self.train_gen:
             batch, labels = batch.to(self.device), labels.to(self.device)
             self.zero_grad()
-            train_loss += self.process_batch(batch, labels)
+            self.loss = self.process_batch(batch, labels)
+            self.loss.backward()
+            self.opt.step()
+            train_loss += self.loss
         return train_loss / len(self.train_gen)
 
     def eval_once(self, gen):
@@ -382,5 +406,5 @@ class CGAN_Evaluator(nn.Module):
 
                 if es:
                     if np.argmax(self.val_losses) < epoch - es:
-                        return True
+                        return True  # Exit early
         return True

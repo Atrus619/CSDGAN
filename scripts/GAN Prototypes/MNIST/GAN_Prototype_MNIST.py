@@ -81,5 +81,10 @@ test_generator = data.DataLoader(test_set, **training_params)
 # Define GAN
 CGAN = CGAN(training_generator, validation_generator, test_generator, **CGAN_params)
 
-asdf = CGAN.netG(CGAN.netG.fixed_noise, CGAN.netG.fixed_labels)
-CGAN.netD(asdf, CGAN.netG.fixed_labels)
+# Train
+CGAN.train_gan(25, 5)
+
+# TODO: Better visualization of training (add labels to grid, visualize progress, visualize weights and such)
+# TODO: Add video presenting progression of training images
+# TODO: Seems to perform poorly at generating conditional numbers
+# TODO: Generate performance on original data for comparison
