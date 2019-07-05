@@ -1,7 +1,6 @@
-from scripts.Utils.data_loading import load_dataset
-from sklearn.model_selection import train_test_split
+from utils.data_loading import load_dataset
 from models.CGAN_iris import CGAN_Generator, CGAN_Discriminator
-from scripts.Utils.utils import *
+from utils.utils import *
 import random
 
 # Set random seem for reproducibility

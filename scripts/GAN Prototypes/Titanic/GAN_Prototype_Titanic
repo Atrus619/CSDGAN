@@ -1,6 +1,5 @@
-from sklearn.model_selection import train_test_split
 from models.CGAN_titanic import CGAN_Generator, CGAN_Discriminator
-from scripts.Utils.utils import *
+from utils.utils import *
 import random
 
 # Set random seem for reproducibility
