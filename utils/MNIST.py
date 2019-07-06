@@ -4,7 +4,14 @@ import numpy as np
 import torchvision.utils as vutils
 
 
-def eval_on_real_data(CGAN, num_epochs, es):
+def eval_on_real_data(CGAN, num_epochs, es=None):
+    """
+    Evaluate the CGAN Evaluator Network on real examples
+    :param CGAN: CGAN to evaluate with
+    :param num_epochs: Number of epochs to train for
+    :param es: Early-stopping patience. If None, early-stopping is not utilized.
+    :return: Accuracy of evaluation on CGAN's testing data
+    """
     CGAN.init_evaluator(CGAN.train_gen, CGAN.val_gen)
     CGAN.netE.train_evaluator(num_epochs=num_epochs, eval_freq=1, es=es)
     _, og_result = CGAN.netE.eval_once(CGAN.test_gen)
@@ -12,6 +19,7 @@ def eval_on_real_data(CGAN, num_epochs, es):
 
 
 def convert_y_to_one_hot(y):
+    """Converts a tensor of labels to a one_hot encoded version"""
     new_y = torch.zeros([len(y), 10], dtype=torch.uint8, device='cpu')
     y = y.view(-1, 1)
     new_y.scatter_(1, y, 1)
@@ -19,6 +27,7 @@ def convert_y_to_one_hot(y):
 
 
 def show_real_grid(x_train, y_train, nc=10):
+    """Generates a grid of images on real data. Randomly selects examples from provided args."""
     pre_grid = torch.empty((nc*10, 1, 28, 28))
     for i in range(nc):
         # Collect 10 random samples of each label

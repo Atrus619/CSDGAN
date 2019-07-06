@@ -64,9 +64,9 @@ CGAN = CGAN(train_gen=training_generator,
 
 # Train CGAN
 try:
-    CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, use_netE=cfg.EVAL)
+    CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, eval_freq=cfg.EVAL_FREQ)
 except RuntimeError:
-    CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, use_netE=cfg.EVAL)
+    CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, eval_freq=cfg.EVAL_FREQ)
 
 # Display final grid
 CGAN.show_grid(-1)
@@ -79,12 +79,15 @@ CGAN.show_img(0)
 CGAN.show_video()
 
 # Diagnostics
-training_plots(netD=CGAN.netD, netG=CGAN.netG, num_epochs=CGAN.epoch, save=exp_path)
-plot_layer_scatters(net=CGAN.netG, title="Generator", save=exp_path)
-plot_layer_scatters(net=CGAN.netD, title="Discriminator", save=exp_path)
+CGAN.plot_training_plots(show=True, save=exp_path)
+CGAN.netG.plot_layer_scatters(title="Generator", show=True, save=exp_path)
+CGAN.netD.plot_layer_scatters(title="Discriminator", show=True, save=exp_path)
+
+CGAN.netG.plot_layer_hists()
+CGAN.netD.plot_layer_hists()
 
 # TODO: Seems to perform poorly at generating conditional numbers
-# TODO: Add comments to each function
 # TODO: Add augmentation and compare
 # TODO: Possibly bad initialization too
 # TODO: It seems like the issue is exploding gradients in the discriminator?!? Possibly affecting generator as well...
+# TODO: Could add activation histograms if you want to go the extra mile

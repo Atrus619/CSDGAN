@@ -35,6 +35,7 @@ class Fake_MNIST_Dataset(data.Dataset):
         self.y = self.y.long().to('cpu')
 
     def gen_labels(self):
+        """Used by evaluator to generate labels for fake training data"""
         npc = self.size // self.nc  # Number of labels Per Class (npc)
         tmp = torch.empty(self.size, dtype=torch.int64)
         for i in range(self.nc):
@@ -42,6 +43,7 @@ class Fake_MNIST_Dataset(data.Dataset):
         self.y = convert_y_to_one_hot(tmp).float().to(self.device)
 
     def gen_data(self):
+        """Used by evaluator to generate fake training data examples. Requires prior run of gen_labels"""
         assert self.size % self.gen_x_bs == 0, "Please adjust size so that it is divisible by self.gen_x_bs so that an edge case isn't required."
         self.x = torch.empty((self.size, 1, 28, 28), dtype=torch.float32, device=self.device)
         with torch.no_grad():

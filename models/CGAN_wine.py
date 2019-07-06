@@ -28,7 +28,7 @@ class CGAN_Generator(nn.Module, NetUtils):
 
         # Record history of training
         self.init_layer_list()
-        self.init_hist()
+        self.init_history()
         self.losses = []
         self.fixed_noise_outputs = []
 
@@ -87,7 +87,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
 
         # Record history of training
         self.init_layer_list()
-        self.init_hist()
+        self.init_history()
         self.losses = []
         self.Avg_D_reals = []
         self.Avg_D_fakes = []

@@ -8,6 +8,7 @@ from models.MNIST.netG import CGAN_Generator
 from models.MNIST.netE import CGAN_Evaluator
 from utils.MNIST import *
 import time
+from utils.utils import *
 
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
@@ -20,7 +21,7 @@ class CGAN(nn.Module):
                  eval_num_epochs, early_stopping_patience):
         # Inherit nn.Module initialization
         super(CGAN, self).__init__()
-        #
+
         self.train_gen = train_gen
         self.val_gen = val_gen
         self.test_gen = test_gen
@@ -29,10 +30,12 @@ class CGAN(nn.Module):
         self.fake_num_workers = 6
         self.fake_data_set_size = fake_data_set_size
         self.fake_bs = fake_bs
-        self.fake_train_set = None  # Initialized through init_fake_gen method
-        self.fake_train_gen = None  # Initialized through init_fake_gen method
-        self.fake_val_set = None  # Initialized through init_fake_gen method
-        self.fake_val_gen = None  # Initialized through init_fake_gen method
+
+        # Initialized through init_fake_gen method
+        self.fake_train_set = None
+        self.fake_train_gen = None
+        self.fake_val_set = None
+        self.fake_val_gen = None
 
         self.device = device
         self.x_dim = x_dim
@@ -61,27 +64,38 @@ class CGAN(nn.Module):
         self.eval_num_epochs = eval_num_epochs
         self.early_stopping_patience = early_stopping_patience
 
-    def train_gan(self, num_epochs, print_freq, use_netE=False):
+    def train_gan(self, num_epochs, print_freq, eval_freq=None):
+        """
+        Primary method for training
+        :param num_epochs: Desired number of epochs to train for
+        :param print_freq: How freqently to print out training statistics (i.e., freq of 5 will result in information being printed every 5 epochs)
+        :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur. Evaluation takes a significant amount of time.
+        """
         start_time = None
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
                 x, y = x.to(self.device), y.to(self.device)
                 self.train_one_step(x, y)
+
+            self.next_epoch()
+
             if self.epoch % print_freq == 0 or (self.epoch == num_epochs - 1):
                 if start_time is not None:
                     print("Elapsed time since last eval: %ds" % (time.time() - start_time))
                 start_time = time.time()
+
                 self.print_progress(num_epochs)
 
-                if use_netE:
+                self.fixed_imgs.append(self.gen_fixed_img_grid())
+
+            if eval_freq is not None:
+                if self.epoch % eval_freq == 0 or (self.epoch == num_epochs - 1):
                     self.init_fake_gen()
                     self.test_model(train_gen=self.fake_train_gen, val_gen=self.fake_val_gen)
-                    print("Evaluator Score: %.4f" % (self.stored_acc[-1]))
-
-                self.fixed_imgs.append(self.gen_fixed_img_grid())
-            self.epoch += 1
+                    print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch+1, self.stored_acc[-1]))
 
     def train_one_step(self, x_train, y_train):
+        """One full step of the CGAN training process"""
         bs = x_train.shape[0]
         self.netG.train()
         self.netD.train()
@@ -103,14 +117,12 @@ class CGAN(nn.Module):
         fake_forward_pass = self.netD(x_train_fake.detach(), garbage_y_train).view(-1)
         self.netD.train_one_step_fake(fake_forward_pass, labels)
         self.netD.combine_and_update_opt()
-        self.netD.update_history()
 
         # Update Generator
         labels.fill_(self.real_label)  # Reverse labels, fakes are real for generator cost
         # gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
         gen_fake_forward_pass = self.netD(x_train_fake, garbage_y_train).view(-1)
         self.netG.train_one_step(gen_fake_forward_pass, labels)
-        self.netG.update_history()
 
     def test_model(self, train_gen, val_gen):
         """
@@ -128,6 +140,25 @@ class CGAN(nn.Module):
         self.stored_loss.append(loss.item())
         self.stored_acc.append(acc.item())
 
+    def print_progress(self, num_epochs):
+        """Print metrics of interest"""
+        print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+              % (self.epoch+1, num_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
+
+        with torch.no_grad():
+            # Generate sample of fake images to store for later
+            self.fixed_imgs.append(self.gen_fixed_img_grid())
+
+    def next_epoch(self):
+        """Runs netG and netD methods to prepare for next epoch. Mostly saves histories and resets history collection objects."""
+        self.epoch += 1
+
+        self.netG.next_epoch()
+        self.netG.next_epoch_gen()
+
+        self.netD.next_epoch()
+        self.netD.next_epoch_discrim()
+
     def init_evaluator(self, train_gen, val_gen):
         """
         Initializes the netE sub-net. This is done as a separate method because we want to reinitialize netE each time we want to evaluate it.
@@ -144,17 +175,8 @@ class CGAN(nn.Module):
         self.fake_val_set = Fake_MNIST_Dataset(self.netG, self.fake_data_set_size, self.nz, self.nc, self.device)
         self.fake_val_gen = data.DataLoader(self.fake_val_set, batch_size=self.fake_bs, shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
 
-    def print_progress(self, num_epochs):
-        # Print metrics of interest
-        print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-              % (self.epoch + 1, num_epochs, self.netD.loss.item(), self.netG.loss.item(), self.netD.D_x, self.netD.D_G_z1, self.netG.D_G_z2))
-
-        with torch.no_grad():
-            # Generate sample of fake images to store for later
-            self.fixed_imgs.append(self.gen_fixed_img_grid())
-
     def show_img(self, label):
-        # Generates a 28x28 image based on the desired class label index (integer 0-9)
+        """Generates a 28x28 image based on the desired class label index (integer 0-9)"""
         assert 0 <= label <= 9 and type(label) is int, "Make sure label is an integer between 0 and 9 (inclusive)."
         noise = torch.randn(1, self.nz, device=self.device)
         processed_label = torch.zeros([1, 10], dtype=torch.uint8, device='cpu')
@@ -203,8 +225,61 @@ class CGAN(nn.Module):
             plt.show()
 
     def plot_progress(self):
+        """ Plot describing progress over time of netE compared to an evaluation on real data"""
         pass
 
+    def plot_training_plots(self, show=True, save=None):
+        """
+        Pulls together a plot of relevant training diagnostics for both netG and netD
+        :param show: Whether to display the plot
+        :param save: Whether to save the plot. If a value is entered, this is the path where the plot should be saved.
+        """
+        assert self.epoch > 0, "Model needs to be trained first"
+
+        f, axes = plt.subplots(2, 2, figsize=(12, 12), sharex=True)
+
+        axes[0, 0].title.set_text("Generator and Discriminator Loss During Training")
+        axes[0, 0].plot(self.netG.losses, label="G")
+        axes[0, 0].plot(self.netD.losses, label="D")
+        axes[0, 0].set_xlabel("iterations")
+        axes[0, 0].set_ylabel("loss")
+        axes[0, 0].legend()
+
+        axes[0, 1].title.set_text("Average Discriminator Outputs During Training")
+        axes[0, 1].plot(self.netD.Avg_D_reals, label="Real")
+        axes[0, 1].plot(self.netD.Avg_D_fakes, label="Fake")
+        axes[0, 1].plot(np.linspace(0, self.epoch, self.epoch), np.full(self.epoch, 0.5))
+        axes[0, 1].set_xlabel("iterations")
+        axes[0, 1].set_ylabel("proportion")
+        axes[0, 1].legend()
+
+        axes[1, 0].title.set_text('Gradient Norm History')
+        axes[1, 0].plot(self.netG.gnorm_total_history, label="G")
+        axes[1, 0].plot(self.netD.gnorm_total_history, label="D")
+        axes[1, 0].set_xlabel("iterations")
+        axes[1, 0].set_ylabel("norm")
+        axes[1, 0].legend()
+
+        axes[1, 1].title.set_text('Weight Norm History')
+        axes[1, 1].plot(self.netG.wnorm_total_history, label="G")
+        axes[1, 1].plot(self.netD.wnorm_total_history, label="D")
+        axes[1, 1].set_xlabel("iterations")
+        axes[1, 1].set_ylabel("norm")
+        axes[1, 1].legend()
+
+        st = f.suptitle("Training Diagnostic Plots", fontsize='x-large')
+        f.tight_layout()
+        st.set_y(0.96)
+        f.subplots_adjust(top=0.9)
+
+        if show:
+            f.show()
+
+        if save is not None:
+            assert os.path.exists(save), "Check that the desired save path exists."
+            safe_mkdir(save + '/training_plots')
+            f.savefig(save + '/training_plots/training_plot.png')
+
     def load_netE(self, epoch):
-        # Loads a previously stored netE (likely the one that performed the best)
+        """Loads a previously stored netE (likely the one that performed the best)"""
         self.netE.load_state_dict(torch.load(self.netE_filepath + "/Epoch_" + epoch + "_Evaluator.pt"))

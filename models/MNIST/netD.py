@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 from models.NetUtils import NetUtils
 import torch.optim as optim
+import numpy as np
 
 
 # Discriminator class
@@ -9,13 +10,13 @@ class CGAN_Discriminator(nn.Module, NetUtils):
     def __init__(self, nf, nc, num_channels, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
+
         self.loss_real = None
         self.loss_fake = None
-        self.loss = None
-        self.D_x = None
-        self.D_G_z1 = None
+
         self.nc = nc
         self.nf = nf
+        self.epoch = 0
         self.fc_labels_size = 128
         self.agg_size = 512
 
@@ -43,10 +44,12 @@ class CGAN_Discriminator(nn.Module, NetUtils):
 
         # Record history of training
         self.init_layer_list()
-        self.init_hist()
-        self.losses = []
-        self.Avg_D_reals = []
-        self.Avg_D_fakes = []
+        self.init_history()
+
+        self.D_x = []  # Per step
+        self.Avg_D_reals = []  # D_x across epochs
+        self.D_G_z1 = []  # Per step
+        self.Avg_D_fakes = []  # Store D_G_z1 across epochs
 
         # Initialize weights
         self.weights_init()
@@ -69,20 +72,22 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.zero_grad()
         self.loss_real = self.loss_fn(output, label)
         self.loss_real.backward()
-        self.D_x = output.mean().item()
+        self.D_x.append(output.mean().item())
 
     def train_one_step_fake(self, output, label):
         self.loss_fake = self.loss_fn(output, label)
         self.loss_fake.backward()
-        self.D_G_z1 = output.mean().item()
+        self.D_G_z1.append(output.mean().item())
 
     def combine_and_update_opt(self):
-        self.loss = self.loss_real + self.loss_fake
+        self.loss.append(self.loss_real.item() + self.loss_fake.item())
         self.opt.step()
+        self.store_weight_and_grad_norms()
 
-    def update_history(self):
-        self.update_gnormz(2)
-        self.update_wnormz(2)
-        self.losses.append(self.loss.item())
-        self.Avg_D_reals.append(self.D_x)
-        self.Avg_D_fakes.append(self.D_G_z1)
+    def next_epoch_discrim(self):
+        """Discriminator specific actions"""
+        self.Avg_D_reals.append(np.mean(self.D_x))  # Mean of means is not exact, but close enough for our purposes
+        self.D_x = []
+
+        self.Avg_D_fakes.append(np.mean(self.D_G_z1))
+        self.D_G_z1 = []

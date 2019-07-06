@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 from models.NetUtils import NetUtils
 import torch.optim as optim
+import numpy as np
 
 
 # Generator class
@@ -9,15 +10,15 @@ class CGAN_Generator(nn.Module, NetUtils):
     def __init__(self, nz, nf, num_channels, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
-        self.loss = None
-        self.D_G_z2 = None
+
         self.x_dim = x_dim
         self.nc = nc
         self.nz = nz
         self.nf = nf
-        # 10x10, 10 examples of each of the 10 labels
+        self.epoch = 0
+
         self.fixed_count_per_label = 10
-        self.fixed_noise = torch.randn(100, nz, device=device)
+        self.fixed_noise = torch.randn(self.fixed_count_per_label * nc, nz, device=device)  # 10x10, 10 examples of each of the 10 labels
         self.fixed_labels = self.init_fixed_labels().to(device)
 
         # Layers
@@ -41,8 +42,10 @@ class CGAN_Generator(nn.Module, NetUtils):
 
         # Record history of training
         self.init_layer_list()
-        self.init_hist()
-        self.losses = []
+        self.init_history()
+
+        self.D_G_z2 = []  # Per step
+        self.Avg_G_fakes = []  # Store D_G_z2 across epochs
 
         # Initialize weights
         self.weights_init()
@@ -69,12 +72,15 @@ class CGAN_Generator(nn.Module, NetUtils):
 
     def train_one_step(self, output, label):
         self.zero_grad()
-        self.loss = self.loss_fn(output, label)
-        self.loss.backward()
-        self.D_G_z2 = output.mean().item()
+        loss_tmp = self.loss_fn(output, label)
+        loss_tmp.backward()
+        self.loss.append(loss_tmp.item())
+        self.D_G_z2.append(output.mean().item())
         self.opt.step()
 
-    def update_history(self):
-        self.update_gnormz(2)
-        self.update_wnormz(2)
-        self.losses.append(self.loss.item())
+        self.store_weight_and_grad_norms()
+
+    def next_epoch_gen(self):
+        """Generator specific actions"""
+        self.Avg_G_fakes.append(np.mean(self.D_G_z2))
+        self.D_G_z2 = []
