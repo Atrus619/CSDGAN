@@ -75,8 +75,8 @@ show_real_grid(x_train, y_train)
 # Generate sample images
 CGAN.show_img(0)
 
-# Display video of progress
-CGAN.show_video()
+# Build video of progress
+CGAN.build_gif(os.path.join(exp_path, "imgs"))
 
 # Diagnostics
 CGAN.plot_training_plots(show=True, save=exp_path)
@@ -91,3 +91,4 @@ CGAN.netD.plot_layer_hists()
 # TODO: Possibly bad initialization too
 # TODO: It seems like the issue is exploding gradients in the discriminator?!? Possibly affecting generator as well...
 # TODO: Could add activation histograms if you want to go the extra mile
+# TODO: Find average weight norm instead of just norm

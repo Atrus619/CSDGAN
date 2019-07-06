@@ -7,9 +7,9 @@ SPLITS = [0.15, 0.05, 0.80]
 # Training and CGAN parameters
 MANUAL_SEED = 999
 NUM_EPOCHS = 5
-PRINT_FREQ = 1
-EVAL_FREQ = False
-BATCH_SIZE = 100
+PRINT_FREQ = 5
+EVAL_FREQ = None
+BATCH_SIZE = 128
 TRAINING_PARAMS = {'batch_size': BATCH_SIZE,
                    'shuffle': True,
                    'num_workers': 6}

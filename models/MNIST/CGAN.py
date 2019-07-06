@@ -9,6 +9,7 @@ from models.MNIST.netE import CGAN_Evaluator
 from utils.MNIST import *
 import time
 from utils.utils import *
+import imageio
 
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
@@ -49,7 +50,6 @@ class CGAN(nn.Module):
 
         self.epoch = 0
 
-        self.fixed_imgs = []
         self.stored_loss = []
         self.stored_acc = []
 
@@ -64,6 +64,8 @@ class CGAN(nn.Module):
         self.eval_num_epochs = eval_num_epochs
         self.early_stopping_patience = early_stopping_patience
 
+        self.fixed_imgs = [self.gen_fixed_img_grid()]
+
     def train_gan(self, num_epochs, print_freq, eval_freq=None):
         """
         Primary method for training
@@ -71,7 +73,7 @@ class CGAN(nn.Module):
         :param print_freq: How freqently to print out training statistics (i.e., freq of 5 will result in information being printed every 5 epochs)
         :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur. Evaluation takes a significant amount of time.
         """
-        start_time = None
+        start_time = time.time()
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
                 x, y = x.to(self.device), y.to(self.device)
@@ -79,17 +81,14 @@ class CGAN(nn.Module):
 
             self.next_epoch()
 
-            if self.epoch % print_freq == 0 or (self.epoch == num_epochs - 1):
-                if start_time is not None:
-                    print("Elapsed time since last eval: %ds" % (time.time() - start_time))
+            if self.epoch % print_freq == 0 or (self.epoch == num_epochs):
+                print("Time: %ds" % (time.time() - start_time))
                 start_time = time.time()
 
                 self.print_progress(num_epochs)
 
-                self.fixed_imgs.append(self.gen_fixed_img_grid())
-
             if eval_freq is not None:
-                if self.epoch % eval_freq == 0 or (self.epoch == num_epochs - 1):
+                if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
                     self.init_fake_gen()
                     self.test_model(train_gen=self.fake_train_gen, val_gen=self.fake_val_gen)
                     print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch+1, self.stored_acc[-1]))
@@ -101,27 +100,27 @@ class CGAN(nn.Module):
         self.netD.train()
         y_train = y_train.float()  # Convert to float so that it can interact with float weights correctly
 
-        garbage_y_train = convert_y_to_one_hot(torch.from_numpy(np.random.randint(0, 9, len(y_train)))).to(self.device).type(torch.float32)
+        # garbage_y_train = convert_y_to_one_hot(torch.from_numpy(np.random.randint(0, 9, len(y_train)))).to(self.device).type(torch.float32)
         # import pdb; pdb.set_trace()
         # Update Discriminator, all real batch
         labels = torch.full(size=(bs,), fill_value=self.real_label, device=self.device)
-        # real_forward_pass = self.netD(x_train, y_train).view(-1)
-        real_forward_pass = self.netD(x_train, garbage_y_train).view(-1)
+        real_forward_pass = self.netD(x_train, y_train).view(-1)
+        # real_forward_pass = self.netD(x_train, garbage_y_train).view(-1)
         self.netD.train_one_step_real(real_forward_pass, labels)
 
         # Update Discriminator, all fake batch
         noise = torch.randn(bs, self.nz, device=self.device)
         x_train_fake = self.netG(noise, y_train)
         labels.fill_(self.fake_label)
-        # fake_forward_pass = self.netD(x_train_fake.detach(), y_train).view(-1)
-        fake_forward_pass = self.netD(x_train_fake.detach(), garbage_y_train).view(-1)
+        fake_forward_pass = self.netD(x_train_fake.detach(), y_train).view(-1)
+        # fake_forward_pass = self.netD(x_train_fake.detach(), garbage_y_train).view(-1)
         self.netD.train_one_step_fake(fake_forward_pass, labels)
         self.netD.combine_and_update_opt()
 
         # Update Generator
         labels.fill_(self.real_label)  # Reverse labels, fakes are real for generator cost
-        # gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
-        gen_fake_forward_pass = self.netD(x_train_fake, garbage_y_train).view(-1)
+        gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
+        # gen_fake_forward_pass = self.netD(x_train_fake, garbage_y_train).view(-1)
         self.netG.train_one_step(gen_fake_forward_pass, labels)
 
     def test_model(self, train_gen, val_gen):
@@ -143,7 +142,7 @@ class CGAN(nn.Module):
     def print_progress(self, num_epochs):
         """Print metrics of interest"""
         print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-              % (self.epoch+1, num_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
+              % (self.epoch, num_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
 
         with torch.no_grad():
             # Generate sample of fake images to store for later
@@ -152,6 +151,8 @@ class CGAN(nn.Module):
     def next_epoch(self):
         """Runs netG and netD methods to prepare for next epoch. Mostly saves histories and resets history collection objects."""
         self.epoch += 1
+
+        self.fixed_imgs.append(self.gen_fixed_img_grid())
 
         self.netG.next_epoch()
         self.netG.next_epoch_gen()
@@ -210,19 +211,27 @@ class CGAN(nn.Module):
             plt.imshow(np.transpose(self.fixed_imgs[index], (1, 2, 0)))
             plt.show()
 
-    def show_video(self):
+    def build_gif(self, path):
+        """Loops through self.fixed_imgs and saves the images to a folder.
+        :param path: Path to folder to save images. Folder will be created if it does not already exist.
         """
-        Produces a video demonstrating the CGAN's progress over evaluations.
-        :return: Nothing. Displays the desired video instead.
-        """
-        if len(self.fixed_imgs) == 0:
-            print("Model not yet trained.")
-        else:
+        assert len(self.fixed_imgs) > 0, "Model not yet trained"
+        safe_mkdir(path)
+        ims = []
+        for epoch, grid in enumerate(self.fixed_imgs):
             fig = plt.figure(figsize=(8, 8))
             plt.axis('off')
-            ims = [[plt.imshow(np.transpose(grid, (1, 2, 0)))] for grid in self.fixed_imgs]
-            ani = animation.ArtistAnimation(fig, ims, interval=1000, repeat_delay=1000, blit=True)
-            plt.show()
+            plt.suptitle('Epoch ' + str(epoch))
+            plt.imshow(np.transpose(grid, (1, 2, 0)))
+            img_name = path + "/Epoch " + str(epoch) + ".png"
+            plt.savefig(img_name)
+            ims.append(imageio.imread(img_name))
+            plt.close()
+            if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
+                for i in range(9):
+                    ims.append(imageio.imread(img_name))
+                    plt.close()
+        imageio.mimsave(path + '/generation_animation.gif', ims, fps=5)
 
     def plot_progress(self):
         """ Plot describing progress over time of netE compared to an evaluation on real data"""
