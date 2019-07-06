@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch
 import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -9,7 +8,7 @@ from torch.utils import data
 from models.MNIST.netD import CGAN_Discriminator
 from models.MNIST.netG import CGAN_Generator
 from models.MNIST.netE import CGAN_Evaluator
-
+from utils.MNIST import *
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
@@ -84,23 +83,28 @@ class CGAN(nn.Module):
         self.netD.train()
         y_train = y_train.float()  # Convert to float so that it can interact with float weights correctly
 
+        garbage_y_train = convert_y_to_one_hot(torch.from_numpy(np.random.randint(0, 9, len(y_train)))).to(self.device).type(torch.float32)
+        # import pdb; pdb.set_trace()
         # Update Discriminator, all real batch
         labels = torch.full(size=(bs,), fill_value=self.real_label, device=self.device)
-        real_forward_pass = self.netD(x_train, y_train).view(-1)
+        # real_forward_pass = self.netD(x_train, y_train).view(-1)
+        real_forward_pass = self.netD(x_train, garbage_y_train).view(-1)
         self.netD.train_one_step_real(real_forward_pass, labels)
 
         # Update Discriminator, all fake batch
         noise = torch.randn(bs, self.nz, device=self.device)
         x_train_fake = self.netG(noise, y_train)
         labels.fill_(self.fake_label)
-        fake_forward_pass = self.netD(x_train_fake.detach(), y_train).view(-1)
+        # fake_forward_pass = self.netD(x_train_fake.detach(), y_train).view(-1)
+        fake_forward_pass = self.netD(x_train_fake.detach(), garbage_y_train).view(-1)
         self.netD.train_one_step_fake(fake_forward_pass, labels)
         self.netD.combine_and_update_opt()
         self.netD.update_history()
 
         # Update Generator
         labels.fill_(self.real_label)  # Reverse labels, fakes are real for generator cost
-        gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
+        # gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
+        gen_fake_forward_pass = self.netD(x_train_fake, garbage_y_train).view(-1)
         self.netG.train_one_step(gen_fake_forward_pass, labels)
         self.netG.update_history()
 

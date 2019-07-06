@@ -79,3 +79,4 @@ CGAN.show_video()
 # TODO: Add comments to each function
 # TODO: Add augmentation and compare
 # TODO: Possibly bad initialization too
+# TODO: Add time tracking to training loop for CGAN

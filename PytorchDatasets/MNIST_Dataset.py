@@ -1,12 +1,5 @@
 from torch.utils import data
-import torch
-
-
-def convert_y_to_one_hot(y):
-    new_y = torch.zeros([len(y), 10], dtype=torch.uint8, device='cpu')
-    y = y.view(-1, 1)
-    new_y.scatter_(1, y, 1)
-    return new_y
+from utils.MNIST import *
 
 
 class MNIST_Dataset(data.Dataset):
