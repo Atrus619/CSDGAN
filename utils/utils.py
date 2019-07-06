@@ -108,11 +108,11 @@ def plot_training_progress(stored_scores, test_range, num_saves, real_data_score
     xs = np.empty((num_saves, len(test_range)))
     barWidth = 1 / (len(test_range) + 1)
     for i in range(len(test_range)):
-        ys[:, i] = np.array(stored_scores[i:num_saves*len(test_range):len(test_range)])
+        ys[:, i] = np.array(stored_scores[i:num_saves * len(test_range):len(test_range)])
         xs[:, i] = np.arange(num_saves) + barWidth * i
         plt.bar(xs[:, i], ys[:, i], width=barWidth, edgecolor='white', label=test_range[i])
 
-    line_len = 2*len(test_range)+1
+    line_len = 2 * len(test_range) + 1
     plt.plot(np.linspace(0, line_len, line_len), np.full(line_len, real_data_score), linestyle='dashed', color='r')
     plt.xlabel('Epoch', fontweight='bold')
     plt.xticks([r + barWidth for r in range(num_saves)], list(range(num_saves)))
@@ -121,13 +121,14 @@ def plot_training_progress(stored_scores, test_range, num_saves, real_data_score
     plt.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/training_progress')
         plt.savefig(save + '/training_progress/' + 'training_progress.png')
 
 
 # Helper/diagnostic function to return stats for a specific model
 def parse_models(stored_models, epoch, print_interval, test_range, ind, x_test, y_test, labels):
-    tmp_model = stored_models[epoch // print_interval * len(test_range)-1 + ind]
+    tmp_model = stored_models[epoch // print_interval * len(test_range) - 1 + ind]
     best_score = tmp_model.score(x_test, y_test)
     predictions = tmp_model.predict(x_test)
     print("Accuracy:", best_score)
@@ -145,6 +146,7 @@ def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
     plt.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/scatter_matrices')
         plt.savefig(save + '/scatter_matrices/' + title + '_scatter_matrix.png')
 
@@ -178,6 +180,7 @@ def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_d
     f.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/conditional_scatters')
         f.savefig(save + '/conditional_scatters/' + og_df.columns[col1] + '_vs_' + og_df.columns[col2] + '_conditional_scatter.png')
 
@@ -205,6 +208,7 @@ def plot_conditional_density(x_real, y_real, x_fake, y_fake, col, class_dict, og
     f.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/conditional_densities')
         f.savefig(save + '/conditional_densities/' + og_df.columns[col] + '_conditional_density.png')
 
@@ -247,6 +251,7 @@ def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0, save=None):
     plt.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/conditional_scatters')
         plt.savefig(save + '/conditional_scatters/' + title + '_conditional_scatter.png')
 
@@ -293,6 +298,7 @@ def iris_plot_densities(X, y, title, scaler=None, save=None):
     f.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/conditional_densities')
         f.savefig(save + '/conditional_densities/' + title + '_conditional_density.png')
 
@@ -337,6 +343,7 @@ def training_plots(netD, netG, num_epochs, save=None):
     f.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/training_plots')
         f.savefig(save + '/training_plots/training_plot.png')
 
@@ -362,6 +369,7 @@ def fake_data_training_plots(real_range, score_real, test_range, fake_scores, sa
     f.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/fake_data_training_plots')
         f.savefig(save + '/fake_data_training_plots/fake_data_training_plot.png')
 
@@ -375,11 +383,10 @@ def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
     axes[0, 3].title.set_text("Bias Gradient Norms")
 
     for i in range(4):
-        axes[len(net.layer_list)-1, i].set_xlabel('epochs')
+        axes[len(net.layer_list) - 1, i].set_xlabel('epochs')
 
-    layer_iterator = iter(net._modules)
     for i, layer in enumerate(net.layer_list):
-        axes[i, 0].set_ylabel(layer_iterator.__next__())
+        axes[i, 0].set_ylabel(net.layer_list_names[i])
         axes[i, 0].plot(net.wnorm_hist[layer]['weight'])
         axes[i, 1].plot(net.gnorm_hist[layer]['weight'])
         axes[i, 2].plot(net.wnorm_hist[layer]['bias'])
@@ -397,6 +404,7 @@ def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
     f.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/layer_scatters')
         f.savefig(save + '/layer_scatters/' + title + '_layer_scatter.png')
 
@@ -491,6 +499,7 @@ def compare_cats(real, fake, x, y, hue, save=None):
     f.show()
 
     if save is not None:
+        assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/compare_cats')
         f.savefig(save + '/compare_cats/' + x + '_' + hue + '_cat_comparison.png')
 

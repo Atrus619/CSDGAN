@@ -7,7 +7,8 @@ import torch.optim as optim
 # Discriminator class
 class CGAN_Discriminator(nn.Module, NetUtils):
     def __init__(self, nf, nc, num_channels, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
-        super(CGAN_Discriminator, self).__init__()
+        super().__init__()
+        NetUtils.__init__(self)
         self.loss_real = None
         self.loss_fake = None
         self.loss = None
@@ -41,7 +42,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
         # Record history of training
-        self.layer_list = [self._modules[x] for x in self._modules if self._modules[x].__class__.__name__.find('Conv2d') != -1]  # Return list of linear layers
+        self.init_layer_list()
         self.init_hist()
         self.losses = []
         self.Avg_D_reals = []

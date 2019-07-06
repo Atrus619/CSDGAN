@@ -5,20 +5,23 @@ from utils.data_loading import *
 from utils.MNIST import *
 from PytorchDatasets.MNIST_Dataset import MNIST_Dataset
 from torch.utils import data
+import os
 
 # Set random seem for reproducibility
-manualSeed = 999
-print("Random Seed: ", manualSeed)
-random.seed(manualSeed)
-torch.manual_seed(manualSeed)
+print("Random Seed: ", cfg.MANUAL_SEED)
+random.seed(cfg.MANUAL_SEED)
+torch.manual_seed(cfg.MANUAL_SEED)
 
 # Ensure directory exists for outputs
-safe_mkdir(cfg.netE_FILEPATH)
+exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
+eval_path = os.path.join(exp_path, "Stored Evaluators")
+safe_mkdir(exp_path)
+safe_mkdir(eval_path)
 
 # Import data and split
 mnist = load_dataset('mnist')
 x_comb, y_comb = torch.cat((mnist[0].data, mnist[1].data), 0).numpy(), torch.cat((mnist[0].targets, mnist[1].targets), 0).numpy()
-x_train, y_train, x_val, y_val, x_test, y_test = train_val_test_split(x_comb, y_comb, cfg.SPLITS, manualSeed)
+x_train, y_train, x_val, y_val, x_test, y_test = train_val_test_split(x_comb, y_comb, cfg.SPLITS, cfg.MANUAL_SEED)
 
 # Automatically determine these parameters
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")  # GPU if exists, else CPU
@@ -49,8 +52,8 @@ CGAN = CGAN(train_gen=training_generator,
             test_gen=test_generator,
             device=device,
             x_dim=x_dim,
-            netE_filepath=cfg.netE_FILEPATH,
-            **cfg.CGAN_PARAMS)
+            netE_filepath=eval_path,
+            **cfg.CGAN_INIT_PARAMS)
 
 # Check performance on real data
 # try:
@@ -61,12 +64,13 @@ CGAN = CGAN(train_gen=training_generator,
 
 # Train CGAN
 try:
-    CGAN.train_gan(30, 5)
+    CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, use_netE=cfg.EVAL)
 except RuntimeError:
-    CGAN.train_gan(30, 5)
+    CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, use_netE=cfg.EVAL)
 
 # Display final grid
 CGAN.show_grid(-1)
+show_real_grid(x_train, y_train)
 
 # Generate sample images
 CGAN.show_img(0)
@@ -74,9 +78,13 @@ CGAN.show_img(0)
 # Display video of progress
 CGAN.show_video()
 
-# TODO: Better visualization of training (add labels to grid, visualize progress, visualize weights and such)
+# Diagnostics
+training_plots(netD=CGAN.netD, netG=CGAN.netG, num_epochs=CGAN.epoch, save=exp_path)
+plot_layer_scatters(net=CGAN.netG, title="Generator", save=exp_path)
+plot_layer_scatters(net=CGAN.netD, title="Discriminator", save=exp_path)
+
 # TODO: Seems to perform poorly at generating conditional numbers
 # TODO: Add comments to each function
 # TODO: Add augmentation and compare
 # TODO: Possibly bad initialization too
-# TODO: Add time tracking to training loop for CGAN
+# TODO: It seems like the issue is exploding gradients in the discriminator?!? Possibly affecting generator as well...

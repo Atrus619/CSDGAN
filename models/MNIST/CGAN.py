@@ -1,6 +1,4 @@
 import torch.nn as nn
-import torchvision.utils as vutils
-import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 from PytorchDatasets.MNIST_Dataset import Fake_MNIST_Dataset
@@ -9,6 +7,8 @@ from models.MNIST.netD import CGAN_Discriminator
 from models.MNIST.netG import CGAN_Generator
 from models.MNIST.netE import CGAN_Evaluator
 from utils.MNIST import *
+import time
+
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
@@ -61,12 +61,16 @@ class CGAN(nn.Module):
         self.eval_num_epochs = eval_num_epochs
         self.early_stopping_patience = early_stopping_patience
 
-    def train_gan(self, num_epochs, eval_freq, use_netE=False):
+    def train_gan(self, num_epochs, print_freq, use_netE=False):
+        start_time = None
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
                 x, y = x.to(self.device), y.to(self.device)
                 self.train_one_step(x, y)
-            if self.epoch % eval_freq == 0 or (self.epoch == num_epochs - 1):
+            if self.epoch % print_freq == 0 or (self.epoch == num_epochs - 1):
+                if start_time is not None:
+                    print("Elapsed time since last eval: %ds" % (time.time() - start_time))
+                start_time = time.time()
                 self.print_progress(num_epochs)
 
                 if use_netE:
@@ -149,14 +153,6 @@ class CGAN(nn.Module):
             # Generate sample of fake images to store for later
             self.fixed_imgs.append(self.gen_fixed_img_grid())
 
-    def gen_fixed_img_grid(self):
-        """
-        Produces a grid of generated images from netG's fixed noise vector. This can be used to visually track progress of the CGAN training.
-        :return: Tensor of images
-        """
-        fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
-        return vutils.make_grid(tensor=fixed_imgs, nrow=self.nc, normalize=True).detach().cpu()
-
     def show_img(self, label):
         # Generates a 28x28 image based on the desired class label index (integer 0-9)
         assert 0 <= label <= 9 and type(label) is int, "Make sure label is an integer between 0 and 9 (inclusive)."
@@ -167,6 +163,16 @@ class CGAN(nn.Module):
         output = self.netG(noise, processed_label).view(28, 28).detach().cpu().numpy()
         plt.imshow(output)
         plt.show()
+
+    def gen_fixed_img_grid(self):
+        """
+        Produces a grid of generated images from netG's fixed noise vector. This can be used to visually track progress of the CGAN training.
+        :return: Tensor of images
+        """
+        self.netG.eval()
+        with torch.no_grad():
+            fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
+        return vutils.make_grid(tensor=fixed_imgs, nrow=10, normalize=True).detach().cpu()
 
     def show_grid(self, index):
         """
@@ -195,6 +201,9 @@ class CGAN(nn.Module):
             ims = [[plt.imshow(np.transpose(grid, (1, 2, 0)))] for grid in self.fixed_imgs]
             ani = animation.ArtistAnimation(fig, ims, interval=1000, repeat_delay=1000, blit=True)
             plt.show()
+
+    def plot_progress(self):
+        pass
 
     def load_netE(self, epoch):
         # Loads a previously stored netE (likely the one that performed the best)

@@ -8,7 +8,7 @@ import numpy as np
 # Evaluator class
 class CGAN_Evaluator(nn.Module, NetUtils):
     def __init__(self, train_gen, val_gen, test_gen, device, num_channels, nc, lr, beta1, beta2, wd):
-        super(CGAN_Evaluator, self).__init__()
+        super().__init__()
 
         # Generators
         self.train_gen = train_gen

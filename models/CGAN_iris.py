@@ -7,7 +7,8 @@ import torch.optim as optim
 # Generator class
 class CGAN_Generator(nn.Module, NetUtils):
     def __init__(self, nz, H, out_dim, nc, bs, lr, beta1, beta2):
-        super(CGAN_Generator, self).__init__()
+        super().__init__()
+        NetUtils.__init__(self)
         self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
         self.loss = None
         self.D_G_z2 = None
@@ -24,7 +25,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2))
 
         # Record history of training
-        self.layer_list = [self.fc1, self.output]
+        self.init_layer_list()
         self.init_hist()
         self.losses = []
         self.fixed_noise_outputs = []
@@ -60,7 +61,8 @@ class CGAN_Generator(nn.Module, NetUtils):
 # Discriminator class
 class CGAN_Discriminator(nn.Module, NetUtils):
     def __init__(self, H, out_dim, nc, lr, beta1, beta2):
-        super(CGAN_Discriminator, self).__init__()
+        super().__init__()
+        NetUtils.__init__(self)
         self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
         self.loss_real = None
         self.loss_fake = None
@@ -80,7 +82,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2))
 
         # Record history of training
-        self.layer_list = [self.fc1, self.output]
+        self.init_layer_list()
         self.init_hist()
         self.losses = []
         self.Avg_D_reals = []

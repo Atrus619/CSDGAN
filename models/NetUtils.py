@@ -4,12 +4,23 @@ import torch
 
 # Contains utils to be inherited by other nets in this project
 class NetUtils:
-    def init_hist(self):
-        assert self.layer_list, "Make sure to initialize a self.layer_list in your constructor consisting of a list of layers to track to use this method."
+    def __init__(self):
+        super().__init__()
         self.gnorm_hist = {}
         self.gnorm_total_hist = []
         self.wnorm_hist = {}
         self.wnorm_total_hist = []
+
+        self.layer_list = []
+        self.layer_list_names = []
+
+    def init_layer_list(self):
+        # List of nn.modules to ignore when constructing layer_list
+        nn_module_ignore_list = ['batchnorm', 'activation', 'loss']
+        self.layer_list = [x for x in self._modules.values() if not any(excl in str(type(x)) for excl in nn_module_ignore_list)]
+        self.layer_list_names = [x for x in self._modules.keys() if not any(excl in str(type(self._modules[x])) for excl in nn_module_ignore_list)]
+
+    def init_hist(self):
         for layer in self.layer_list:
             self.gnorm_hist[layer] = {'weight': [], 'bias': []}
             self.wnorm_hist[layer] = {'weight': [], 'bias': []}
