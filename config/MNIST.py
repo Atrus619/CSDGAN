@@ -1,14 +1,14 @@
 # Title of experiment for output directory
-EXPERIMENT_NAME = 'mnist_initial_tests'
+EXPERIMENT_NAME = 'mnist_test_200_epochs'
 
 # Desired Train/Validation/Test split
 SPLITS = [0.15, 0.05, 0.80]
 
 # Training and CGAN parameters
 MANUAL_SEED = 999
-NUM_EPOCHS = 5
+NUM_EPOCHS = 200
 PRINT_FREQ = 5
-EVAL_FREQ = None
+EVAL_FREQ = 20
 BATCH_SIZE = 128
 TRAINING_PARAMS = {'batch_size': BATCH_SIZE,
                    'shuffle': True,

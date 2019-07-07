@@ -24,6 +24,7 @@ class NetUtils:
         self.losses = []  # List of loss per epoch
 
         self.norm_num = 2
+        self.bins = 20  # Choice of bins=20 seems to look nice. Subject to change.
 
     def init_layer_list(self):
         """Initializes list of layers for tracking history"""
@@ -52,7 +53,7 @@ class NetUtils:
 
         self.update_wnormz()
         self.update_gnormz()
-        self.update_hist_list(bins=20)  # Choice of bins=20 seems to look nice. Subject to change.
+        self.update_hist_list(bins=self.bins)
 
         for layer in self.layer_list:
             self.streaming_weight_history[layer] = {'weight': [], 'bias': []}
@@ -64,15 +65,15 @@ class NetUtils:
         Should be ran once per step per subnet.
         """
         for layer in self.layer_list:
-            self.streaming_weight_history[layer]['weight'].append(layer.weight.norm(self.norm_num).detach().cpu().numpy().take(0))
-            self.streaming_weight_history[layer]['bias'].append(layer.bias.norm(self.norm_num).detach().cpu().numpy().take(0))
+            self.streaming_weight_history[layer]['weight'].append(layer.weight.norm(self.norm_num).detach().cpu().numpy().take(0) / layer.weight.numel())
+            self.streaming_weight_history[layer]['bias'].append(layer.bias.norm(self.norm_num).detach().cpu().numpy().take(0) / layer.bias.numel())
 
-            self.streaming_gradient_history[layer]['weight'].append(layer.weight.grad.norm(self.norm_num).detach().cpu().numpy().take(0))
-            self.streaming_gradient_history[layer]['bias'].append(layer.bias.grad.norm(self.norm_num).detach().cpu().numpy().take(0))
+            self.streaming_gradient_history[layer]['weight'].append(layer.weight.grad.norm(self.norm_num).detach().cpu().numpy().take(0) / layer.weight.grad.numel())
+            self.streaming_gradient_history[layer]['bias'].append(layer.bias.grad.norm(self.norm_num).detach().cpu().numpy().take(0) / layer.bias.grad.numel())
 
     def update_hist_list(self, bins=None):
         """
-        Updates the histogram history based on the weights at the end of an epoch.
+        Updates the histogram history based on the weights at the end of an epoch. Scales each norm by the number of elements.
         Should be ran once per epoch.
         """
         for layer in self.layer_list:
@@ -104,22 +105,23 @@ class NetUtils:
 
     def update_gnormz(self):
         """
-        Calculates gradient norms by layer as well as overall.
+        Calculates gradient norms by layer as well as overall. Scales each norm by the number of elements.
         Should be ran once per epoch.
         :param norm_num: 1 = l1 norm, 2 = l2 norm
         :return: list of gradient norms by layer, as well as overall gradient norm
         """
         total_norm = 0
         for layer in self.gnorm_history:
-            w_norm = np.linalg.norm(self.streaming_gradient_history[layer]['weight'], self.norm_num)
-            b_norm = np.linalg.norm(self.streaming_gradient_history[layer]['bias'], self.norm_num)
+            w_norm = np.linalg.norm(self.streaming_gradient_history[layer]['weight'], self.norm_num) / len(self.streaming_gradient_history[layer]['weight'])
+            b_norm = np.linalg.norm(self.streaming_gradient_history[layer]['bias'], self.norm_num) / len(self.streaming_gradient_history[layer]['bias'])
+
             self.gnorm_history[layer]['weight'].append(w_norm)
             self.gnorm_history[layer]['bias'].append(b_norm)
             if self.norm_num == 1:
                 total_norm += abs(w_norm) + abs(b_norm)
             else:
                 total_norm += w_norm**self.norm_num + b_norm**self.norm_num
-        total_norm = total_norm**(1./self.norm_num)
+        total_norm = total_norm**(1./self.norm_num) / len(self.gnorm_history)
         self.gnorm_total_history.append(total_norm)
 
     def weights_init(self):

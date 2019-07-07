@@ -91,7 +91,7 @@ class CGAN(nn.Module):
                 if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
                     self.init_fake_gen()
                     self.test_model(train_gen=self.fake_train_gen, val_gen=self.fake_val_gen)
-                    print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch+1, self.stored_acc[-1]))
+                    print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, self.stored_acc[-1]))
 
     def train_one_step(self, x_train, y_train):
         """One full step of the CGAN training process"""
@@ -143,10 +143,6 @@ class CGAN(nn.Module):
         """Print metrics of interest"""
         print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
               % (self.epoch, num_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
-
-        with torch.no_grad():
-            # Generate sample of fake images to store for later
-            self.fixed_imgs.append(self.gen_fixed_img_grid())
 
     def next_epoch(self):
         """Runs netG and netD methods to prepare for next epoch. Mostly saves histories and resets history collection objects."""

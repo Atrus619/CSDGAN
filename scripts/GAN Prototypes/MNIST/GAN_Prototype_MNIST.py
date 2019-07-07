@@ -6,6 +6,7 @@ from utils.MNIST import *
 from PytorchDatasets.MNIST_Dataset import MNIST_Dataset
 from torch.utils import data
 import os
+import pickle
 
 # Set random seem for reproducibility
 print("Random Seed: ", cfg.MANUAL_SEED)
@@ -56,11 +57,11 @@ CGAN = CGAN(train_gen=training_generator,
             **cfg.CGAN_INIT_PARAMS)
 
 # Check performance on real data
-# try:
-#     benchmark_acc = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_PARAMS['eval_num_epochs'], es=cfg.CGAN_PARAMS['early_stopping_patience'])
-# except RuntimeError:
-#     benchmark_acc = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_PARAMS['eval_num_epochs'], es=cfg.CGAN_PARAMS['early_stopping_patience'])
-# print(benchmark_acc)
+try:
+    benchmark_acc = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
+except RuntimeError:
+    benchmark_acc = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
+print(benchmark_acc)
 
 # Train CGAN
 try:
@@ -83,12 +84,13 @@ CGAN.plot_training_plots(show=True, save=exp_path)
 CGAN.netG.plot_layer_scatters(title="Generator", show=True, save=exp_path)
 CGAN.netD.plot_layer_scatters(title="Discriminator", show=True, save=exp_path)
 
-CGAN.netG.plot_layer_hists()
-CGAN.netD.plot_layer_hists()
+CGAN.netG.plot_layer_hists(title="Generator", show=True, save=exp_path)
+CGAN.netD.plot_layer_hists(title="Discriminator", show=True, save=exp_path)
 
-# TODO: Seems to perform poorly at generating conditional numbers
+# Save model
+with open(exp_path + "/CGAN.pkl", 'wb') as f:
+    pickle.dump(CGAN, f)
+
 # TODO: Add augmentation and compare
-# TODO: Possibly bad initialization too
-# TODO: It seems like the issue is exploding gradients in the discriminator?!? Possibly affecting generator as well...
 # TODO: Could add activation histograms if you want to go the extra mile
-# TODO: Find average weight norm instead of just norm
+# TODO: Find examples where generator does not fool discriminator
