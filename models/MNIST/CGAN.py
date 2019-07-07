@@ -239,7 +239,7 @@ class CGAN(nn.Module):
             plt.axis('off')
             plt.suptitle('Epoch ' + str(epoch))
             plt.imshow(np.transpose(grid, (1, 2, 0)))
-            img_name = path + "/Epoch " + str(epoch) + ".png"
+            img_name = path + "/imgs/Epoch " + str(epoch) + ".png"
             plt.savefig(img_name)
             ims.append(imageio.imread(img_name))
             plt.close()

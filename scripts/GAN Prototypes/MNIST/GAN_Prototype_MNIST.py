@@ -71,11 +71,11 @@ except RuntimeError:
     CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, eval_freq=cfg.EVAL_FREQ)
 
 # Display final grid
-CGAN.show_grid(-1)
-show_real_grid(x_train, y_train)
+# CGAN.show_grid(-1)
+# show_real_grid(x_train, y_train)
 
 # Generate sample images
-CGAN.show_img(0)
+# CGAN.show_img(0)
 
 # Diagnostics
 CGAN.run_all_diagnostics(real_netE=real_netE, benchmark_acc=benchmark_acc, save=exp_path, show=True)
