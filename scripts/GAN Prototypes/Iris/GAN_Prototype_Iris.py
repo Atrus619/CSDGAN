@@ -127,7 +127,7 @@ for size in test_range:
 
 # Visualize distributions
 iris_plot_scatters(genned_data, genned_labels, "Fake Data", scaler, alpha=0.5)  # Fake data
-iris_plot_scatters(iris.drop(columns='species'), np.array(iris.species, alpha=0.5), "Full Real Data Set")  # All real data
+iris_plot_scatters(iris.drop(columns='species'), np.array(iris.species), "Full Real Data Set", alpha=0.5)  # All real data
 iris_plot_scatters(x_train, np.array(y_train), "Training Data", scaler, alpha=0.5)  # Real train data
 iris_plot_scatters(x_test, np.array(y_test), "Testing Data", scaler, alpha=0.5)  # Real test data
 

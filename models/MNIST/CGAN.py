@@ -6,6 +6,7 @@ from torch.utils import data
 from models.MNIST.netD import CGAN_Discriminator
 from models.MNIST.netG import CGAN_Generator
 from models.MNIST.netE import CGAN_Evaluator
+from models.NetUtils import GaussianNoise
 from utils.MNIST import *
 import time
 from utils.utils import *
@@ -15,6 +16,7 @@ import imageio
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
     def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, netE_filepath,
+                 label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal,
                  netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
                  netD_nf, netD_lr, netD_beta1, netD_beta2, netD_wd,
                  netE_lr, netE_beta1, netE_beta2, netE_wd,
@@ -22,6 +24,15 @@ class CGAN(nn.Module):
                  eval_num_epochs, early_stopping_patience):
         # Inherit nn.Module initialization
         super(CGAN, self).__init__()
+
+        assert 0.0 <= label_noise <= 1.0, "Label noise must be between 0 and 1"
+        self.label_noise = label_noise
+        self.label_noise_linear_anneal = label_noise_linear_anneal
+        self.ln_rate = 0.0
+
+        self.discrim_noise = discrim_noise
+        self.discrim_noise_linear_anneal = discrim_noise_linear_anneal
+        self.dn_rate = 0.0
 
         self.train_gen = train_gen
         self.val_gen = val_gen
@@ -56,7 +67,7 @@ class CGAN(nn.Module):
         # Instantiate sub-nets
         self.netG = CGAN_Generator(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device,
                                    lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
-        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc,
+        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device,
                                        lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
 
         self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
@@ -73,6 +84,14 @@ class CGAN(nn.Module):
         :param print_freq: How freqently to print out training statistics (i.e., freq of 5 will result in information being printed every 5 epochs)
         :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur. Evaluation takes a significant amount of time.
         """
+        total_epochs = self.epoch + num_epochs
+
+        if self.label_noise_linear_anneal:
+            self.ln_rate = self.label_noise / num_epochs
+
+        if self.discrim_noise_linear_anneal:
+            self.dn_rate = self.discrim_noise / num_epochs
+
         start_time = time.time()
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
@@ -85,7 +104,7 @@ class CGAN(nn.Module):
                 print("Time: %ds" % (time.time() - start_time))
                 start_time = time.time()
 
-                self.print_progress(num_epochs)
+                self.print_progress(total_epochs)
 
             if eval_freq is not None:
                 if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
@@ -103,7 +122,7 @@ class CGAN(nn.Module):
         # garbage_y_train = convert_y_to_one_hot(torch.from_numpy(np.random.randint(0, 9, len(y_train)))).to(self.device).type(torch.float32)
         # import pdb; pdb.set_trace()
         # Update Discriminator, all real batch
-        labels = torch.full(size=(bs,), fill_value=self.real_label, device=self.device)
+        labels = (torch.rand(size=(bs,)) >= self.label_noise).type(torch.float32).to(self.device)
         real_forward_pass = self.netD(x_train, y_train).view(-1)
         # real_forward_pass = self.netD(x_train, garbage_y_train).view(-1)
         self.netD.train_one_step_real(real_forward_pass, labels)
@@ -111,7 +130,7 @@ class CGAN(nn.Module):
         # Update Discriminator, all fake batch
         noise = torch.randn(bs, self.nz, device=self.device)
         x_train_fake = self.netG(noise, y_train)
-        labels.fill_(self.fake_label)
+        labels = (torch.rand(size=(bs,)) <= self.label_noise).type(torch.float32).to(self.device)
         fake_forward_pass = self.netD(x_train_fake.detach(), y_train).view(-1)
         # fake_forward_pass = self.netD(x_train_fake.detach(), garbage_y_train).view(-1)
         self.netD.train_one_step_fake(fake_forward_pass, labels)
@@ -128,9 +147,6 @@ class CGAN(nn.Module):
         Train a CNN evaluator from scratch
         :param train_gen: Specified train_gen, can either be real training generator or a created one from netG
         :param val_gen: Same as above ^
-        :param num_epochs: Number of epochs to train for
-        :param es: Early-stopping, None by default
-        :return: Best performance on test set
         """
         self.init_evaluator(train_gen, val_gen)
         self.netE.train_evaluator(num_epochs=self.eval_num_epochs, eval_freq=1, es=self.early_stopping_patience)
@@ -139,10 +155,10 @@ class CGAN(nn.Module):
         self.stored_loss.append(loss.item())
         self.stored_acc.append(acc.item())
 
-    def print_progress(self, num_epochs):
+    def print_progress(self, total_epochs):
         """Print metrics of interest"""
         print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-              % (self.epoch, num_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
+              % (self.epoch, total_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
 
     def next_epoch(self):
         """Run netG and netD methods to prepare for next epoch. Mostly saves histories and resets history collection objects."""
@@ -155,6 +171,11 @@ class CGAN(nn.Module):
 
         self.netD.next_epoch()
         self.netD.next_epoch_discrim()
+
+        # Anneal noise rates
+        self.label_noise -= self.ln_rate
+        self.discrim_noise -= self.dn_rate
+        self.netD.noise = GaussianNoise(device=self.device, sigma=self.discrim_noise)
 
     def init_evaluator(self, train_gen, val_gen):
         """
@@ -180,7 +201,7 @@ class CGAN(nn.Module):
         label = torch.full((1, 1), label, dtype=torch.int64)
         processed_label = processed_label.scatter(1, label, 1).float().to(self.device)
         output = self.netG(noise, processed_label).view(28, 28).detach().cpu().numpy()
-        plt.imshow(output)
+        plt.imshow(output, cmap='gray')
         plt.show()
 
     def gen_fixed_img_grid(self):
@@ -206,11 +227,12 @@ class CGAN(nn.Module):
         plt.show()
 
     def build_gif(self, path):
-        """Loop through self.fixed_imgs and saves the images to a folder.
+        """
+        Loop through self.fixed_imgs and saves the images to a folder.
         :param path: Path to folder to save images. Folder will be created if it does not already exist.
         """
         assert len(self.fixed_imgs) > 0, "Model not yet trained"
-        safe_mkdir(path)
+        safe_mkdir(path + "/imgs")
         ims = []
         for epoch, grid in enumerate(self.fixed_imgs):
             fig = plt.figure(figsize=(8, 8))
@@ -222,14 +244,67 @@ class CGAN(nn.Module):
             ims.append(imageio.imread(img_name))
             plt.close()
             if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
-                for i in range(9):
+                for i in range(20):
                     ims.append(imageio.imread(img_name))
                     plt.close()
         imageio.mimsave(path + '/generation_animation.gif', ims, fps=5)
 
-    def plot_progress(self):
-        """ Plot describing progress over time of netE compared to an evaluation on real data"""
-        pass
+    def plot_progress(self, benchmark_acc, show, save=None):
+        """
+        Plot scores of each evaluation model across training of CGAN
+        :param benchmark_acc: Best score obtained from training Evaluator on real data
+        :param show: Whether to show the plot
+        :param save: Where to save the plot
+        """
+        length = len(self.stored_acc)
+
+        plt.bar(x=range(length), height=self.stored_acc, tick_label=np.linspace(self.epoch // length, self.epoch, length, dtype=np.int64))
+        plt.plot(np.linspace(0, length, length), np.full(length, benchmark_acc), linestyle='dashed', color='r')
+
+        plt.xlabel('Epoch', fontweight='bold')
+        plt.ylabel('Accuracy (%)', fontweight='bold')
+        plt.title('Evaluation Over Training Epochs', fontweight='bold')
+
+        if show:
+            plt.show()
+
+        if save is not None:
+            assert os.path.exists(save), "Check that the desired save path exists."
+            plt.savefig(save + '/training_progress.png')
+
+    def run_all_diagnostics(self, real_netE, benchmark_acc, save, show=False):
+        """
+        Run all diagnostic methods
+        :param real_netE: netE trained on real data
+        :param benchmark_acc: Best score obtained from training Evaluator on real data
+        :param save: File path to save the plots
+        :param show: Whether to display the plots as well
+        """
+        self.plot_progress(benchmark_acc=benchmark_acc, show=show, save=save)
+
+        self.build_gif(path=save)
+
+        self.plot_training_plots(show=show, save=save)
+
+        self.netG.plot_layer_scatters(title="Generator", show=show, save=save)
+        self.netD.plot_layer_scatters(title="Discriminator", show=show, save=save)
+
+        self.netG.plot_layer_hists(title="Generator", show=True, save=save)
+        self.netD.plot_layer_hists(title="Discriminator", show=True, save=save)
+
+        self.troubleshoot_discriminator(show=show, save=save)
+        self.troubleshoot_evaluator(real_netE=real_netE, show=show, save=save)
+
+        cm_gen, cr_gen = self.netE.classification_stats()
+        cm_real, cr_real = real_netE.classification_stats()
+
+        print("CGAN Evaluator Network Classification Stats:")
+        print(cm_gen)
+        print(cr_gen)
+
+        print("Real Data Evaluator Network Classification Stats:")
+        print(cm_real)
+        print(cr_real)
 
     def plot_training_plots(self, show=True, save=None):
         """
@@ -280,8 +355,7 @@ class CGAN(nn.Module):
 
         if save is not None:
             assert os.path.exists(save), "Check that the desired save path exists."
-            safe_mkdir(save + '/training_plots')
-            f.savefig(save + '/training_plots/training_plot.png')
+            f.savefig(save + '/training_plot.png')
 
     def load_netE(self, epoch):
         """Load a previously stored netE (likely the one that performed the best)"""
@@ -303,7 +377,7 @@ class CGAN(nn.Module):
         grid1, grid2 = vutils.make_grid(tensor=grid1, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid2, nrow=10, normalize=True).detach().cpu()
         grid3, grid4 = vutils.make_grid(tensor=grid3, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid4, nrow=10, normalize=True).detach().cpu()
 
-        f, axes = plt.subplots(2, 2)
+        f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
         axes[0, 1].axis('off')
         axes[1, 0].axis('off')
@@ -319,7 +393,7 @@ class CGAN(nn.Module):
         axes[1, 0].imshow(np.transpose(grid3, (1, 2, 0)))
         axes[1, 1].imshow(np.transpose(grid4, (1, 2, 0)))
 
-        st = f.suptitle("Troubleshooting examples of discriminator outputs")
+        st = f.suptitle("Troubleshooting examples of discriminator outputs", fontweight='bold', fontsize=20)
         f.tight_layout()
         st.set_y(0.96)
         f.subplots_adjust(top=0.9)
@@ -348,7 +422,7 @@ class CGAN(nn.Module):
         grid5, grid6 = vutils.make_grid(tensor=grid5, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid6, nrow=10, normalize=True).detach().cpu()
         grid7, grid8 = vutils.make_grid(tensor=grid7, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid8, nrow=10, normalize=True).detach().cpu()
 
-        f, axes = plt.subplots(2, 2)
+        f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
         axes[0, 1].axis('off')
         axes[1, 0].axis('off')
@@ -364,7 +438,7 @@ class CGAN(nn.Module):
         axes[1, 0].imshow(np.transpose(grid7, (1, 2, 0)))
         axes[1, 1].imshow(np.transpose(grid8, (1, 2, 0)))
 
-        st = f.suptitle("Troubleshooting examples of evaluator outputs")
+        st = f.suptitle("Troubleshooting examples of evaluator outputs", fontweight='bold', fontsize=20)
         f.tight_layout()
         st.set_y(0.96)
         f.subplots_adjust(top=0.9)

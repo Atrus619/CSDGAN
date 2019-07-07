@@ -1,20 +1,24 @@
 # Title of experiment for output directory
-EXPERIMENT_NAME = 'mnist_test_200_epochs'
+EXPERIMENT_NAME = 'mnist_label_noise_20_percent_discrim_noise_25_std_10_percent_training_data_anneal_both'
 
 # Desired Train/Validation/Test split
-SPLITS = [0.15, 0.05, 0.80]
+SPLITS = [0.10, 0.10, 0.80]
 
 # Training and CGAN parameters
 MANUAL_SEED = 999
 NUM_EPOCHS = 200
 PRINT_FREQ = 5
-EVAL_FREQ = 20
+EVAL_FREQ = 40
 BATCH_SIZE = 128
 TRAINING_PARAMS = {'batch_size': BATCH_SIZE,
                    'shuffle': True,
                    'num_workers': 6}
 
-CGAN_INIT_PARAMS = {'nc': 10,  # Number of output classes
+CGAN_INIT_PARAMS = {'label_noise': 0.2,  # Proportion of labels to flip for discriminator (value between 0 and 1)
+                    'label_noise_linear_anneal': True,  # Whether to linearly anneal label noise effect
+                    'discrim_noise': 0.25,  # Stdev of noise to add to discriminator inputs
+                    'discrim_noise_linear_anneal': True,  # Whether to linearly anneal discriminator noise effect
+                    'nc': 10,  # Number of output classes
                     'nz': 64,  # Size of noise vector
                     'num_channels': 1,  # Number of channels in image
                     # Number of feature maps
@@ -41,4 +45,3 @@ CGAN_INIT_PARAMS = {'nc': 10,  # Number of output classes
                     # Evaluator parameters
                     'eval_num_epochs': 40,
                     'early_stopping_patience': 3}
-

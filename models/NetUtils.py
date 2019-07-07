@@ -28,7 +28,7 @@ class NetUtils:
 
     def init_layer_list(self):
         """Initializes list of layers for tracking history"""
-        nn_module_ignore_list = {'batchnorm', 'activation', 'loss'}  # List of nn.modules to ignore when constructing layer_list
+        nn_module_ignore_list = {'batchnorm', 'activation', 'loss', 'Noise'}  # List of nn.modules to ignore when constructing layer_list
         self.layer_list = [x for x in self._modules.values() if not any(excl in str(type(x)) for excl in nn_module_ignore_list)]
         self.layer_list_names = [x for x in self._modules.keys() if not any(excl in str(type(self._modules[x])) for excl in nn_module_ignore_list)]
 
@@ -143,7 +143,7 @@ class NetUtils:
                 nn.init.constant_(m.bias.data, 0)
 
     def plot_layer_scatters(self, figsize=(20, 10), title=None, show=True, save=None):
-        """Plots weight and gradient norm history for each layer in layer_list across epochs"""
+        """Plot weight and gradient norm history for each layer in layer_list across epochs"""
         assert self.epoch > 0, "Model needs to be trained first"
 
         f, axes = plt.subplots(len(self.layer_list), 4, figsize=figsize, sharex=True)
@@ -230,6 +230,20 @@ class NetUtils:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/layer_histograms')
             f.savefig(save + '/layer_histograms/' + title + '_layer_histograms.png')
+
+
+class GaussianNoise(nn.Module):
+    """Gaussian noise regularizer"""
+    def __init__(self, device, sigma=0.1):
+        super().__init__()
+        self.device = device
+        self.sigma = sigma
+
+    def forward(self, x):
+        if self.training and self.sigma != 0:
+            sampled_noise = torch.randn(*x.size(), device=self.device) * self.sigma
+            x = x + sampled_noise
+        return x
 
 
 class CustomCatGANLayer(nn.Module):

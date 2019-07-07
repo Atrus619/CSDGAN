@@ -123,35 +123,42 @@ def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_tes
     return fake_models, fake_scores
 
 
-def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None, verbose=1):
+def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None, verbose=True):
     """
     Helper function to repeatedly test and print outputs for a logistic regression
-    :param x_train:
-    :param y_train:
-    :param x_test:
-    :param y_test:
-    :param param_grid:
-    :param cv:
-    :param random_state:
-    :param labels:
-    :param verbose:
-    :return:
+    :param x_train: training data
+    :param y_train: training labels
+    :param x_test: testing data
+    :param y_test: testing labels
+    :param param_grid: parameter grid for GridSearchCV
+    :param cv: number of folds
+    :param random_state: Seed for reproducibility
+    :param labels: List of names of labels
+    :param verbose: Verbosity for whether to print all information (True = print, False = don't print)
+    :return: Tuple of the the fitted model and it's best score
     """
     lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
     lr_cv = GridSearchCV(lr, param_grid=param_grid, n_jobs=-1, cv=cv, iid=True)
     lr_cv.fit(x_train, y_train)
     best_score = lr_cv.score(x_test, y_test)
     predictions = lr_cv.predict(x_test)
-    if verbose == 1:
+    if verbose:
         print("Accuracy:", best_score)
         print("Best Parameters:", lr_cv.best_params_)
         print(classification_report(y_test, predictions, labels=labels))
         print(confusion_matrix(np.array(y_test), predictions, labels=labels))
-    return [lr_cv, best_score]
+    return lr_cv, best_score
 
 
-# Plot progress so far on training
 def plot_training_progress(stored_scores, test_range, num_saves, real_data_score, save=None):
+    """
+    Plot scores of each evaluation model across training of CGAN
+    :param stored_scores: List of scores on generated data
+    :param test_range: List of sample sizes for testing
+    :param num_saves: Number of distinct checkpoints used (should be len(stored_scores) // len(test_range)
+    :param real_data_score: Best score for model trained on real data
+    :param save: File path to save the resulting plot. If None, plot is not saved
+    """
     ys = np.empty((num_saves, len(test_range)))
     xs = np.empty((num_saves, len(test_range)))
     barWidth = 1 / (len(test_range) + 1)
@@ -174,8 +181,19 @@ def plot_training_progress(stored_scores, test_range, num_saves, real_data_score
         plt.savefig(save + '/training_progress/' + 'training_progress.png')
 
 
-# Helper/diagnostic function to return stats for a specific model
 def parse_models(stored_models, epoch, print_interval, test_range, ind, x_test, y_test, labels):
+    """
+    Helper/diagnostic function to return stats for a specific model
+    :param stored_models: List of stored models
+    :param epoch: Epoch of model desired
+    :param print_interval: Print interval used for training
+    :param test_range: List of sample sizes for testing
+    :param ind: Index of test_range desired
+    :param x_test: Testing data
+    :param y_test: Testing labels
+    :param labels: Names of labels
+    :return: N/A. Prints classification statistics for desired model
+    """
     tmp_model = stored_models[epoch // print_interval * len(test_range) - 1 + ind]
     best_score = tmp_model.score(x_test, y_test)
     predictions = tmp_model.predict(x_test)
@@ -185,8 +203,15 @@ def parse_models(stored_models, epoch, print_interval, test_range, ind, x_test, 
     print(confusion_matrix(y_test, predictions, labels=labels))
 
 
-# Plots scatter matrix of data set (real or fake)
 def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
+    """
+    Plot scatter matrix of data set (real or fake)
+    :param X: DataFrame of continuous features
+    :param title: Title to be attached to saved file
+    :param og_df: Original DataFrame to use for labeling features
+    :param scaler: Optional scaler for inverse transforming data back to original scale
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     if scaler:
         X = scaler.inverse_transform(X)
     pd.plotting.scatter_matrix(pd.DataFrame(X, columns=og_df.columns), figsize=(12, 12))
@@ -199,8 +224,21 @@ def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
         plt.savefig(save + '/scatter_matrices/' + title + '_scatter_matrix.png')
 
 
-# Plots a conditional scatter plot (labels are colors) to compare real and fake data side by side
 def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_dict, og_df, scaler=None, alpha=1.0, save=None):
+    """
+    Plot conditional scatter plot (labels are colors) to compare real and fake data side by side
+    :param x_real: NumPy array of real, continuous values
+    :param y_real: NumPy array of real labels
+    :param x_fake: NumPy array of generated, continuous values
+    :param y_fake: NumPy array of generated labels
+    :param col1: Column index of first feature to be plotted
+    :param col2: Column index of second feature to be plotted
+    :param class_dict: Dictionary with keys as label value (0 or 1 for binary dep var), and values as tuple of (name, 'color')
+    :param og_df: Original DataFrame to use for labeling features
+    :param scaler: Optional scaler for inverse transforming data back to original scale
+    :param alpha: Optional alpha parameter for matplotlib.pyplot
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     if scaler:
         x_real = scaler.inverse_transform(x_real)
         x_fake = scaler.inverse_transform(x_fake)
@@ -233,8 +271,19 @@ def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_d
         f.savefig(save + '/conditional_scatters/' + og_df.columns[col1] + '_vs_' + og_df.columns[col2] + '_conditional_scatter.png')
 
 
-# Plots a conditional density plot (labels are colors) to compare real and fake data side by side
 def plot_conditional_density(x_real, y_real, x_fake, y_fake, col, class_dict, og_df, scaler=None, save=None):
+    """
+    Plot conditional density plot (labels are colors) to compare real and fake data side by side
+    :param x_real: NumPy array of real, continuous values
+    :param y_real: NumPy array of real labels
+    :param x_fake: NumPy array of generated, continuous values
+    :param y_fake: NumPy array of generated labels
+    :param col: Column index of feature to be plotted
+    :param class_dict: Dictionary with keys as label value (0 or 1 for binary dep var), and values as tuple of (name, 'color')
+    :param og_df: Original DataFrame to use for labeling features
+    :param scaler: Optional scaler for inverse transforming data back to original scale
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     if scaler:
         x_real = scaler.inverse_transform(x_real)
         x_fake = scaler.inverse_transform(x_fake)
@@ -261,8 +310,16 @@ def plot_conditional_density(x_real, y_real, x_fake, y_fake, col, class_dict, og
         f.savefig(save + '/conditional_densities/' + og_df.columns[col] + '_conditional_density.png')
 
 
-# Helper to plot iris sepal length vs width
 def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0, save=None):
+    """
+    Helper to plot iris sepal length vs width
+    :param X: DataFrame of continuous features
+    :param y: NumPy array of labels
+    :param title: Title to be attached to save file
+    :param scaler: Optional scaler for inverse transforming data back to original scale
+    :param alpha: Optional alpha parameter for matplotlib.pyplot
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     if scaler:
         X = scaler.inverse_transform(X)
     inv = pd.DataFrame(X).rename(columns={0: 'sepal_len', 1: 'sepal_wid', 2: 'petal_len', 3: 'petal_wid'})
@@ -304,8 +361,15 @@ def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0, save=None):
         plt.savefig(save + '/conditional_scatters/' + title + '_conditional_scatter.png')
 
 
-# Helper to plot iris distributions of variables by class
 def iris_plot_densities(X, y, title, scaler=None, save=None):
+    """
+    Helper to plot iris distributions of variables by class
+    :param X: DataFrame of continuous features
+    :param y: NumPy array of labels
+    :param title: Title to be attached to save file
+    :param scaler: Optional scaler for inverse transforming data back to original scale
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     if scaler:
         X = scaler.inverse_transform(X)
     inv = pd.DataFrame(X).rename(columns={0: 'sepal_len', 1: 'sepal_wid', 2: 'petal_len', 3: 'petal_wid'})
@@ -352,6 +416,13 @@ def iris_plot_densities(X, y, title, scaler=None, save=None):
 
 
 def training_plots(netD, netG, num_epochs, save=None):
+    """
+    Pull together a plot of relevant training diagnostics for both netG and netD
+    :param netD: Class netD
+    :param netG: Class netG
+    :param num_epochs: Number of epochs trained for
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     f, axes = plt.subplots(2, 2, figsize=(12, 12), sharex=True)
 
     axes[0, 0].title.set_text("Generator and Discriminator Loss During Training")
@@ -397,6 +468,15 @@ def training_plots(netD, netG, num_epochs, save=None):
 
 
 def fake_data_training_plots(real_range, score_real, test_range, fake_scores, save=None):
+    """
+    Plots of evaluation progress across epochs
+    Only used for iris data set
+    :param real_range: Number of samples used for real data evaluation
+    :param score_real: Real data evaluation best score
+    :param test_range: List of number of samples used for fake data evaluation
+    :param fake_scores: List of best scores for each fake data evaluation
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     f, axes = plt.subplots(1, 2, figsize=(8, 8))
 
     axes[0].title.set_text('Sample Sizes')
@@ -423,6 +503,13 @@ def fake_data_training_plots(real_range, score_real, test_range, fake_scores, sa
 
 
 def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
+    """
+    Plot weight and gradient norm history for each layer in layer_list across epochs
+    :param net: Either netG or netD Class
+    :param figsize: Desired size of figure
+    :param title: Title to be attached to save file. Recommended to differentiate between discriminator and generator
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     f, axes = plt.subplots(len(net.layer_list), 4, figsize=figsize, sharex=True)
 
     axes[0, 0].title.set_text("Weight Norms")
@@ -458,6 +545,13 @@ def plot_layer_scatters(net, figsize=(20, 10), title=None, save=None):
 
 
 def scale_cont_inputs(arr, preprocessed_cat_mask, scaler=None):
+    """
+    Transform array's continuous features
+    :param arr: NumPy array to be transformed
+    :param preprocessed_cat_mask: Boolean mask of which features in array are categorical (True) versus continuous (False)
+    :param scaler: Optional scaler. If not provided, one will be created.
+    :return: NumPy array with continuous features scaled and categorical features left alone, along with the scaler used for transformation
+    """
     if scaler is None:
         scaler = StandardScaler()
         arr_cont = scaler.fit_transform(arr[:, ~preprocessed_cat_mask])
@@ -468,6 +562,15 @@ def scale_cont_inputs(arr, preprocessed_cat_mask, scaler=None):
 
 
 def encode_categoricals_custom(df, x_train, x_test, cat_inputs, cat_mask):
+    """
+    Generate a two-way conversion of one_hot encoding categorical variables
+    :param df: Raw DataFrame for encoding
+    :param x_train: Subset of raw DataFrame to be used as training data
+    :param x_test: Subset of raw DataFrame to be used as testing data
+    :param cat_inputs: List of names of features in df that are categorical
+    :param cat_mask: Boolean mask of which features in one hot encoded version of DataFrame are categorical (True) versus continuous (False)
+    :return: Dictionary of LabelEncoders to be used for inverse transformation back to original raw data, OneHotEncoder for same purpose, and transformed train and test data
+    """
     le_dict = {}
     for x in cat_inputs:
         le_dict[x] = LabelEncoder()
@@ -483,6 +586,11 @@ def encode_categoricals_custom(df, x_train, x_test, cat_inputs, cat_mask):
 
 
 def create_preprocessed_cat_mask(le_dict, x_train):
+    """
+    :param le_dict: Dictionary of LabelEncoders to be used for inverse transformation back to original raw data
+    :param x_train: Training data
+    :return: Boolean mask of which features in array are categorical (True) versus continuous (False)
+    """
     count = 0
     for _, le in le_dict.items():
         count += len(le.classes_)
@@ -490,6 +598,11 @@ def create_preprocessed_cat_mask(le_dict, x_train):
 
 
 def process_fake_output(raw_fake_output, le_dict):
+    """
+    :param raw_fake_output: Data generated by netG
+    :param le_dict: Dictionary of LabelEncoders to be used for inverse transformation back to original raw data
+    :return: Generated data inverse transformed and prepared for train_test_logistic_reg method. Data is still scaled and one hot encoded.
+    """
     curr = 0
     new_fake_output = np.copy(raw_fake_output)
     for _, le in le_dict.items():
@@ -502,6 +615,19 @@ def process_fake_output(raw_fake_output, le_dict):
 
 
 def fully_process_fake_output(processed_fake_output, genned_labels, label_name, preprocessed_cat_mask, ohe, le_dict, scaler, cat_inputs, cont_inputs, int_inputs):
+    """
+    :param processed_fake_output: Output of process_fake_output method
+    :param genned_labels: Labels corresponding to generated data
+    :param label_name: Name of the dependent variable feature
+    :param preprocessed_cat_mask: Boolean mask of which features in array are categorical (True) versus continuous (False)
+    :param ohe: One Hot Encoder used to inverse transform data
+    :param le_dict: Dictionary of LabelEncoders to be used for inverse transformation back to original raw data
+    :param scaler: Scaler used to scale data
+    :param cat_inputs: List of names of categorical features in original raw data
+    :param cont_inputs: List of names of continuous features in original raw data
+    :param int_inputs: List of names of integer features in original raw data
+    :return: Generated data fully inverse transformed to be on the same basis as the original raw data
+    """
     df = pd.DataFrame(index=range(processed_fake_output.shape[0]), columns=[label_name] + list(cat_inputs) + list(cont_inputs))
 
     # Add labels
@@ -527,6 +653,15 @@ def fully_process_fake_output(processed_fake_output, genned_labels, label_name, 
 
 
 def compare_cats(real, fake, x, y, hue, save=None):
+    """
+    Visualize categorical variables
+    :param real: DataFrame of original raw data
+    :param fake: DataFrame of generated data. Output of fully_process_fake_output method.
+    :param x: Name of first feature to be compared (str)
+    :param y: Name of second feature to be compared (str)
+    :param hue: Name of third feature to be compared (str)
+    :param save: File path to save the resulting plot. If None, plot is not saved.
+    """
     f, axes = plt.subplots(1, 2, figsize=(8, 8), sharey=True, sharex=True)
 
     axes[0].title.set_text('Fake Data')
@@ -555,15 +690,15 @@ def compare_cats(real, fake, x, y, hue, save=None):
 def train_val_test_split(x, y, splits, random_state=None):
     """
     Performs a train/validation/test split on x and y, stratified, based on desired splits
-    :param x: independent var
-    :param y: dependent var
-    :param splits: proportion of total data to be assigned to train/validation/test set
+    :param x: Independent var
+    :param y: Dependent var
+    :param splits: Proportion of total data to be assigned to train/validation/test set
     :param random_state: Optional random state
-    :return:
+    :return: Data split into 6 discrete pieces
     """
     assert sum(splits) == 1.0, "Please make sure sum of splits is equal to 1"
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=splits[2], stratify=y, random_state=random_state)
-    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=splits[1] / splits[0], stratify=y_train, random_state=random_state)
+    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=splits[1] / (splits[0]+splits[1]), stratify=y_train, random_state=random_state)
     x_train, y_train, x_val, y_val, x_test, y_test = torch.from_numpy(x_train), torch.from_numpy(y_train), \
                                                      torch.from_numpy(x_val), torch.from_numpy(y_val), \
                                                      torch.from_numpy(x_test), torch.from_numpy(y_test)

@@ -1,13 +1,13 @@
 import torch.nn as nn
 import torch
-from models.NetUtils import NetUtils
+from models.NetUtils import NetUtils, GaussianNoise
 import torch.optim as optim
 import numpy as np
 
 
 # Discriminator class
 class CGAN_Discriminator(nn.Module, NetUtils):
-    def __init__(self, nf, nc, num_channels, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, nf, nc, num_channels, device, noise=0.0, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
 
@@ -19,6 +19,8 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.epoch = 0
         self.fc_labels_size = 128
         self.agg_size = 512
+
+        self.noise = GaussianNoise(device=device, sigma=noise)
 
         # Convolutional layers
         # Image input size of num_channels x 28 x 28
@@ -60,6 +62,7 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         :param labels: Label embedding
         :return: Binary classification (sigmoid activation on a single unit hidden layer)
         """
+        img = self.noise(img)
         x = self.act(self.cn1_bn(self.cn1(img)))
         x = self.act(self.cn2_bn(self.cn2(x)))
         x = x.view(-1, self.nf * 2 * 7 * 7)

@@ -15,7 +15,7 @@ torch.manual_seed(cfg.MANUAL_SEED)
 
 # Ensure directory exists for outputs
 exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
-eval_path = os.path.join(exp_path, "Stored Evaluators")
+eval_path = os.path.join(exp_path, "stored_evaluators")
 safe_mkdir(exp_path)
 safe_mkdir(eval_path)
 
@@ -61,6 +61,7 @@ try:
     benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
 except RuntimeError:
     benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
+benchmark_acc = benchmark_acc.numpy().take(0)
 print(benchmark_acc)
 
 # Train CGAN
@@ -76,29 +77,8 @@ show_real_grid(x_train, y_train)
 # Generate sample images
 CGAN.show_img(0)
 
-# Build video of progress
-CGAN.build_gif(os.path.join(exp_path, "imgs"))
-
 # Diagnostics
-CGAN.plot_training_plots(show=True, save=exp_path)
-CGAN.netG.plot_layer_scatters(title="Generator", show=True, save=exp_path)
-CGAN.netD.plot_layer_scatters(title="Discriminator", show=True, save=exp_path)
-
-CGAN.netG.plot_layer_hists(title="Generator", show=True, save=exp_path)
-CGAN.netD.plot_layer_hists(title="Discriminator", show=True, save=exp_path)
-
-# Troubleshooting
-CGAN.troubleshoot_discriminator(show=True, save=exp_path)
-CGAN.troubleshoot_evaluator(real_netE=real_netE, show=True, save=exp_path)
-
-# Evaluator classification stats
-cm_gen, cr_gen = CGAN.netE.classification_stats()
-cm_real, cr_real = real_netE.classification_stats()
-
-print(cm_gen)
-print(cr_gen)
-print(cm_real)
-print(cr_real)
+CGAN.run_all_diagnostics(real_netE=real_netE, benchmark_acc=benchmark_acc, save=exp_path, show=True)
 
 # Save model
 with open(exp_path + "/CGAN.pkl", 'wb') as f:
@@ -109,9 +89,5 @@ with open(exp_path + "/CGAN.pkl", 'rb') as f:
     CGAN = pickle.load(f)
 
 # TODO: Add augmentation and compare
-# TODO: Could add activation histograms if you want to go the extra mile
-# TODO: Find examples where generator does not fool discriminator
 # TODO: Use FAR LESS training data (only a handful of examples)
-# TODO: Train generator multiple times per discriminator training
-# TODO: Add noise to discriminator inputs??
-# TODO: Add label noise
+# TODO: Create notebook
