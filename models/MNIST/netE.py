@@ -3,6 +3,7 @@ import torch
 from models.NetUtils import NetUtils
 import torch.optim as optim
 import numpy as np
+from sklearn.metrics import confusion_matrix, classification_report
 
 
 # Evaluator class
@@ -104,3 +105,22 @@ class CGAN_Evaluator(nn.Module, NetUtils):
                     if np.argmin(self.val_losses) < (epoch - es + 1):
                         return True  # Exit early
         return True
+
+    def classification_stats(self):
+        """Return a confusion matrix and classification report on the predictions"""
+        self.eval()
+
+        ground_truth = torch.empty(size=(0, 0), dtype=torch.int64, device=self.device).view(-1)
+        preds = torch.empty_like(ground_truth)
+
+        with torch.no_grad():
+            for batch, labels in self.test_gen:
+                batch, labels = batch.to(self.device), labels.to(self.device)
+                fwd = self.forward(batch)
+
+                ground_truth = torch.cat((ground_truth, torch.argmax(labels, -1)), dim=0)
+                preds = torch.cat((preds, torch.argmax(fwd, -1)), dim=0)
+
+        cm = confusion_matrix(ground_truth.detach().cpu().numpy(), preds.detach().cpu().numpy())
+        cr = classification_report(ground_truth.detach().cpu().numpy(), preds.detach().cpu().numpy())
+        return cm, cr

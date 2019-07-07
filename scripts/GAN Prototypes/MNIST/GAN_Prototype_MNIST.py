@@ -26,7 +26,7 @@ x_train, y_train, x_val, y_val, x_test, y_test = train_val_test_split(x_comb, y_
 
 # Automatically determine these parameters
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")  # GPU if exists, else CPU
-x_dim = (x_train.shape[1], x_train.shape[2]),  # Dimensions of input images
+x_dim = (x_train.shape[1], x_train.shape[2])  # Dimensions of input images
 
 # Print resulting sizes
 print("Train:", x_train.shape)
@@ -58,9 +58,9 @@ CGAN = CGAN(train_gen=training_generator,
 
 # Check performance on real data
 try:
-    benchmark_acc = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
+    benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
 except RuntimeError:
-    benchmark_acc = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
+    benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
 print(benchmark_acc)
 
 # Train CGAN
@@ -87,10 +87,31 @@ CGAN.netD.plot_layer_scatters(title="Discriminator", show=True, save=exp_path)
 CGAN.netG.plot_layer_hists(title="Generator", show=True, save=exp_path)
 CGAN.netD.plot_layer_hists(title="Discriminator", show=True, save=exp_path)
 
+# Troubleshooting
+CGAN.troubleshoot_discriminator(show=True, save=exp_path)
+CGAN.troubleshoot_evaluator(real_netE=real_netE, show=True, save=exp_path)
+
+# Evaluator classification stats
+cm_gen, cr_gen = CGAN.netE.classification_stats()
+cm_real, cr_real = real_netE.classification_stats()
+
+print(cm_gen)
+print(cr_gen)
+print(cm_real)
+print(cr_real)
+
 # Save model
 with open(exp_path + "/CGAN.pkl", 'wb') as f:
     pickle.dump(CGAN, f)
 
+# Load model
+with open(exp_path + "/CGAN.pkl", 'rb') as f:
+    CGAN = pickle.load(f)
+
 # TODO: Add augmentation and compare
 # TODO: Could add activation histograms if you want to go the extra mile
 # TODO: Find examples where generator does not fool discriminator
+# TODO: Use FAR LESS training data (only a handful of examples)
+# TODO: Train generator multiple times per discriminator training
+# TODO: Add noise to discriminator inputs??
+# TODO: Add label noise

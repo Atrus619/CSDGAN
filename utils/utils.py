@@ -15,14 +15,14 @@ import os
 import random
 
 
-# Helper function to set working directory to the primary one
 def fix_wd():
+    """Helper function to set working directory to the primary one"""
     while os.path.basename(os.getcwd()) != 'Synthetic_Data_GAN_Capstone':
         os.chdir('..')
 
 
 def safe_mkdir(path):
-    """ Create a directory if there isn't one already. """
+    """Create a directory if there isn't one already"""
     try:
         os.mkdir(path)
     except OSError:
@@ -30,6 +30,17 @@ def safe_mkdir(path):
 
 
 def gen_fake_data(netG, bs, nz, nc, labels_list, device, stratify=None):
+    """
+    Generate fake data. Calls gen_labels method below.
+    :param netG: netG class to use
+    :param bs: Batch size of fake data to generate
+    :param nz: Size of noise vector for netG
+    :param nc: Number of classes
+    :param labels_list: List of names of each of the classes
+    :param device: Device (either gpu or cpu)
+    :param stratify: Proportions of each label to stratify
+    :return: Tuple of generated data and associated labels
+    """
     noise = torch.randn(bs, nz, device=device)
     fake_labels, output_labels = gen_labels(size=bs, num_classes=nc, labels_list=labels_list, stratify=stratify)
     fake_labels = fake_labels.to(device)
@@ -39,6 +50,14 @@ def gen_fake_data(netG, bs, nz, nc, labels_list, device, stratify=None):
 
 # Helper function to generate a labeled tensor for the CGAN based on an equal distribution of classes
 def gen_labels(size, num_classes, labels_list, stratify=None):
+    """
+    Generate labels for generating fake data
+    :param size: Number of desired labels
+    :param num_classes: Number of classes
+    :param labels_list: List of names of each of the classes
+    :param stratify: Proportions of each label to stratify
+    :return: Tuple of one hot encoded labels and the labels themselves
+    """
     if stratify is None:
         assert size // num_classes == size / num_classes, "Make sure size is divisible by num_classes"
         stratify = np.full(num_classes, 1 / num_classes)
@@ -61,11 +80,28 @@ def gen_labels(size, num_classes, labels_list, stratify=None):
             tmp_one_hot[:, j] = one_hot.iloc[i, j]
         output_one_hot = np.concatenate((output_one_hot, tmp_one_hot), axis=0)
         output_one_hot = torch.tensor(output_one_hot, dtype=torch.float)
-    return [output_one_hot, output_labels]
+    return output_one_hot, output_labels
 
 
-# Train a model on fake data and evaluate on test data in order to evaluate network as it trains
 def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_test, y_test, manualSeed, labels_list, param_grid, device, le_dict=None, stratify=None):
+    """
+    Train a model on fake data and evaluate on test data in order to evaluate network as it trains
+    :param test_range: List of sample sizes to test
+    :param fake_bs: Batch size for generated data
+    :param nz: Size of noise vector for netG
+    :param nc: Number of classes
+    :param out_dim: Size of vector for real data (number of features)
+    :param netG: netG class to use
+    :param x_test: Testing data
+    :param y_test: Testing labels
+    :param manualSeed: Seed for reproducibility
+    :param labels_list: List of names of each of the classes
+    :param param_grid: Grid to perform GridSearchCV when training evaluation models
+    :param device: Device (either gpu or cpu)
+    :param le_dict: Dictionary of pretrained LabelEncoders for handling categorical variables
+    :param stratify: Proportions of each label to stratify
+    :return: Tuple of list of models trained and the scores each achieved
+    """
     fake_scores = []
     fake_models = []
     for size in test_range:
@@ -87,8 +123,20 @@ def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_tes
     return fake_models, fake_scores
 
 
-# Helper function to repeatedly test and print outputs for a logistic regression
 def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, random_state=None, labels=None, verbose=1):
+    """
+    Helper function to repeatedly test and print outputs for a logistic regression
+    :param x_train:
+    :param y_train:
+    :param x_test:
+    :param y_test:
+    :param param_grid:
+    :param cv:
+    :param random_state:
+    :param labels:
+    :param verbose:
+    :return:
+    """
     lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
     lr_cv = GridSearchCV(lr, param_grid=param_grid, n_jobs=-1, cv=cv, iid=True)
     lr_cv.fit(x_train, y_train)
