@@ -29,13 +29,14 @@ device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")  # GPU
 x_dim = (x_train.shape[1], x_train.shape[2])  # Dimensions of input images
 
 # Print resulting sizes
-print("Train:", x_train.shape)
-print("Validate: ", x_val.shape)
-print("Test: ", x_test.shape)
+print("Train Set Size:", x_train.shape[0])
+print("Validation Set Size:", x_val.shape[0])
+print("Test Set Size:", x_test.shape[0])
+print("Each image size:", x_test.shape[1], "x", x_test.shape[2])
 
 # Print an example image
-print(y_train[0])
-# plt.imshow(x_train[0], cmap='gray')
+print(y_train[2])
+plt.imshow(x_train[2], cmap='gray')
 
 # Define generators
 training_set = MNIST_Dataset(x_train, y_train)
@@ -61,8 +62,7 @@ try:
     benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
 except RuntimeError:
     benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
-benchmark_acc = benchmark_acc.numpy().take(0)
-print(benchmark_acc)
+print("Benchmark Accuracy:", benchmark_acc)
 
 # Train CGAN
 try:
@@ -89,5 +89,8 @@ with open(exp_path + "/CGAN.pkl", 'rb') as f:
     CGAN = pickle.load(f)
 
 # TODO: Add augmentation and compare
-# TODO: Use FAR LESS training data (only a handful of examples)
-# TODO: Create notebook
+# TODO: Visualize networks and describe architecture
+# TODO: GIF of histograms - TEST
+# TODO: Histogram at epoch=0
+# TODO: Say it is cDCGAN
+# TODO: Visualize focus of discriminator when discriminating

@@ -1,4 +1,5 @@
 from utils.utils import *
+import imageio
 
 
 # Contains utils to be inherited by other nets in this project
@@ -142,7 +143,7 @@ class NetUtils:
                 nn.init.normal_(m.weight.data, 1.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
 
-    def plot_layer_scatters(self, figsize=(20, 10), title=None, show=True, save=None):
+    def plot_layer_scatters(self, figsize=(20, 10), title='', show=True, save=None):
         """Plot weight and gradient norm history for each layer in layer_list across epochs"""
         assert self.epoch > 0, "Model needs to be trained first"
 
@@ -163,7 +164,7 @@ class NetUtils:
             axes[i, 2].plot(self.wnorm_history[layer]['bias'])
             axes[i, 3].plot(self.gnorm_history[layer]['bias'])
 
-        if title:
+        if title != '':
             sup = title + " Layer Weight and Gradient Norms"
         else:
             sup = "Layer Weight and Gradient Norms"
@@ -180,7 +181,7 @@ class NetUtils:
             safe_mkdir(save + '/layer_scatters')
             f.savefig(save + '/layer_scatters/' + title + '_layer_scatter.png')
 
-    def plot_layer_hists(self, epoch=None, figsize=(20, 10), title=None, show=True, save=None):
+    def plot_layer_hists(self, epoch=None, figsize=(20, 10), title='', show=True, save=None):
         """Plots histograms of weight and gradients for each layer in layer_list at the desired epoch"""
         assert self.epoch > 0, "Model needs to be trained first"
 
@@ -214,7 +215,7 @@ class NetUtils:
                 plt.sca(axes[i, 3])
                 convert_np_hist_to_plot(self.histogram_gradient_history[layer]['bias'][epoch-1])
 
-        if title:
+        if title != '':
             sup = title + " Layer Weight and Gradient Histograms - Epoch " + str(epoch)
         else:
             sup = "Layer Weight and Gradient Histograms - Epoch " + str(epoch)
@@ -230,6 +231,26 @@ class NetUtils:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/layer_histograms')
             f.savefig(save + '/layer_histograms/' + title + '_layer_histograms.png')
+
+    def build_hist_gif(self, path, net):
+        """
+        Loop through self.histogram_weight_history and saves the images to a folder.
+        :param path: Path to folder to save images. Folder will be created if it does not already exist.
+        :param net: Name of network (Generator or Discriminator). Used for naming files.
+        """
+        assert len(self.histogram_weight_history[self.layer_list[0]]['weight']) > 1, "Model not yet trained"
+        ims = []
+        for epoch in range(self.epoch+1):
+            title = net + '_Epoch_' + str(epoch)
+            self.plot_layer_hists(epoch=epoch, title=title, show=False, save=path)
+            img_name = path + '/layer_histograms/' + title + '_layer_histograms.png'
+            ims.append(imageio.imread(img_name))
+            plt.close()
+            if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
+                for i in range(20):
+                    ims.append(imageio.imread(img_name))
+                    plt.close()
+        imageio.mimsave(path + '/histogram_generation_animation.gif', ims, fps=5)
 
 
 class GaussianNoise(nn.Module):

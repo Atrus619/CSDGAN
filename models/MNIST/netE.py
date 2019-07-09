@@ -4,12 +4,19 @@ from models.NetUtils import NetUtils
 import torch.optim as optim
 import numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+import os
+from utils.utils import safe_mkdir
 
 
 # Evaluator class
 class CGAN_Evaluator(nn.Module, NetUtils):
     def __init__(self, train_gen, val_gen, test_gen, device, num_channels, nc, lr, beta1, beta2, wd):
         super().__init__()
+
+        self.nc = nc
 
         # Generators
         self.train_gen = train_gen
@@ -27,7 +34,7 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         self.mp = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.fc1 = nn.Linear(in_features=14 * 14 * 20, out_features=64)
-        self.output = nn.Linear(in_features=64, out_features=nc)
+        self.output = nn.Linear(in_features=64, out_features=self.nc)
 
         # Activations
         self.do2d = nn.Dropout2d(0.2)
@@ -106,8 +113,8 @@ class CGAN_Evaluator(nn.Module, NetUtils):
                         return True  # Exit early
         return True
 
-    def classification_stats(self):
-        """Return a confusion matrix and classification report on the predictions"""
+    def classification_stats(self, title='', show=True, save=None):
+        """Return a confusion matrix, classification report, and plots/saves a heatmap confusion matrix on the predictions"""
         self.eval()
 
         ground_truth = torch.empty(size=(0, 0), dtype=torch.int64, device=self.device).view(-1)
@@ -123,4 +130,17 @@ class CGAN_Evaluator(nn.Module, NetUtils):
 
         cm = confusion_matrix(ground_truth.detach().cpu().numpy(), preds.detach().cpu().numpy())
         cr = classification_report(ground_truth.detach().cpu().numpy(), preds.detach().cpu().numpy())
+
+        plt.figure(figsize=(10, 7))
+        df_cm = pd.DataFrame(cm, index=list(range(self.nc)), columns=list(range(self.nc)))
+        sns.heatmap(df_cm, annot=True)
+
+        if show:
+            plt.show()
+
+        if save is not None:
+            assert os.path.exists(save), "Check that the desired save path exists."
+            safe_mkdir(save + '/conf_heatmaps')
+            plt.savefig(save + '/conf_heatmaps/' + title + '_conf_heatmap.png')
+
         return cm, cr

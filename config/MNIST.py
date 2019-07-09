@@ -1,5 +1,5 @@
 # Title of experiment for output directory
-EXPERIMENT_NAME = 'mnist_label_noise_25_percent_discrim_noise_25_std_15_percent_training_data_anneal_label_noise'
+EXPERIMENT_NAME = 'Notebook_Example'
 
 # Desired Train/Validation/Test split
 SPLITS = [0.15, 0.05, 0.80]

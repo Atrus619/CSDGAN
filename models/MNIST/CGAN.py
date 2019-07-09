@@ -249,6 +249,43 @@ class CGAN(nn.Module):
                     plt.close()
         imageio.mimsave(path + '/generation_animation.gif', ims, fps=5)
 
+    def run_all_diagnostics(self, real_netE, benchmark_acc, save, show=False):
+        """
+        Run all diagnostic methods
+        :param real_netE: netE trained on real data
+        :param benchmark_acc: Best score obtained from training Evaluator on real data
+        :param save: File path to save the plots
+        :param show: Whether to display the plots as well
+        """
+        self.plot_progress(benchmark_acc=benchmark_acc, show=show, save=save)
+
+        self.build_gif(path=save)
+
+        self.plot_training_plots(show=show, save=save)
+
+        self.netG.plot_layer_scatters(title="Generator", show=show, save=save)
+        self.netD.plot_layer_scatters(title="Discriminator", show=show, save=save)
+
+        self.netG.plot_layer_hists(title="Generator", show=show, save=save)
+        self.netD.plot_layer_hists(title="Discriminator", show=show, save=save)
+
+        self.troubleshoot_discriminator(show=show, save=save)
+        self.troubleshoot_evaluator(real_netE=real_netE, show=show, save=save)
+
+        cm_gen, cr_gen = self.netE.classification_stats(title='CGAN', show=show, save=save)
+
+        print("\nCGAN Evaluator Network Classification Stats:\n")
+        print(cm_gen)
+        print("\n")
+        print(cr_gen)
+
+        cm_real, cr_real = real_netE.classification_stats(title='Real', show=show, save=save)
+
+        print("\nReal Data Evaluator Network Classification Stats:\n")
+        print(cm_real)
+        print("\n")
+        print(cr_real)
+
     def plot_progress(self, benchmark_acc, show, save=None):
         """
         Plot scores of each evaluation model across training of CGAN
@@ -271,40 +308,6 @@ class CGAN(nn.Module):
         if save is not None:
             assert os.path.exists(save), "Check that the desired save path exists."
             plt.savefig(save + '/training_progress.png')
-
-    def run_all_diagnostics(self, real_netE, benchmark_acc, save, show=False):
-        """
-        Run all diagnostic methods
-        :param real_netE: netE trained on real data
-        :param benchmark_acc: Best score obtained from training Evaluator on real data
-        :param save: File path to save the plots
-        :param show: Whether to display the plots as well
-        """
-        self.plot_progress(benchmark_acc=benchmark_acc, show=show, save=save)
-
-        self.build_gif(path=save)
-
-        self.plot_training_plots(show=show, save=save)
-
-        self.netG.plot_layer_scatters(title="Generator", show=show, save=save)
-        self.netD.plot_layer_scatters(title="Discriminator", show=show, save=save)
-
-        self.netG.plot_layer_hists(title="Generator", show=True, save=save)
-        self.netD.plot_layer_hists(title="Discriminator", show=True, save=save)
-
-        self.troubleshoot_discriminator(show=show, save=save)
-        self.troubleshoot_evaluator(real_netE=real_netE, show=show, save=save)
-
-        cm_gen, cr_gen = self.netE.classification_stats()
-        cm_real, cr_real = real_netE.classification_stats()
-
-        print("CGAN Evaluator Network Classification Stats:")
-        print(cm_gen)
-        print(cr_gen)
-
-        print("Real Data Evaluator Network Classification Stats:")
-        print(cm_real)
-        print(cr_real)
 
     def plot_training_plots(self, show=True, save=None):
         """
