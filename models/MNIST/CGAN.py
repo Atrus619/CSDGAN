@@ -67,7 +67,7 @@ class CGAN(nn.Module):
         # Instantiate sub-nets
         self.netG = CGAN_Generator(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device,
                                    lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
-        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device,
+        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim,
                                        lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
 
         self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
@@ -92,6 +92,7 @@ class CGAN(nn.Module):
         if self.discrim_noise_linear_anneal:
             self.dn_rate = self.discrim_noise / num_epochs
 
+        print("Beginning training")
         start_time = time.time()
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
@@ -182,8 +183,8 @@ class CGAN(nn.Module):
         Initialize the netE sub-net. This is done as a separate method because we want to reinitialize netE each time we want to evaluate it.
         We can also evaluate on the original, real data by specifying these training generators.
         """
-        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, num_channels=self.num_channels, nc=self.nc,
-                                   **self.netE_params).to(self.device)
+        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, x_dim=self.x_dim, num_channels=self.num_channels,
+                                   nc=self.nc, **self.netE_params).to(self.device)
 
     def init_fake_gen(self):
         # Initialize fake training set and validation set to be same size
@@ -260,6 +261,8 @@ class CGAN(nn.Module):
         self.plot_progress(benchmark_acc=benchmark_acc, show=show, save=save)
 
         self.build_gif(path=save)
+        self.netG.build_hist_gif(path=save, net="Generator")
+        self.netD.build_hist_gif(path=save, net="Discriminator")
 
         self.plot_training_plots(show=show, save=save)
 
@@ -579,3 +582,89 @@ class CGAN(nn.Module):
                     return grid1, grid2
 
         return grid1, grid2
+
+    def find_particular_img(self, gen, net, label, mistake):
+        """
+        Searches through the generator to find a single image of interest based on search parameters
+        :param gen: Generator to use. netG is a valid generator to use for fake data.
+        :param net: Network to use. Either "D" or "E".
+        :param label: Label to return (0-9)
+        :param mistake: Whether the example should be a mistake (True or False)
+        :return: torch tensor of image (x_dim[0] x x_dim[1])
+        """
+        assert gen in {self.train_gen, self.val_gen, self.test_gen, self.netG}, "Please use a valid generator (train/val/test/generator)"
+        assert net in {"D", "E"}, "Please use a valid net ('D' or 'E')"
+        assert label in range(self.nc), "Please use a valid label #"
+        assert mistake in {True, False}, "Mistake should be True or False"
+
+        bs = 128
+
+        subnet = self.netD if net == "D" else self.netE
+        subnet.eval()
+
+        while True:  # Search until a match is found
+            # Generate examples
+            if gen == self.netG:
+                noise = torch.randn(bs, self.nz, device=self.device)
+                y = convert_y_to_one_hot(torch.full((bs, 1), label, dtype=torch.int64)).to(self.device).type(torch.float32)
+
+                with torch.no_grad():
+                    x = self.netG(noise, y)
+
+            else:
+                iterator = gen.__iter__()
+                x, y = next(iterator)
+                x, y = x.to(self.device), y.type(torch.float32).to(self.device)
+                intended_y = convert_y_to_one_hot(torch.full((bs, 1), label, dtype=torch.int64)).to(self.device).type(torch.float32)
+                boolz = torch.argmax(y, -1) == torch.argmax(intended_y, -1)
+                x, y = x[boolz], y[boolz]
+
+            with torch.no_grad():
+                if net == "D":
+                    fwd = subnet(x, y)
+                else:
+                    fwd = subnet(x)
+
+            # Check if conditions are met and exit, otherwise continue.
+            # netD and incorrect
+            if net == "D":
+                if mistake:
+                    if gen == self.netG:  # Incorrect means classifying as real
+                        contenders = x[fwd > 0.5]
+                    else:
+                        contenders = x[fwd < 0.5]
+            # netD and correct
+                else:
+                    if gen == self.netG:  # Correct means classifying as fake
+                        contenders = x[fwd < 0.5]
+                    else:
+                        contenders = x[fwd > 0.5]
+            # netE and incorrect
+            elif mistake:
+                contenders = x[torch.argmax(fwd, -1) != torch.argmax(y, -1)]
+            # netE and incorrect
+            else:
+                contenders = x[torch.argmax(fwd, -1) == torch.argmax(y, -1)]
+
+            # If 1 or more values returned, return that value and exit. Otherwise, continue.
+            if len(contenders) > 0:
+                return contenders[0]
+
+    def draw_cam(self, gen, net, label, mistake, path, show):
+        """
+        Wrapper function for find_particular_img and draw_cam
+        :param gen: Generator to use. netG is a valid generator to use for fake data.
+        :param net: Network to use. Either "D" or "E".
+        :param label: Label to return (0-9)
+        :param mistake: Whether the example should be a mistake (True or False)
+        :param path: Path to create image file. Should end in .jpg
+        :param show: Whether to show the image
+        """
+        assert path.split(".")[-1] == "jpg", "Please make sure path ends in '.jpg'"
+
+        img = self.find_particular_img(gen=gen, net=net, label=label, mistake=mistake)
+
+        if net == "D":
+            self.netD.draw_cam(img=img, label=label, path=path, show=show)
+        else:
+            self.netE.draw_cam(img=img, path=path, show=show)

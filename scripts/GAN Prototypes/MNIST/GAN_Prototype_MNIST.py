@@ -36,7 +36,7 @@ print("Each image size:", x_test.shape[1], "x", x_test.shape[2])
 
 # Print an example image
 print(y_train[2])
-plt.imshow(x_train[2], cmap='gray')
+# plt.imshow(x_train[2], cmap='gray')
 
 # Define generators
 training_set = MNIST_Dataset(x_train, y_train)
@@ -88,9 +88,19 @@ with open(exp_path + "/CGAN.pkl", 'wb') as f:
 with open(exp_path + "/CGAN.pkl", 'rb') as f:
     CGAN = pickle.load(f)
 
+# Test Grad CAM
+x, y = CGAN.test_gen.__iter__().__next__()
+CGAN.netD.draw_cam(img=x[0], label=y[0], path=exp_path+"/plswork.jpg")
+
+CGAN.init_evaluator(CGAN.train_gen, CGAN.val_gen)
+CGAN.netE.draw_cam(img=x[1], path=exp_path+"/plswork2.jpg")
+
+x = CGAN.find_particular_img(CGAN.train_gen, "D", 3, True)
+CGAN.netD.draw_cam(img=x, label=3, path=exp_path+"/plswork.jpg")
+
+CGAN.draw_cam(gen=CGAN.train_gen, net="E", label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
 # TODO: Add augmentation and compare
 # TODO: Visualize networks and describe architecture
-# TODO: GIF of histograms - TEST
-# TODO: Histogram at epoch=0
 # TODO: Say it is cDCGAN
-# TODO: Visualize focus of discriminator when discriminating
+# TODO: Add parameter for training scheduling of generator vs. discriminator
+# TODO: Document new functions

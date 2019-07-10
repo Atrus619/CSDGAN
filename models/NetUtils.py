@@ -1,7 +1,6 @@
 from utils.utils import *
 import imageio
 
-
 # Contains utils to be inherited by other nets in this project
 class NetUtils:
     def __init__(self):
@@ -54,7 +53,7 @@ class NetUtils:
 
         self.update_wnormz()
         self.update_gnormz()
-        self.update_hist_list(bins=self.bins)
+        self.update_hist_list()
 
         for layer in self.layer_list:
             self.streaming_weight_history[layer] = {'weight': [], 'bias': []}
@@ -62,7 +61,7 @@ class NetUtils:
 
     def store_weight_and_grad_norms(self):
         """
-        Appends training history for summarization and visualization later.
+        Appends training history for summarization and visualization later. Scales each norm by the number of elements.
         Should be ran once per step per subnet.
         """
         for layer in self.layer_list:
@@ -72,22 +71,25 @@ class NetUtils:
             self.streaming_gradient_history[layer]['weight'].append(layer.weight.grad.norm(self.norm_num).detach().cpu().numpy().take(0) / layer.weight.grad.numel())
             self.streaming_gradient_history[layer]['bias'].append(layer.bias.grad.norm(self.norm_num).detach().cpu().numpy().take(0) / layer.bias.grad.numel())
 
-    def update_hist_list(self, bins=None):
+    def update_hist_list(self):
         """
-        Updates the histogram history based on the weights at the end of an epoch. Scales each norm by the number of elements.
-        Should be ran once per epoch.
+        Updates the histogram history based on the weights at the end of an epoch.
+        Should be ran once per epoch per subnet.
         """
         for layer in self.layer_list:
-            self.histogram_weight_history[layer]['weight'].append(np.histogram(layer.weight.detach().cpu().numpy().reshape(-1), bins=bins))
-            self.histogram_weight_history[layer]['bias'].append(np.histogram(layer.bias.detach().cpu().numpy().reshape(-1), bins=bins))
-
-            self.histogram_gradient_history[layer]['weight'].append(np.histogram(layer.weight.grad.detach().cpu().numpy().reshape(-1), bins=bins))
-            self.histogram_gradient_history[layer]['bias'].append(np.histogram(layer.bias.grad.detach().cpu().numpy().reshape(-1), bins=bins))
+            self.histogram_weight_history[layer]['weight'].append(np.histogram(layer.weight.detach().cpu().numpy().reshape(-1), bins=self.bins))
+            self.histogram_weight_history[layer]['bias'].append(np.histogram(layer.bias.detach().cpu().numpy().reshape(-1), bins=self.bins))
+            if self.epoch == 0:  # Model is untrained; no gradients exist yet
+                self.histogram_gradient_history[layer]['weight'].append(None)
+                self.histogram_gradient_history[layer]['bias'].append(None)
+            else:
+                self.histogram_gradient_history[layer]['weight'].append(np.histogram(layer.weight.grad.detach().cpu().numpy().reshape(-1), bins=self.bins))
+                self.histogram_gradient_history[layer]['bias'].append(np.histogram(layer.bias.grad.detach().cpu().numpy().reshape(-1), bins=self.bins))
 
     def update_wnormz(self):
         """
         Tracks history of desired norm of weights.
-        Should be ran once per epoch.
+        Should be ran once per epoch per subnet.
         :param norm_num: 1 = l1 norm, 2 = l2 norm
         :return: list of norms of weights by layer, as well as overall weight norm
         """
@@ -107,7 +109,7 @@ class NetUtils:
     def update_gnormz(self):
         """
         Calculates gradient norms by layer as well as overall. Scales each norm by the number of elements.
-        Should be ran once per epoch.
+        Should be ran once per epoch per subnet.
         :param norm_num: 1 = l1 norm, 2 = l2 norm
         :return: list of gradient norms by layer, as well as overall gradient norm
         """
@@ -183,8 +185,6 @@ class NetUtils:
 
     def plot_layer_hists(self, epoch=None, figsize=(20, 10), title='', show=True, save=None):
         """Plots histograms of weight and gradients for each layer in layer_list at the desired epoch"""
-        assert self.epoch > 0, "Model needs to be trained first"
-
         if epoch is None:
             epoch = self.epoch
 
@@ -202,18 +202,18 @@ class NetUtils:
             axes[i, 0].set_ylabel(self.layer_list_names[i])
 
             plt.sca(axes[i, 0])
-            convert_np_hist_to_plot(self.histogram_weight_history[layer]['weight'][epoch-1])
+            convert_np_hist_to_plot(self.histogram_weight_history[layer]['weight'][epoch])
 
             plt.sca(axes[i, 2])
-            convert_np_hist_to_plot(self.histogram_weight_history[layer]['bias'][epoch-1])
-            if layer.weight.grad is None:
+            convert_np_hist_to_plot(self.histogram_weight_history[layer]['bias'][epoch])
+            if epoch == 0:
                 pass
             else:
                 plt.sca(axes[i, 1])
-                convert_np_hist_to_plot(self.histogram_gradient_history[layer]['weight'][epoch-1])
+                convert_np_hist_to_plot(self.histogram_gradient_history[layer]['weight'][epoch])
 
                 plt.sca(axes[i, 3])
-                convert_np_hist_to_plot(self.histogram_gradient_history[layer]['bias'][epoch-1])
+                convert_np_hist_to_plot(self.histogram_gradient_history[layer]['bias'][epoch])
 
         if title != '':
             sup = title + " Layer Weight and Gradient Histograms - Epoch " + str(epoch)
@@ -230,7 +230,7 @@ class NetUtils:
         if save is not None:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/layer_histograms')
-            f.savefig(save + '/layer_histograms/' + title + '_layer_histograms.png')
+            f.savefig(save + '/layer_histograms/' + title + '_epoch_' + str(epoch) + '_layer_histograms.png')
 
     def build_hist_gif(self, path, net):
         """
@@ -241,16 +241,29 @@ class NetUtils:
         assert len(self.histogram_weight_history[self.layer_list[0]]['weight']) > 1, "Model not yet trained"
         ims = []
         for epoch in range(self.epoch+1):
-            title = net + '_Epoch_' + str(epoch)
-            self.plot_layer_hists(epoch=epoch, title=title, show=False, save=path)
-            img_name = path + '/layer_histograms/' + title + '_layer_histograms.png'
+            self.plot_layer_hists(epoch=epoch, title=net, show=False, save=path)
+            img_name = path + '/layer_histograms/' + net + '_epoch_' + str(epoch) + '_layer_histograms.png'
             ims.append(imageio.imread(img_name))
             plt.close()
             if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
                 for i in range(20):
                     ims.append(imageio.imread(img_name))
                     plt.close()
-        imageio.mimsave(path + '/histogram_generation_animation.gif', ims, fps=5)
+        imageio.mimsave(path + '/' + net + '_histogram_generation_animation.gif', ims, fps=2)
+
+    def activations_hook(self, grad):
+        """
+        Used for Grad CAM
+        Hook for the gradients of the activations
+        Used on the final convolutional layer
+        """
+        self.gradients = grad
+
+    def get_activations_gradient(self):
+        return self.gradients
+
+    def get_activations(self):
+        return self.final_conv_output
 
 
 class GaussianNoise(nn.Module):
@@ -295,3 +308,4 @@ class CustomCatGANLayer(nn.Module):
             curr = newcurr
 
         return torch.cat([catted, cont], 1)
+

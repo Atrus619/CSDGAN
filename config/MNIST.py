@@ -1,14 +1,14 @@
 # Title of experiment for output directory
-EXPERIMENT_NAME = 'Notebook_Example'
+EXPERIMENT_NAME = 'Testing'
 
 # Desired Train/Validation/Test split
 SPLITS = [0.15, 0.05, 0.80]
 
 # Training and CGAN parameters
 MANUAL_SEED = 999
-NUM_EPOCHS = 400
+NUM_EPOCHS = 20
 PRINT_FREQ = 5
-EVAL_FREQ = 40
+EVAL_FREQ = None
 BATCH_SIZE = 128
 TRAINING_PARAMS = {'batch_size': BATCH_SIZE,
                    'shuffle': True,

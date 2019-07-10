@@ -9,14 +9,18 @@ import pandas as pd
 import seaborn as sns
 import os
 from utils.utils import safe_mkdir
+import cv2
+import matplotlib
 
 
 # Evaluator class
 class CGAN_Evaluator(nn.Module, NetUtils):
-    def __init__(self, train_gen, val_gen, test_gen, device, num_channels, nc, lr, beta1, beta2, wd):
+    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, num_channels, nc, lr, beta1, beta2, wd):
         super().__init__()
 
         self.nc = nc
+        self.nf = 10  # Completely arbitrary. Works well for now.
+        self.x_dim = x_dim
 
         # Generators
         self.train_gen = train_gen
@@ -26,9 +30,9 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         self.device = device
 
         # Layers
-        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=10, kernel_size=5, stride=1, padding=2, bias=True)
+        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.nf, kernel_size=5, stride=1, padding=2, bias=True)
         self.cn1_bn = nn.BatchNorm2d(10)
-        self.cn2 = nn.Conv2d(in_channels=10, out_channels=20, kernel_size=5, stride=1, padding=2, bias=True)
+        self.cn2 = nn.Conv2d(in_channels=self.nf, out_channels=self.nf*2, kernel_size=5, stride=1, padding=2, bias=True)
         self.cn2_bn = nn.BatchNorm2d(20)
 
         self.mp = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -54,9 +58,20 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         self.val_losses = []
         self.val_acc = []
 
+        # Grad CAM
+        self.gradients = None
+        self.final_conv_output = None
+
     def forward(self, x):
         x = self.do2d(self.act(self.cn1_bn(self.cn1(x))))
-        x = self.do2d(self.act(self.cn2_bn(self.cn2(x))))
+
+        # Register hook for Grad CAM
+        self.final_conv_output = self.cn2(x)
+        self.final_conv_output.requires_grad_()
+        h = self.final_conv_output.register_hook(self.activations_hook)
+
+        # Continue
+        x = self.do2d(self.act(self.cn2_bn(self.final_conv_output)))
         x = self.mp(x)
         x = x.view(-1, 14 * 14 * 20)
         x = self.do1d(self.act(self.fc1(x)))
@@ -144,3 +159,72 @@ class CGAN_Evaluator(nn.Module, NetUtils):
             plt.savefig(save + '/conf_heatmaps/' + title + '_conf_heatmap.png')
 
         return cm, cr
+
+    def draw_cam(self, img, path, show=True):
+        self.eval()
+
+        # Preprocess inputs
+        img = img.to(self.device)
+        img = img.view(-1, 1, self.x_dim[0], self.x_dim[1])
+
+        pred = self.forward(img)
+        pred[:, pred.argmax(1)].backward()
+        gradients = self.get_activations_gradient()
+        pooled_gradients = torch.mean(gradients, dim=[0, 2, 3])
+        activations = self.get_activations().detach()
+
+        # Weight the channels by corresponding gradients
+        for i in range(self.nf*2):
+            activations[:, i, :, :] *= pooled_gradients[i]
+
+        # Average the channels of the activations
+        heatmap = torch.mean(activations, dim=1).squeeze().detach().cpu()
+
+        # ReLU on top of the heatmap (possibly should use the actual activation in the network???)
+        heatmap = np.maximum(heatmap, 0)
+
+        # Normalize heatmap
+        heatmap /= torch.max(heatmap)
+        heatmap = heatmap.numpy()
+
+        # Save original image
+        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy()*255
+        matplotlib.image.imsave(path, img_transformed, cmap='gray')
+
+        # Read in image and cut pixels in half for visibility
+        cv_img = cv2.imread(path)
+        cv_img = cv_img / 2
+
+        # Create heatmap
+        heatmap = cv2.resize(heatmap, (cv_img.shape[1], cv_img.shape[0]))
+        heatmap = np.uint8(255 * heatmap)
+        heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+
+        # Superimpose
+        superimposed_img = heatmap * 0.4 + cv_img
+
+        # Save
+        cv2.imwrite(path, superimposed_img)
+
+        # Load in to show
+        if show:
+            show_img = plt.imread(path)
+            f, axes = plt.subplots(1, 2, figsize=(14, 7))
+            plt.sca(axes[0])
+            plt.axis('off')
+            plt.title('Grad CAM', fontweight='bold')
+            plt.imshow(show_img)
+
+            plt.sca(axes[1])
+            plt.axis('off')
+            plt.title('Original Image', fontweight='bold')
+            img = img.squeeze().detach().cpu().numpy()
+            plt.imshow(img, cmap='gray')
+
+            sup = 'Evaluator Gradient Class Activation Map\n\nPredicted to be ' + str(pred.argmax(1).detach().cpu().numpy().take(0))
+            st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
+            f.tight_layout()
+            st.set_y(0.96)
+            f.subplots_adjust(top=0.8)
+
+            plt.show()

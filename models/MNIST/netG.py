@@ -40,15 +40,16 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.loss_fn = nn.BCELoss()  # BCE Loss
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
+        # Initialize weights
+        self.weights_init()
+
         # Record history of training
         self.init_layer_list()
         self.init_history()
+        self.update_hist_list()
 
         self.D_G_z2 = []  # Per step
         self.Avg_G_fakes = []  # Store D_G_z2 across epochs
-
-        # Initialize weights
-        self.weights_init()
 
     def init_fixed_labels(self):
         tmp = torch.empty((self.nc * self.fixed_count_per_label, 1), dtype=torch.int64)
