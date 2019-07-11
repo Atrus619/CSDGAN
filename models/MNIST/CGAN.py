@@ -220,7 +220,7 @@ class CGAN(nn.Module):
 
         self.init_evaluator(train_gen, val_gen)
         self.netE.train_evaluator(num_epochs=num_epochs, eval_freq=1, es=es)
-        _, og_result = CGAN.netE.eval_once(test_gen)
+        _, og_result = self.netE.eval_once(test_gen)
         og_result = og_result.numpy().take(0)
         return og_result, copy.copy(self.netE)
 
