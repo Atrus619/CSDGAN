@@ -58,9 +58,9 @@ CGAN = CGAN(train_gen=training_generator,
 
 # Check performance on real data
 try:
-    benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
+    benchmark_acc, real_netE = CGAN.eval_on_real_data(num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
 except RuntimeError:
-    benchmark_acc, real_netE = eval_on_real_data(CGAN=CGAN, num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
+    benchmark_acc, real_netE = CGAN.eval_on_real_data(num_epochs=cfg.CGAN_INIT_PARAMS['eval_num_epochs'], es=cfg.CGAN_INIT_PARAMS['early_stopping_patience'])
 print("Benchmark Accuracy:", benchmark_acc)
 
 # Train CGAN

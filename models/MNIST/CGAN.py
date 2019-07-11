@@ -199,6 +199,31 @@ class CGAN(nn.Module):
         self.fake_val_set = Fake_MNIST_Dataset(self.netG, self.fake_data_set_size, self.nz, self.nc, self.device)
         self.fake_val_gen = data.DataLoader(self.fake_val_set, batch_size=self.fake_bs, shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
 
+    def eval_on_real_data(self, num_epochs, train_gen=None, val_gen=None, test_gen=None, es=None):
+        """
+        Evaluate the CGAN Evaluator Network on real examples
+        :param num_epochs: Number of epochs to train for
+        :param train_gen: PyTorch generator
+        :param val_gen: PyTorch generator
+        :param test_gen: PyTorch generator
+        :param es: Early-stopping patience. If None, early-stopping is not utilized.
+        :return: Accuracy of evaluation on CGAN's testing data
+        """
+        if train_gen is None:
+            train_gen = self.train_gen
+
+        if val_gen is None:
+            val_gen = self.val_gen
+
+        if test_gen is None:
+            test_gen = self.test_gen
+
+        self.init_evaluator(train_gen, val_gen)
+        self.netE.train_evaluator(num_epochs=num_epochs, eval_freq=1, es=es)
+        _, og_result = CGAN.netE.eval_once(test_gen)
+        og_result = og_result.numpy().take(0)
+        return og_result, copy.copy(self.netE)
+
     def show_img(self, label):
         """Generate a 28x28 image based on the desired class label index (integer 0-9)"""
         assert 0 <= label <= 9 and type(label) is int, "Make sure label is an integer between 0 and 9 (inclusive)."
@@ -385,21 +410,26 @@ class CGAN(nn.Module):
         """Load a previously stored netG (likely the one that performed the best)"""
         self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + epoch + "_Generator.pt"))
 
-    def troubleshoot_discriminator(self, show=True, save=None):
+    def troubleshoot_discriminator(self, exit_early_iters=1000, gen=None, show=True, save=None):
         """
         Produce several 10x10 grids of examples of interest for troubleshooting the model
         1. 10x10 grid of generated examples discriminator labeled as fake.
         2. 10x10 grid of generated examples discriminator labeled as real.
         3. 10x10 grid of real examples discriminator labeled as fake.
         4. 10x10 grid of real examples discriminator labeled as real.
+        :param exit_early_iters: Number of iterations to exit after if not enough images are found for grids 1 and 2
+        :param gen: Generator to use for grids 3 and 4
         :param show: Whether to show the plots
         :param save: Where to save the plots. If set to None default path is used. If false, not saved.
         """
         if save is None:
             save = self.path
 
-        grid1, grid2 = self.build_grid1_and_grid2()
-        grid3, grid4 = self.build_grid3_and_grid4()
+        if gen is None:
+            gen = self.test_gen  # More data exists
+
+        grid1, grid2 = self.build_grid1_and_grid2(exit_early_iters=exit_early_iters)
+        grid3, grid4 = self.build_grid3_and_grid4(gen=gen)
 
         grid1, grid2 = vutils.make_grid(tensor=grid1, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid2, nrow=10, normalize=True).detach().cpu()
         grid3, grid4 = vutils.make_grid(tensor=grid3, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid4, nrow=10, normalize=True).detach().cpu()
@@ -481,7 +511,7 @@ class CGAN(nn.Module):
             safe_mkdir(save + '/troubleshoot_plots')
             f.savefig(save + '/troubleshoot_plots/evaluator.png')
 
-    def build_grid1_and_grid2(self, exit_early_iters=200):
+    def build_grid1_and_grid2(self, exit_early_iters=1000):
         """Generate images and feeds them to discriminator in order to find 10 examples of each class"""
         self.netG.eval()
         self.netD.eval()
@@ -524,7 +554,7 @@ class CGAN(nn.Module):
 
         return grid1, grid2
 
-    def build_grid3_and_grid4(self):
+    def build_grid3_and_grid4(self, gen):
         """
         Feed real images to discriminator in order to find 10 examples of each class labeled as fake
         Runs one full epoch over training data
@@ -541,7 +571,7 @@ class CGAN(nn.Module):
             grid3_counts[i] = 0
             grid4_counts[i] = 0
 
-        for x, y in self.train_gen:
+        for x, y in gen:
             x, y = x.to(self.device), y.type(torch.float32).to(self.device)
 
             with torch.no_grad():
@@ -697,10 +727,13 @@ class CGAN(nn.Module):
         """
         Utilizes torchviz to print current graph to a pdf
         :param net: Network to draw graph for. One of netG, netD, or netE.
-        :param show: Whether to show the graph.
-        :param save: Where to save the graph. Needs full file name. Will always save as .pdf
+        :param show: Whether to show the graph. To visualize in jupyter notebooks, run the returned viz.
+        :param save: Where to save the graph.
         """
         assert net in {self.netG, self.netD, self.netE}, "Invalid entry for net. Should be netG, netD, or netE."
+
+        if save is None:
+            save = self.path
 
         iterator = self.train_gen.__iter__()
         x, y = next(iterator)
@@ -714,4 +747,14 @@ class CGAN(nn.Module):
         else:
             viz = make_dot(net(x), params=dict(net.named_parameters()))
 
-        viz.render(filename=save, view=show)
+        if net == self.netG:
+            title = "Generator"
+        elif net == self.netD:
+            title = "Discriminator"
+        else:
+            title = "Evaluator"
+
+        safe_mkdir(save + "/architectures")
+        viz.render(filename=save + "/architectures/" + title, view=show)
+
+        return viz

@@ -115,12 +115,13 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.Avg_D_fakes.append(np.mean(self.D_G_z1))
         self.D_G_z1 = []
 
-    def draw_cam(self, img, label, path, show=True):
+    def draw_cam(self, img, label, path, real, show=True):
         """
         Implements Grad CAM for netD
         :param img: Image to draw over
         :param label: Corresponding label for img
-        :param path: Path to save output image to
+        :param path: Path to save output image to. Full image path that should end in .jpg
+        :param real: Whether the image is real or not
         :param show: Whether to show the image
         :return: Pair of images, side by side, left image is drawn over, right image is original
         """
@@ -171,26 +172,28 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         # Save
         cv2.imwrite(path, superimposed_img)
 
-        # Load in to show
+        # Load in and make pretty
+        show_img = plt.imread(path)
+        f, axes = plt.subplots(1, 2, figsize=(14, 7))
+        plt.sca(axes[0])
+        plt.axis('off')
+        plt.title('Grad CAM', fontweight='bold')
+        plt.imshow(show_img)
+
+        plt.sca(axes[1])
+        plt.axis('off')
+        plt.title('Original Image', fontweight='bold')
+        img = img.squeeze().detach().cpu().numpy()
+        plt.imshow(img, cmap='gray')
+
+        real_or_fake = 'real' if pred > 0.5 else 'fake'
+        sup = 'Discriminator Gradient Class Activation Map\n\nPredicted to be ' + real_or_fake
+        st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
+        f.tight_layout()
+        st.set_y(0.96)
+        f.subplots_adjust(top=0.8)
+
+        f.savefig(path)
+
         if show:
-            show_img = plt.imread(path)
-            f, axes = plt.subplots(1, 2, figsize=(14, 7))
-            plt.sca(axes[0])
-            plt.axis('off')
-            plt.title('Grad CAM', fontweight='bold')
-            plt.imshow(show_img)
-
-            plt.sca(axes[1])
-            plt.axis('off')
-            plt.title('Original Image', fontweight='bold')
-            img = img.squeeze().detach().cpu().numpy()
-            plt.imshow(img, cmap='gray')
-
-            real_or_fake = 'real' if pred > 0.5 else 'fake'
-            sup = 'Discriminator Gradient Class Activation Map\n\nPredicted to be ' + real_or_fake
-            st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
-            f.tight_layout()
-            st.set_y(0.96)
-            f.subplots_adjust(top=0.8)
-
             plt.show()

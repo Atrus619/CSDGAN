@@ -245,6 +245,7 @@ class NetUtils:
         Loop through self.histogram_weight_history and saves the images to a folder.
         :param path: Path to folder to save images. Folder will be created if it does not already exist.
         :param net: Name of network (Generator or Discriminator). Used for naming files.
+        :return: Saves a gif with the title net + _histogram_generation_animation.gif (as well as the images comprising the gif into the layer_histograms folder)
         """
         assert len(self.histogram_weight_history[self.layer_list[0]]['weight']) > 1, "Model not yet trained"
 

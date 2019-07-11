@@ -133,6 +133,9 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         """Return a confusion matrix, classification report, and plots/saves a heatmap confusion matrix on the predictions"""
         self.eval()
 
+        if save is None:
+            save = self.path
+
         ground_truth = torch.empty(size=(0, 0), dtype=torch.int64, device=self.device).view(-1)
         preds = torch.empty_like(ground_truth)
 
@@ -154,18 +157,19 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         if show:
             plt.show()
 
-        if save is not None:
+        if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/conf_heatmaps')
             plt.savefig(save + '/conf_heatmaps/' + title + '_conf_heatmap.png')
 
         return cm, cr
 
-    def draw_cam(self, img, path, show=True):
+    def draw_cam(self, img, path, real, show=True):
         """
         Implements Grad CAM for netE
         :param img: Image to draw over
-        :param path: Path to save output image to
+        :param path: Path to save output image to. Full image path that should end in .jpg
+        :param real: Whether the image is real or not
         :param show: Whether to show the image
         :return: Pair of images, side by side, left image is drawn over, right image is original
         """
@@ -215,24 +219,27 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         cv2.imwrite(path, superimposed_img)
 
         # Load in to show
+
+        show_img = plt.imread(path)
+        f, axes = plt.subplots(1, 2, figsize=(14, 7))
+        plt.sca(axes[0])
+        plt.axis('off')
+        plt.title('Grad CAM', fontweight='bold')
+        plt.imshow(show_img)
+
+        plt.sca(axes[1])
+        plt.axis('off')
+        plt.title('Original Image', fontweight='bold')
+        img = img.squeeze().detach().cpu().numpy()
+        plt.imshow(img, cmap='gray')
+
+        sup = 'Evaluator Gradient Class Activation Map\n\nPredicted to be ' + str(pred.argmax(1).detach().cpu().numpy().take(0))
+        st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
+        f.tight_layout()
+        st.set_y(0.96)
+        f.subplots_adjust(top=0.8)
+
+        f.savefig(path)
+
         if show:
-            show_img = plt.imread(path)
-            f, axes = plt.subplots(1, 2, figsize=(14, 7))
-            plt.sca(axes[0])
-            plt.axis('off')
-            plt.title('Grad CAM', fontweight='bold')
-            plt.imshow(show_img)
-
-            plt.sca(axes[1])
-            plt.axis('off')
-            plt.title('Original Image', fontweight='bold')
-            img = img.squeeze().detach().cpu().numpy()
-            plt.imshow(img, cmap='gray')
-
-            sup = 'Evaluator Gradient Class Activation Map\n\nPredicted to be ' + str(pred.argmax(1).detach().cpu().numpy().take(0))
-            st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
-            f.tight_layout()
-            st.set_y(0.96)
-            f.subplots_adjust(top=0.8)
-
             plt.show()
