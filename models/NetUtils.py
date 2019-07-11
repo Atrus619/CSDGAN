@@ -1,6 +1,7 @@
 from utils.utils import *
 import imageio
 
+
 # Contains utils to be inherited by other nets in this project
 class NetUtils:
     def __init__(self):
@@ -260,9 +261,11 @@ class NetUtils:
         self.gradients = grad
 
     def get_activations_gradient(self):
+        """Grad CAM Helper Function"""
         return self.gradients
 
     def get_activations(self):
+        """Grad CAM Helper Function"""
         return self.final_conv_output
 
 

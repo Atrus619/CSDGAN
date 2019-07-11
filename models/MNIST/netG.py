@@ -10,7 +10,9 @@ class CGAN_Generator(nn.Module, NetUtils):
     def __init__(self, nz, nf, num_channels, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
+        self.device = device
 
+        self.num_channels = num_channels
         self.x_dim = x_dim
         self.nc = nc
         self.nz = nz
@@ -18,8 +20,8 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.epoch = 0
 
         self.fixed_count_per_label = 10
-        self.fixed_noise = torch.randn(self.fixed_count_per_label * nc, nz, device=device)  # 10x10, 10 examples of each of the 10 labels
-        self.fixed_labels = self.init_fixed_labels().to(device)
+        self.fixed_noise = torch.randn(self.fixed_count_per_label * nc, nz, device=self.device)  # 10x10, 10 examples of each of the 10 labels
+        self.fixed_labels = self.init_fixed_labels().to(self.device)
 
         # Layers
         # Noise with one-hot encoded category conditional inputs
@@ -29,7 +31,7 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.ct2 = nn.ConvTranspose2d(in_channels=self.nf*2, out_channels=self.nf, kernel_size=5, stride=2, padding=2, output_padding=1, bias=True)
         self.ct2_bn = nn.BatchNorm2d(self.nf)
         # Intermediate size of (nf*1) x 14 x 14
-        self.output = nn.ConvTranspose2d(in_channels=self.nf, out_channels=num_channels, kernel_size=5, stride=2, padding=2, output_padding=1, bias=True)
+        self.output = nn.ConvTranspose2d(in_channels=self.nf, out_channels=self.num_channels, kernel_size=5, stride=2, padding=2, output_padding=1, bias=True)
         # Output size of num_channels x 28 x 28
         # Activations
         self.act = nn.LeakyReLU(0.2)

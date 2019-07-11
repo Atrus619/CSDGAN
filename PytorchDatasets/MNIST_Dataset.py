@@ -1,5 +1,8 @@
 from torch.utils import data
 from utils.MNIST import *
+import torchvision
+import torchvision.transforms as t
+from sklearn.model_selection import train_test_split
 
 
 class MNIST_Dataset(data.Dataset):
@@ -58,3 +61,77 @@ class Fake_MNIST_Dataset(data.Dataset):
         return self.x[index], self.y[index]
 
 
+class Augmented_MNIST_Dataset(data.Dataset):
+    def __init__(self, x, y, n):
+        assert n < x.shape[0], "Amount of augmentation n must be less than total data set size"
+        self.x = x.view(-1, 1, 28, 28).float() / 255
+        self.y_raw = y
+        self.y = convert_y_to_one_hot(y)
+        self.augment(n)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, index):
+        return self.x[index], self.y[index]
+
+    def augment(self, n):
+        """Increases the data set by augmenting a stratified sample of size n through the transfm_batch method"""
+        x_aug, _, y_aug, _, y_aug_raw, _ = train_test_split(self.x.numpy(), self.y.numpy(), self.y_raw.numpy(), test_size=self.x.shape[0]-n, stratify=self.y_raw)
+        x_aug, y_aug = torch.from_numpy(x_aug), torch.from_numpy(y_aug)
+        x_aug = self.trnsfm_batch(x_aug, y_aug_raw)
+        self.x, self.y = torch.cat((self.x, x_aug), dim=0), torch.cat((self.y, y_aug), dim=0)
+
+    @staticmethod
+    def trnsfm_batch(img, labels):
+        """Performs various transformations in order to augment the data set"""
+        PIL = torchvision.transforms.ToPILImage()
+        TNSR = torchvision.transforms.ToTensor()
+        crop_trnsfm = t.RandomResizedCrop(28, scale=(0.75, 1.0), ratio=(0.75, 1.3333))
+        affine_trnsfm = t.RandomAffine((-15, 15))
+        vert_trnsfm = t.RandomVerticalFlip(p=0.5)
+        hor_trnsfm = t.RandomHorizontalFlip(p=0.5)
+        final_trnsfm = t.Compose([crop_trnsfm, affine_trnsfm])
+        spcl_trnsfm = t.Compose([vert_trnsfm, hor_trnsfm])
+        spcl_list = [1, 8]
+        out = torch.empty_like(img)
+        for i in range(img.shape[0]):
+            tmp = img[i].view(28, 28)
+            tmp = PIL(tmp)
+            tmp = final_trnsfm(tmp)
+            if labels[i] in spcl_list:
+                tmp = spcl_trnsfm(tmp)
+            tmp = TNSR(tmp)
+            out[i] = tmp
+        return out
+
+
+class Generator_Augmented_MNIST_Dataset(data.Dataset):
+    def __init__(self, x, y, n, netG):
+        assert n % 100 == 0, "Please make sure n is divisible by 100 so classes can be perfectly balanced"
+
+        self.x = x.view(-1, 1, 28, 28).float() / 255
+        self.y_raw = y
+        self.y = convert_y_to_one_hot(y)
+        self.netG = netG
+        self.augment(n)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, index):
+        return self.x[index], self.y[index]
+
+    def augment(self, n):
+        """Increases the data set by generating a stratified sample of size n using netG"""
+        bs = self.netG.fixed_labels.shape[0]
+
+        noise = torch.randn(bs, self.netG.nz, device=self.netG.device)
+        x_aug = torch.empty((n, self.netG.num_channels, self.netG.x_dim[0], self.netG.x_dim[1]), dtype=torch.float32, device=self.netG.device)
+        y_aug = torch.empty((n, self.netG.fixed_labels.shape[1]), dtype=torch.float32, device=self.netG.device)
+
+        for i in range(n // bs):
+            x_aug[(100*i):(100*(i+1))] = self.netG(noise, self.netG.fixed_labels)
+            y_aug[(100 * i):(100 * (i + 1))] = self.netG.fixed_labels.detach()
+
+        self.x, self.y = torch.cat((self.x, x_aug.cpu()), dim=0), torch.cat((self.y, y_aug.type(torch.uint8).cpu()), dim=0)

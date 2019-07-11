@@ -11,11 +11,13 @@ from utils.MNIST import *
 import time
 from utils.utils import *
 import imageio
+from torchviz import make_dot
+import graphviz
 
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
-    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, netE_filepath,
+    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, netE_filepath, sched_netG,
                  label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal,
                  netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
                  netD_nf, netD_lr, netD_beta1, netD_beta2, netD_wd,
@@ -24,6 +26,8 @@ class CGAN(nn.Module):
                  eval_num_epochs, early_stopping_patience):
         # Inherit nn.Module initialization
         super(CGAN, self).__init__()
+
+        self.sched_netG = sched_netG
 
         assert 0.0 <= label_noise <= 1.0, "Label noise must be between 0 and 1"
         self.label_noise = label_noise
@@ -120,12 +124,9 @@ class CGAN(nn.Module):
         self.netD.train()
         y_train = y_train.float()  # Convert to float so that it can interact with float weights correctly
 
-        # garbage_y_train = convert_y_to_one_hot(torch.from_numpy(np.random.randint(0, 9, len(y_train)))).to(self.device).type(torch.float32)
-        # import pdb; pdb.set_trace()
         # Update Discriminator, all real batch
         labels = (torch.rand(size=(bs,)) >= self.label_noise).type(torch.float32).to(self.device)
         real_forward_pass = self.netD(x_train, y_train).view(-1)
-        # real_forward_pass = self.netD(x_train, garbage_y_train).view(-1)
         self.netD.train_one_step_real(real_forward_pass, labels)
 
         # Update Discriminator, all fake batch
@@ -133,15 +134,16 @@ class CGAN(nn.Module):
         x_train_fake = self.netG(noise, y_train)
         labels = (torch.rand(size=(bs,)) <= self.label_noise).type(torch.float32).to(self.device)
         fake_forward_pass = self.netD(x_train_fake.detach(), y_train).view(-1)
-        # fake_forward_pass = self.netD(x_train_fake.detach(), garbage_y_train).view(-1)
         self.netD.train_one_step_fake(fake_forward_pass, labels)
         self.netD.combine_and_update_opt()
 
-        # Update Generator
-        labels.fill_(self.real_label)  # Reverse labels, fakes are real for generator cost
-        gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
-        # gen_fake_forward_pass = self.netD(x_train_fake, garbage_y_train).view(-1)
-        self.netG.train_one_step(gen_fake_forward_pass, labels)
+        for i in range(self.sched_netG):
+            # Update Generator
+            noise = torch.randn(bs, self.nz, device=self.device)
+            x_train_fake = self.netG(noise, y_train)
+            labels.fill_(self.real_label)  # Reverse labels, fakes are real for generator cost
+            gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
+            self.netG.train_one_step(gen_fake_forward_pass, labels)
 
     def test_model(self, train_gen, val_gen):
         """
@@ -668,3 +670,26 @@ class CGAN(nn.Module):
             self.netD.draw_cam(img=img, label=label, path=path, show=show)
         else:
             self.netE.draw_cam(img=img, path=path, show=show)
+
+    def draw_architecture(self, net, show, save):
+        """
+        Utilizes torchviz to print current graph to a pdf
+        :param net: Network to draw graph for. One of netG, netD, or netE.
+        :param show: Whether to show the graph.
+        :param save: Where to save the graph. Will always save as .pdf
+        """
+        assert net in {self.netG, self.netD, self.netE}, "Invalid entry for net. Should be netG, netD, or netE."
+
+        iterator = self.train_gen.__iter__()
+        x, y = next(iterator)
+        x, y = x.to(self.device), y.to(self.device).type(torch.float32)
+
+        if net == self.netG:
+            noise = torch.randn(x.shape[0], self.nz, device=self.device)
+            viz = make_dot(net(noise, y), params=dict(net.named_parameters()))
+        elif net == self.netD:
+            viz = make_dot(net(x, y), params=dict(net.named_parameters()))
+        else:
+            viz = make_dot(net(x), params=dict(net.named_parameters()))
+
+        viz.render(filename=save, view=show)

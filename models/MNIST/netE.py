@@ -161,6 +161,13 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         return cm, cr
 
     def draw_cam(self, img, path, show=True):
+        """
+        Implements Grad CAM for netE
+        :param img: Image to draw over
+        :param path: Path to save output image to
+        :param show: Whether to show the image
+        :return: Pair of images, side by side, left image is drawn over, right image is original
+        """
         self.eval()
 
         # Preprocess inputs

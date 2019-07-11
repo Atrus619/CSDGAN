@@ -114,6 +114,14 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         self.D_G_z1 = []
 
     def draw_cam(self, img, label, path, show=True):
+        """
+        Implements Grad CAM for netD
+        :param img: Image to draw over
+        :param label: Corresponding label for img
+        :param path: Path to save output image to
+        :param show: Whether to show the image
+        :return: Pair of images, side by side, left image is drawn over, right image is original
+        """
         self.eval()
 
         # Preprocess inputs

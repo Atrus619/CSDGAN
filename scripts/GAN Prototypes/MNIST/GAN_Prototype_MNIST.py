@@ -3,10 +3,11 @@ import config.MNIST as cfg
 from utils.utils import *
 from utils.data_loading import *
 from utils.MNIST import *
-from PytorchDatasets.MNIST_Dataset import MNIST_Dataset
+from PytorchDatasets.MNIST_Dataset import MNIST_Dataset, Augmented_MNIST_Dataset, Generator_Augmented_MNIST_Dataset
 from torch.utils import data
 import os
 import pickle
+
 
 # Set random seem for reproducibility
 print("Random Seed: ", cfg.MANUAL_SEED)
@@ -99,8 +100,19 @@ x = CGAN.find_particular_img(CGAN.train_gen, "D", 3, True)
 CGAN.netD.draw_cam(img=x, label=3, path=exp_path+"/plswork.jpg")
 
 CGAN.draw_cam(gen=CGAN.train_gen, net="E", label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
+
+# Test drawing architectures
+CGAN.draw_architecture(net=CGAN.netG, show=True, save="test")
+CGAN.draw_architecture(net=CGAN.netD, show=True, save="test")
+CGAN.draw_architecture(net=CGAN.netE, show=True, save="test")
+
+# Test augmented dataset
+augmented_training_set = Augmented_MNIST_Dataset(x_train, y_train, 10000)
+augmented_training_generator = data.DataLoader(augmented_training_set, **cfg.TRAINING_PARAMS)
+
+generator_augmented_training_set = Generator_Augmented_MNIST_Dataset(x_train, y_train, 10000, CGAN.netG)
+generator_augmented_training_generator = data.DataLoader(generator_augmented_training_set, **cfg.TRAINING_PARAMS)
+
 # TODO: Add augmentation and compare
-# TODO: Visualize networks and describe architecture
 # TODO: Say it is cDCGAN
-# TODO: Add parameter for training scheduling of generator vs. discriminator
-# TODO: Document new functions
+

@@ -34,3 +34,4 @@ Werkzeug==0.15.4
 wget==3.2
 imageio==2.5.0
 opencv-python
+torchviz==0.0.1
