@@ -1,5 +1,6 @@
 from utils.utils import *
 import imageio
+import torch
 
 
 # Contains utils to be inherited by other nets in this project
@@ -150,6 +151,9 @@ class NetUtils:
         """Plot weight and gradient norm history for each layer in layer_list across epochs"""
         assert self.epoch > 0, "Model needs to be trained first"
 
+        if save is None:
+            save = self.path
+
         f, axes = plt.subplots(len(self.layer_list), 4, figsize=figsize, sharex=True)
 
         axes[0, 0].title.set_text("Weight Norms")
@@ -179,7 +183,7 @@ class NetUtils:
         if show:
             f.show()
 
-        if save is not None:
+        if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/layer_scatters')
             f.savefig(save + '/layer_scatters/' + title + '_layer_scatter.png')
@@ -188,6 +192,9 @@ class NetUtils:
         """Plots histograms of weight and gradients for each layer in layer_list at the desired epoch"""
         if epoch is None:
             epoch = self.epoch
+
+        if save is None:
+            save = self.path
 
         f, axes = plt.subplots(len(self.layer_list), 4, figsize=figsize, sharex=False)
 
@@ -228,18 +235,22 @@ class NetUtils:
         if show:
             f.show()
 
-        if save is not None:
+        if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/layer_histograms')
             f.savefig(save + '/layer_histograms/' + title + '_epoch_' + str(epoch) + '_layer_histograms.png')
 
-    def build_hist_gif(self, path, net):
+    def build_hist_gif(self, net, path=None):
         """
         Loop through self.histogram_weight_history and saves the images to a folder.
         :param path: Path to folder to save images. Folder will be created if it does not already exist.
         :param net: Name of network (Generator or Discriminator). Used for naming files.
         """
         assert len(self.histogram_weight_history[self.layer_list[0]]['weight']) > 1, "Model not yet trained"
+
+        if path is None:
+            path = self.path
+
         ims = []
         for epoch in range(self.epoch+1):
             self.plot_layer_hists(epoch=epoch, title=net, show=False, save=path)
@@ -252,6 +263,7 @@ class NetUtils:
                     plt.close()
         imageio.mimsave(path + '/' + net + '_histogram_generation_animation.gif', ims, fps=2)
 
+    @torch.utils.hooks.unserializable_hook
     def activations_hook(self, grad):
         """
         Used for Grad CAM

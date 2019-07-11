@@ -7,9 +7,11 @@ import numpy as np
 
 # Generator class
 class CGAN_Generator(nn.Module, NetUtils):
-    def __init__(self, nz, nf, num_channels, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, nz, nf, num_channels, path, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
+
+        self.path = path
         self.device = device
 
         self.num_channels = num_channels

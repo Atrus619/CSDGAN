@@ -16,9 +16,7 @@ torch.manual_seed(cfg.MANUAL_SEED)
 
 # Ensure directory exists for outputs
 exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
-eval_path = os.path.join(exp_path, "stored_evaluators")
 safe_mkdir(exp_path)
-safe_mkdir(eval_path)
 
 # Import data and split
 mnist = load_dataset('mnist')
@@ -55,7 +53,7 @@ CGAN = CGAN(train_gen=training_generator,
             test_gen=test_generator,
             device=device,
             x_dim=x_dim,
-            netE_filepath=eval_path,
+            path=exp_path,
             **cfg.CGAN_INIT_PARAMS)
 
 # Check performance on real data
@@ -113,6 +111,5 @@ augmented_training_generator = data.DataLoader(augmented_training_set, **cfg.TRA
 generator_augmented_training_set = Generator_Augmented_MNIST_Dataset(x_train, y_train, 10000, CGAN.netG)
 generator_augmented_training_generator = data.DataLoader(generator_augmented_training_set, **cfg.TRAINING_PARAMS)
 
-# TODO: Add augmentation and compare
 # TODO: Say it is cDCGAN
-
+# TODO: Retrain and update notebook

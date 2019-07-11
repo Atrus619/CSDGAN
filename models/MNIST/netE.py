@@ -15,9 +15,10 @@ import matplotlib
 
 # Evaluator class
 class CGAN_Evaluator(nn.Module, NetUtils):
-    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, num_channels, nc, lr, beta1, beta2, wd):
+    def __init__(self, train_gen, val_gen, test_gen, device, path, x_dim, num_channels, nc, lr, beta1, beta2, wd):
         super().__init__()
 
+        self.path = path
         self.nc = nc
         self.nf = 10  # Completely arbitrary. Works well for now.
         self.x_dim = x_dim

@@ -1,20 +1,20 @@
 # Title of experiment for output directory
-EXPERIMENT_NAME = 'Testing'
+EXPERIMENT_NAME = 'Notebook_Example'
 
 # Desired Train/Validation/Test split
 SPLITS = [0.15, 0.05, 0.80]
 
 # Training and CGAN parameters
 MANUAL_SEED = 999
-NUM_EPOCHS = 20
+NUM_EPOCHS = 400
 PRINT_FREQ = 5
-EVAL_FREQ = None
+EVAL_FREQ = 50
 BATCH_SIZE = 128
 TRAINING_PARAMS = {'batch_size': BATCH_SIZE,
                    'shuffle': True,
                    'num_workers': 6}
 
-CGAN_INIT_PARAMS = {'sched_netG': 1,  # Number of batches to train netG per step (netD gets twice as much data as netG per step by default setting of 1)
+CGAN_INIT_PARAMS = {'sched_netG': 2,  # Number of batches to train netG per step (netD gets twice as much data as netG per step by default setting of 1)
                     'label_noise': 0.25,  # Proportion of labels to flip for discriminator (value between 0 and 1)
                     'label_noise_linear_anneal': True,  # Whether to linearly anneal label noise effect
                     'discrim_noise': 0.25,  # Stdev of noise to add to discriminator inputs

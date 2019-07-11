@@ -17,7 +17,7 @@ import graphviz
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
 class CGAN(nn.Module):
-    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, netE_filepath, sched_netG,
+    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, sched_netG, path,
                  label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal,
                  netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
                  netD_nf, netD_lr, netD_beta1, netD_beta2, netD_wd,
@@ -26,6 +26,10 @@ class CGAN(nn.Module):
                  eval_num_epochs, early_stopping_patience):
         # Inherit nn.Module initialization
         super(CGAN, self).__init__()
+
+        self.path = path  # default file path for saved objects
+        safe_mkdir(self.path)
+        safe_mkdir(self.path + "/stored_generators")
 
         self.sched_netG = sched_netG
 
@@ -58,7 +62,6 @@ class CGAN(nn.Module):
         self.nc = nc
         self.nz = nz
         self.num_channels = num_channels
-        self.netE_filepath = netE_filepath
 
         self.real_label = 1
         self.fake_label = 0
@@ -69,9 +72,9 @@ class CGAN(nn.Module):
         self.stored_acc = []
 
         # Instantiate sub-nets
-        self.netG = CGAN_Generator(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device,
+        self.netG = CGAN_Generator(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
                                    lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
-        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim,
+        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim, path=self.path,
                                        lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
 
         self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
@@ -153,7 +156,7 @@ class CGAN(nn.Module):
         """
         self.init_evaluator(train_gen, val_gen)
         self.netE.train_evaluator(num_epochs=self.eval_num_epochs, eval_freq=1, es=self.early_stopping_patience)
-        torch.save(self.netE.state_dict, self.netE_filepath + "/Epoch_" + str(self.epoch) + "_Evaluator.pt")
+        torch.save(self.netG.state_dict, self.path + "/stored_generators/Epoch_" + str(self.epoch) + "_Generator.pt")
         loss, acc = self.netE.eval_once(self.test_gen)
         self.stored_loss.append(loss.item())
         self.stored_acc.append(acc.item())
@@ -186,7 +189,7 @@ class CGAN(nn.Module):
         We can also evaluate on the original, real data by specifying these training generators.
         """
         self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, x_dim=self.x_dim, num_channels=self.num_channels,
-                                   nc=self.nc, **self.netE_params).to(self.device)
+                                   nc=self.nc, path=self.path, **self.netE_params).to(self.device)
 
     def init_fake_gen(self):
         # Initialize fake training set and validation set to be same size
@@ -229,12 +232,16 @@ class CGAN(nn.Module):
         plt.imshow(np.transpose(self.fixed_imgs[index], (1, 2, 0)))
         plt.show()
 
-    def build_gif(self, path):
+    def build_gif(self, path=None):
         """
         Loop through self.fixed_imgs and saves the images to a folder.
         :param path: Path to folder to save images. Folder will be created if it does not already exist.
         """
         assert len(self.fixed_imgs) > 0, "Model not yet trained"
+
+        if path is None:
+            path = self.path
+
         safe_mkdir(path + "/imgs")
         ims = []
         for epoch, grid in enumerate(self.fixed_imgs):
@@ -252,14 +259,17 @@ class CGAN(nn.Module):
                     plt.close()
         imageio.mimsave(path + '/generation_animation.gif', ims, fps=5)
 
-    def run_all_diagnostics(self, real_netE, benchmark_acc, save, show=False):
+    def run_all_diagnostics(self, real_netE, benchmark_acc, show=False, save=None):
         """
         Run all diagnostic methods
         :param real_netE: netE trained on real data
         :param benchmark_acc: Best score obtained from training Evaluator on real data
-        :param save: File path to save the plots
         :param show: Whether to display the plots as well
+        :param save: Where to save the plot. If set to None, default path is used.
         """
+        if save is None:
+            save = self.path
+
         self.plot_progress(benchmark_acc=benchmark_acc, show=show, save=save)
 
         self.build_gif(path=save)
@@ -296,8 +306,11 @@ class CGAN(nn.Module):
         Plot scores of each evaluation model across training of CGAN
         :param benchmark_acc: Best score obtained from training Evaluator on real data
         :param show: Whether to show the plot
-        :param save: Where to save the plot
+        :param save: Where to save the plot. If set to None default path is used. If false, not saved.
         """
+        if save is None:
+            save = self.path
+
         length = len(self.stored_acc)
 
         plt.bar(x=range(length), height=self.stored_acc, tick_label=np.linspace(self.epoch // length, self.epoch, length, dtype=np.int64))
@@ -310,7 +323,7 @@ class CGAN(nn.Module):
         if show:
             plt.show()
 
-        if save is not None:
+        if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             plt.savefig(save + '/training_progress.png')
 
@@ -318,9 +331,12 @@ class CGAN(nn.Module):
         """
         Pull together a plot of relevant training diagnostics for both netG and netD
         :param show: Whether to display the plot
-        :param save: Whether to save the plot. If a value is entered, this is the path where the plot should be saved.
+        :param save: Where to save the plots. If set to None default path is used. If false, not saved.
         """
         assert self.epoch > 0, "Model needs to be trained first"
+
+        if save is None:
+            save = self.path
 
         f, axes = plt.subplots(2, 2, figsize=(12, 12), sharex=True)
 
@@ -361,13 +377,13 @@ class CGAN(nn.Module):
         if show:
             f.show()
 
-        if save is not None:
+        if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             f.savefig(save + '/training_plot.png')
 
-    def load_netE(self, epoch):
-        """Load a previously stored netE (likely the one that performed the best)"""
-        self.netE.load_state_dict(torch.load(self.netE_filepath + "/Epoch_" + epoch + "_Evaluator.pt"))
+    def load_netG(self, epoch):
+        """Load a previously stored netG (likely the one that performed the best)"""
+        self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + epoch + "_Generator.pt"))
 
     def troubleshoot_discriminator(self, show=True, save=None):
         """
@@ -377,8 +393,11 @@ class CGAN(nn.Module):
         3. 10x10 grid of real examples discriminator labeled as fake.
         4. 10x10 grid of real examples discriminator labeled as real.
         :param show: Whether to show the plots
-        :param save: Where to save the plots. If set to None, not saved.
+        :param save: Where to save the plots. If set to None default path is used. If false, not saved.
         """
+        if save is None:
+            save = self.path
+
         grid1, grid2 = self.build_grid1_and_grid2()
         grid3, grid4 = self.build_grid3_and_grid4()
 
@@ -409,7 +428,7 @@ class CGAN(nn.Module):
         if show:
             f.show()
 
-        if save is not None:
+        if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/troubleshoot_plots')
             f.savefig(save + '/troubleshoot_plots/discriminator.png')
@@ -422,8 +441,11 @@ class CGAN(nn.Module):
         7. 10x10 grid of misclassified examples by model trained on real data.
         8. 10x10 grid of what the evaluator THOUGHT each example in grid 7 should be.
         :param show: Whether to show the plots
-        :param save: Where to save the plots. If set to None, not saved.
+        :param save: Where to save the plots. If set to None default path is used. If false, not saved.
         """
+        if save is None:
+            save = self.path
+
         grid5, grid6 = self.build_eval_grids(netE=self.netE)
         grid7, grid8 = self.build_eval_grids(netE=real_netE)
 
@@ -454,7 +476,7 @@ class CGAN(nn.Module):
         if show:
             f.show()
 
-        if save is not None:
+        if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/troubleshoot_plots')
             f.savefig(save + '/troubleshoot_plots/evaluator.png')
@@ -652,15 +674,15 @@ class CGAN(nn.Module):
             if len(contenders) > 0:
                 return contenders[0]
 
-    def draw_cam(self, gen, net, label, mistake, path, show):
+    def draw_cam(self, gen, net, label, mistake, show, path):
         """
         Wrapper function for find_particular_img and draw_cam
         :param gen: Generator to use. netG is a valid generator to use for fake data.
         :param net: Network to use. Either "D" or "E".
         :param label: Label to return (0-9)
         :param mistake: Whether the example should be a mistake (True or False)
-        :param path: Path to create image file. Should end in .jpg
         :param show: Whether to show the image
+        :param path: Path to create image file. Needs full file name. Should end in .jpg
         """
         assert path.split(".")[-1] == "jpg", "Please make sure path ends in '.jpg'"
 
@@ -676,7 +698,7 @@ class CGAN(nn.Module):
         Utilizes torchviz to print current graph to a pdf
         :param net: Network to draw graph for. One of netG, netD, or netE.
         :param show: Whether to show the graph.
-        :param save: Where to save the graph. Will always save as .pdf
+        :param save: Where to save the graph. Needs full file name. Will always save as .pdf
         """
         assert net in {self.netG, self.netD, self.netE}, "Invalid entry for net. Should be netG, netD, or netE."
 
