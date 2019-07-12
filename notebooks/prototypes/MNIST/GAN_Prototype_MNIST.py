@@ -1,9 +1,9 @@
-from models.MNIST.CGAN import CGAN
-import config.MNIST as cfg
+from classes.MNIST.CGAN import CGAN
+import configs.MNIST as cfg
 from utils.utils import *
 from utils.data_loading import *
 from utils.MNIST import *
-from PytorchDatasets.MNIST_Dataset import MNIST_Dataset, Augmented_MNIST_Dataset, Generator_Augmented_MNIST_Dataset
+from classes.MNIST.MNIST_Dataset import MNIST_Dataset, Augmented_MNIST_Dataset, Generator_Augmented_MNIST_Dataset
 from torch.utils import data
 import os
 import pickle

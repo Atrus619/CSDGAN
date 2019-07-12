@@ -1,11 +1,10 @@
-import torch.nn as nn
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
-
+import wget
 import numpy as np
 import pandas as pd
 import torch
@@ -27,6 +26,11 @@ def safe_mkdir(path):
         os.mkdir(path)
     except OSError:
         pass
+
+
+def safe_dl(url, path):
+    if not os.path.exists(path + '/' + url.split('/')[-1]):
+        wget.download(url, path)
 
 
 def gen_fake_data(netG, bs, nz, nc, labels_list, device, stratify=None):
@@ -96,11 +100,11 @@ def evaluate_training_progress(test_range, fake_bs, nz, nc, out_dim, netG, x_tes
     :param y_test: Testing labels
     :param manualSeed: Seed for reproducibility
     :param labels_list: List of names of each of the classes
-    :param param_grid: Grid to perform GridSearchCV when training evaluation models
+    :param param_grid: Grid to perform GridSearchCV when training evaluation classes
     :param device: Device (either gpu or cpu)
     :param le_dict: Dictionary of pretrained LabelEncoders for handling categorical variables
     :param stratify: Proportions of each label to stratify
-    :return: Tuple of list of models trained and the scores each achieved
+    :return: Tuple of list of classes trained and the scores each achieved
     """
     fake_scores = []
     fake_models = []
@@ -184,7 +188,7 @@ def plot_training_progress(stored_scores, test_range, num_saves, real_data_score
 def parse_models(stored_models, epoch, print_interval, test_range, ind, x_test, y_test, labels):
     """
     Helper/diagnostic function to return stats for a specific model
-    :param stored_models: List of stored models
+    :param stored_models: List of stored classes
     :param epoch: Epoch of model desired
     :param print_interval: Print interval used for training
     :param test_range: List of sample sizes for testing

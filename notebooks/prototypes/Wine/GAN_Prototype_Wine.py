@@ -1,5 +1,5 @@
 from utils.data_loading import load_dataset
-from models.CGAN_wine import CGAN_Generator, CGAN_Discriminator
+from classes.wine.CGAN_wine import CGAN_Generator, CGAN_Discriminator
 from utils.utils import *
 import random
 
@@ -48,7 +48,7 @@ y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
 netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0).to(device)
 netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, device=device, wd=0).to(device)
 
-# Print models
+# Print classes
 print(netG)
 print(netD)
 

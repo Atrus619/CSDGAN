@@ -1,5 +1,5 @@
 from utils.data_loading import load_dataset
-from models.CGAN_iris import CGAN_Generator, CGAN_Discriminator
+from classes.iris.CGAN_iris import CGAN_Generator, CGAN_Discriminator
 from utils.utils import *
 import random
 
@@ -43,7 +43,7 @@ y_train_dummies_tensor = torch.tensor(y_train_dummies.values, dtype=torch.float)
 netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, lr=lr, beta1=beta1, beta2=beta2).to(device)
 netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, lr=lr, beta1=beta1, beta2=beta2).to(device)
 
-# Print models
+# Print classes
 print(netG)
 print(netD)
 
@@ -89,7 +89,7 @@ for epoch in range(num_epochs):
 # Output plots
 training_plots(netD=netD, netG=netG, num_epochs=num_epochs)
 
-# Train various models with real/fake data.
+# Train various classes with real/fake data.
 y_test_dummies = pd.get_dummies(y_test)
 print("Dummy columns match?", all(y_train_dummies.columns == y_test_dummies.columns))
 x_test = scaler.transform(x_test)

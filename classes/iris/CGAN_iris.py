@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from models.NetUtils import NetUtils
+from classes.NetUtils import NetUtils
 import torch.optim as optim
 
 

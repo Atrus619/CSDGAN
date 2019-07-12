@@ -2,7 +2,6 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import torchvision.utils as vutils
-import copy
 
 
 def convert_y_to_one_hot(y):

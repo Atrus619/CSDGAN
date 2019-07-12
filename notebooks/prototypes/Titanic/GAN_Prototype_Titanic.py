@@ -1,4 +1,4 @@
-from models.CGAN_titanic import CGAN_Generator, CGAN_Discriminator
+from classes.titanic.CGAN_titanic import CGAN_Generator, CGAN_Discriminator
 from utils.utils import *
 import random
 
@@ -67,7 +67,7 @@ device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 netG = CGAN_Generator(nz=nz, H=H, out_dim=out_dim, nc=nc, bs=bs, device=device, wd=0, cat_mask=preprocessed_cat_mask, le_dict=le_dict).to(device)
 netD = CGAN_Discriminator(H=H, out_dim=out_dim, nc=nc, device=device, wd=0).to(device)
 
-# Print models
+# Print classes
 print(netG)
 print(netD)
 

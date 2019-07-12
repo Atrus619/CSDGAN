@@ -1,18 +1,14 @@
-import torch.nn as nn
-import matplotlib.animation as animation
-import numpy as np
-from PytorchDatasets.MNIST_Dataset import Fake_MNIST_Dataset
+from classes.MNIST.MNIST_Dataset import Fake_MNIST_Dataset
 from torch.utils import data
-from models.MNIST.netD import CGAN_Discriminator
-from models.MNIST.netG import CGAN_Generator
-from models.MNIST.netE import CGAN_Evaluator
-from models.NetUtils import GaussianNoise
+from classes.MNIST.netD import CGAN_Discriminator
+from classes.MNIST.netG import CGAN_Generator
+from classes.MNIST.netE import CGAN_Evaluator
+from classes.NetUtils import GaussianNoise
 from utils.MNIST import *
 import time
 from utils.utils import *
 import imageio
 from torchviz import make_dot
-import graphviz
 
 
 # This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.

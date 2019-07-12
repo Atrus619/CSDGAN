@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from models.NetUtils import NetUtils, GaussianNoise
+from classes.NetUtils import NetUtils, GaussianNoise
 import torch.optim as optim
 import numpy as np
 import cv2
