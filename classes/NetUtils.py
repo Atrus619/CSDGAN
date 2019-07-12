@@ -1,6 +1,7 @@
 from utils.utils import *
 import imageio
 import torch
+import torch.nn as nn
 
 
 # Contains utils to be inherited by other nets in this project

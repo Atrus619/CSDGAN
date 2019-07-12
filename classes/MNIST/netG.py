@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Generator class
-class CGAN_Generator(nn.Module, NetUtils):
+class netG(nn.Module, NetUtils):
     def __init__(self, nz, nf, num_channels, path, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
@@ -40,7 +40,6 @@ class CGAN_Generator(nn.Module, NetUtils):
         self.m = nn.Sigmoid()
 
         # Loss and Optimizer
-        # TODO: Try Wasserstein distance instead of BCE Loss
         self.loss_fn = nn.BCELoss()  # BCE Loss
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
 

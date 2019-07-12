@@ -4,6 +4,10 @@ import os
 import pandas as pd
 import zipfile
 from utils.utils import safe_mkdir, safe_dl
+import pickle as pkl
+import torch
+
+VALID_NAMES = {'iris', 'wine', 'titanic', 'lanl', 'MNIST', 'FashionMNIST'}
 
 
 def prep_path(path):
@@ -13,72 +17,102 @@ def prep_path(path):
     safe_mkdir(path + '/raw')
 
 
-def load_dataset(name):
+def load_raw_dataset(name):
     """
-    Checks to see if data has been installed to the data folder, and installs it if not.
-    Loads into memory the desired data set.
+    Check to see if data has been installed to the downloads/raw folder, and install if not.
+    Load into memory the desired data set.
     For the LANL data set, it is required to have kaggle authentication set up on your computer.
     :param name: name of data set requested
     :return: data set requested (comes in various forms based on the desired data)
     """
-    valid_names = {'iris', 'wine', 'titanic', 'lanl', 'mnist', 'fmnist'}
-    assert name in valid_names, 'Invalid data set requested. Please make sure name is one of ' + ', '.join(valid_names) + '.'
+    assert name in VALID_NAMES, 'Invalid data set requested. Please make sure name is one of ' + ', '.join(VALID_NAMES) + '.'
 
     safe_mkdir('downloads')
     kaggle.api.authenticate()
-    path = 'downloads/' + name
+    path = os.path.join('downloads', name)
+    path_raw = os.path.join(path, 'raw')
 
     if name == 'iris':
         prep_path(path)
-        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data', path)
-        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.names', path)
-        data = pd.read_csv('data/iris/iris.data', names=['sepal_len', 'sepal_wid', 'petal_len', 'petal_wid', 'species'])
+        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data', path_raw)
+        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.names', path_raw)
+        return pd.read_csv(os.path.join(path_raw, 'iris.data'), names=['sepal_len', 'sepal_wid', 'petal_len', 'petal_wid', 'species'])
 
     elif name == 'wine':
         prep_path(path)
-        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data', path)
-        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.names', path)
-        data = pd.read_csv('data/wine/wine.data', names=['class',
-                                                         'alcohol',
-                                                         'malic_acid',
-                                                         'ash',
-                                                         'alkalinity',
-                                                         'magnesium',
-                                                         'phenols',
-                                                         'flavanoids',
-                                                         'nonflavanoid_phenols',
-                                                         'proanthocyanins',
-                                                         'color_intensity',
-                                                         'hue',
-                                                         'dilution',
-                                                         'proline'])
+        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data', path_raw)
+        safe_dl('https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.names', path_raw)
+        return pd.read_csv(os.path.join(path_raw, 'wine.data'), names=['class',
+                                                                       'alcohol',
+                                                                       'malic_acid',
+                                                                       'ash',
+                                                                       'alkalinity',
+                                                                       'magnesium',
+                                                                       'phenols',
+                                                                       'flavanoids',
+                                                                       'nonflavanoid_phenols',
+                                                                       'proanthocyanins',
+                                                                       'color_intensity',
+                                                                       'hue',
+                                                                       'dilution',
+                                                                       'proline'])
 
     elif name == 'titanic':
         prep_path(path)
-        if len(os.listdir(path)) == 0:
-            kaggle.api.competition_download_files('titanic', path)
-        titanic = pd.read_csv('data/titanic/train.csv')
-        titanic_test = pd.read_csv('data/titanic/test.csv')
-        data = [titanic, titanic_test]
+        if len(os.listdir(path_raw)) == 0:
+            kaggle.api.competition_download_files('titanic', path_raw)
+        titanic = pd.read_csv(os.path.join(path_raw, 'train.csv'))
+        titanic_test = pd.read_csv(os.path.join(path_raw, 'test.csv'))
+        return titanic, titanic_test
 
     elif name == 'lanl':
         prep_path(path)
         if len(os.listdir(path)) == 0:
-            kaggle.api.competition_download_files('LANL-Earthquake-Prediction', path)
-        if not os.path.exists(path + "/test"):
-            zip_ref = zipfile.ZipFile(path + "/test.zip", 'r')
-            zip_ref.extractall(path + "/test")
+            kaggle.api.competition_download_files('LANL-Earthquake-Prediction', path_raw)
+        if not os.path.exists(os.path.join(path_raw, 'test')):
+            zip_ref = zipfile.ZipFile(os.path.join(path_raw, 'test.zip'), 'r')
+            zip_ref.extractall(os.path.join(path_raw, 'test'))
             zip_ref.close()
-        data = pd.read_csv('data/lanl/train.csv.zip')
+        return pd.read_csv(os.path.join(path_raw, 'train.csv.zip'))
 
-    elif name == 'mnist':
+    elif name == 'MNIST':
         mnist = torchvision.datasets.MNIST('data', train=True, download=True)
         mnist_test = torchvision.datasets.MNIST('data', train=False, download=True)
-        data = [mnist, mnist_test]
+        return mnist, mnist_test
 
-    elif name == 'fmnist':
+    elif name == 'FashionMNIST':
         fmnist = torchvision.datasets.FashionMNIST('data', train=True, download=True)
         fmnist_test = torchvision.datasets.FashionMNIST('data', train=False, download=True)
-        data = [fmnist, fmnist_test]
+        return fmnist, fmnist_test
 
-    return data
+
+def load_processed_dataset(name):
+    """
+    Load desired data set into memory from processed folder
+    :param name: name of data set requested
+    :return: data set requested (comes in various forms based on the desired data)
+    """
+    assert name in VALID_NAMES, 'Invalid data set requested. Please make sure name is one of ' + ', '.join(VALID_NAMES) + '.'
+    path = os.path.join('downloads', name)
+    path_processed = os.path.join(path, 'processed')
+
+    if name == 'iris':
+        return pd.read_csv(os.path.join(path_processed, 'iris.data'))
+
+    elif name == 'wine':
+        return pd.read_csv(os.path.join(path_processed, 'wine.data'))
+
+    elif name == 'titanic':
+        return pd.read_csv(os.path.join(path_processed, 'titanic.csv'))
+
+    elif name == 'lanl':
+        with open(os.path.join(path_processed, 'train_data.pkl'), 'rb') as f:
+            x = pkl.load(f)
+        with open(os.path.join(path_processed, 'train_targets.pkl'), 'rb') as f:
+            y = pkl.load(f)
+        return x, y
+
+    elif name == 'MNIST' or name == 'FashionMNIST':
+        training = torch.load(os.path.join(path_processed, 'training.pt'))
+        test = torch.load(os.path.join(path_processed, 'test.pt'))
+        return training, test

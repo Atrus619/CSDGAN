@@ -718,3 +718,22 @@ def convert_np_hist_to_plot(np_hist):
     height, bins = np_hist
     width = (bins.max() - bins.min())/(len(bins) - 1)
     return plt.bar(height=height, x=bins[:-1], width=width)
+
+
+def define_cat_inputs(df, dep_var, cont_inputs):
+    """
+    Defines a list of cat_inputs based on a df and list of cont_inputs
+    :param df: DataFrame of interest
+    :param dep_var: String of name of dependent variable column. Excluded from consideration.
+    :param cont_inputs: List of strings of names of continuous feature columns
+    :return: List of strings of names of implied categorical feature columns
+    """
+    return [x for x in df.drop(columns=dep_var).columns if x not in cont_inputs]
+
+
+def reorder_cols(df, dep_var, cat_inputs):
+    """Reorders columns in DataFrame so that categorical inputs are first"""
+    cols = df.columns.tolist()
+    cols_start = [dep_var] + cat_inputs
+    cols = cols_start + [x for x in cols if x not in cols_start]
+    return df[cols]

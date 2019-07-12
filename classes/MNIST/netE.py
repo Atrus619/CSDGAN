@@ -14,7 +14,7 @@ import matplotlib
 
 
 # Evaluator class
-class CGAN_Evaluator(nn.Module, NetUtils):
+class netE(nn.Module, NetUtils):
     def __init__(self, train_gen, val_gen, test_gen, device, path, x_dim, num_channels, nc, lr, beta1, beta2, wd):
         super().__init__()
 

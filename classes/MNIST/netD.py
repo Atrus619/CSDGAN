@@ -10,7 +10,7 @@ from utils.MNIST import convert_y_to_one_hot
 
 
 # Discriminator class
-class CGAN_Discriminator(nn.Module, NetUtils):
+class netD(nn.Module, NetUtils):
     def __init__(self, nf, nc, num_channels, device, path, x_dim, noise=0.0, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)

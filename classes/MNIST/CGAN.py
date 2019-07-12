@@ -1,8 +1,8 @@
 from classes.MNIST.MNIST_Dataset import Fake_MNIST_Dataset
 from torch.utils import data
-from classes.MNIST.netD import CGAN_Discriminator
-from classes.MNIST.netG import CGAN_Generator
-from classes.MNIST.netE import CGAN_Evaluator
+from classes.MNIST.netD import netD
+from classes.MNIST.netG import netG
+from classes.MNIST.netE import netE
 from classes.NetUtils import GaussianNoise
 from utils.MNIST import *
 import time
@@ -11,8 +11,9 @@ import imageio
 from torchviz import make_dot
 
 
-# This CGAN will be set up a bit differently in the hopes of being cleaner. I am going to enclose netG and netD into a higher level class titled CGAN.
-class CGAN(nn.Module):
+class CGAN:
+    """This CGAN will be set up a bit differently in the hopes of being cleaner. netG and netD will be enclosed in a higher level class titled CGAN."""
+
     def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, sched_netG, path,
                  label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal,
                  netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
@@ -20,9 +21,6 @@ class CGAN(nn.Module):
                  netE_lr, netE_beta1, netE_beta2, netE_wd,
                  fake_data_set_size, fake_bs,
                  eval_num_epochs, early_stopping_patience):
-        # Inherit nn.Module initialization
-        super(CGAN, self).__init__()
-
         self.path = path  # default file path for saved objects
         safe_mkdir(self.path)
         safe_mkdir(self.path + "/stored_generators")
@@ -68,10 +66,10 @@ class CGAN(nn.Module):
         self.stored_acc = []
 
         # Instantiate sub-nets
-        self.netG = CGAN_Generator(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
-                                   lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
-        self.netD = CGAN_Discriminator(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim, path=self.path,
-                                       lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
+        self.netG = netG(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
+                         lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
+        self.netD = netD(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim, path=self.path,
+                         lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
 
         self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
         self.netE = None  # Initialized through init_evaluator method
@@ -184,8 +182,8 @@ class CGAN(nn.Module):
         Initialize the netE sub-net. This is done as a separate method because we want to reinitialize netE each time we want to evaluate it.
         We can also evaluate on the original, real data by specifying these training generators.
         """
-        self.netE = CGAN_Evaluator(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, x_dim=self.x_dim, num_channels=self.num_channels,
-                                   nc=self.nc, path=self.path, **self.netE_params).to(self.device)
+        self.netE = netE(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, x_dim=self.x_dim, num_channels=self.num_channels,
+                         nc=self.nc, path=self.path, **self.netE_params).to(self.device)
 
     def init_fake_gen(self):
         # Initialize fake training set and validation set to be same size
@@ -540,8 +538,8 @@ class CGAN(nn.Module):
                 grid1_retain = min(10 - grid1_counts[i], len(grid1_contenders))
                 grid2_retain = min(10 - grid2_counts[i], len(grid2_contenders))
 
-                grid1[(i*10) + grid1_counts[i]:(i*10) + grid1_counts[i]+grid1_retain] = grid1_contenders[:grid1_retain]
-                grid2[(i*10) + grid2_counts[i]:(i*10) + grid2_counts[i]+grid2_retain] = grid2_contenders[:grid2_retain]
+                grid1[(i * 10) + grid1_counts[i]:(i * 10) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                grid2[(i * 10) + grid2_counts[i]:(i * 10) + grid2_counts[i] + grid2_retain] = grid2_contenders[:grid2_retain]
 
                 grid1_counts[i] += grid1_retain
                 grid2_counts[i] += grid2_retain
@@ -580,8 +578,8 @@ class CGAN(nn.Module):
                 grid3_retain = min(10 - grid3_counts[i], len(grid3_contenders))
                 grid4_retain = min(10 - grid4_counts[i], len(grid4_contenders))
 
-                grid3[(i*10) + grid3_counts[i]:(i*10) + grid3_counts[i]+grid3_retain] = grid3_contenders[:grid3_retain]
-                grid4[(i*10) + grid4_counts[i]:(i*10) + grid4_counts[i]+grid4_retain] = grid4_contenders[:grid4_retain]
+                grid3[(i * 10) + grid3_counts[i]:(i * 10) + grid3_counts[i] + grid3_retain] = grid3_contenders[:grid3_retain]
+                grid4[(i * 10) + grid4_counts[i]:(i * 10) + grid4_counts[i] + grid4_retain] = grid4_contenders[:grid4_retain]
 
                 grid3_counts[i] += grid3_retain
                 grid4_counts[i] += grid4_retain
@@ -622,8 +620,8 @@ class CGAN(nn.Module):
 
                     grid1_retain = min(10 - grid1_counts[i], len(grid1_contenders))
 
-                    grid1[(i*10) + grid1_counts[i]:(i*10) + grid1_counts[i]+grid1_retain] = grid1_contenders[:grid1_retain]
-                    grid2[(i*10) + grid1_counts[i]:(i*10) + grid1_counts[i]+grid1_retain] = grid2_contenders[:grid1_retain]
+                    grid1[(i * 10) + grid1_counts[i]:(i * 10) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                    grid2[(i * 10) + grid1_counts[i]:(i * 10) + grid1_counts[i] + grid1_retain] = grid2_contenders[:grid1_retain]
 
                     grid1_counts[i] += grid1_retain
 
@@ -683,7 +681,7 @@ class CGAN(nn.Module):
                         contenders = x[fwd > 0.5]
                     else:
                         contenders = x[fwd < 0.5]
-            # netD and correct
+                # netD and correct
                 else:
                     if gen == self.netG:  # Correct means classifying as fake
                         contenders = x[fwd < 0.5]
