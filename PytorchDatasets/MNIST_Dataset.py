@@ -130,8 +130,10 @@ class Generator_Augmented_MNIST_Dataset(data.Dataset):
         x_aug = torch.empty((n, self.netG.num_channels, self.netG.x_dim[0], self.netG.x_dim[1]), dtype=torch.float32, device=self.netG.device)
         y_aug = torch.empty((n, self.netG.fixed_labels.shape[1]), dtype=torch.float32, device=self.netG.device)
 
+        self.netG.eval()
         for i in range(n // bs):
-            x_aug[(100*i):(100*(i+1))] = self.netG(noise, self.netG.fixed_labels)
+            with torch.no_grad():
+                x_aug[(100*i):(100*(i+1))] = self.netG(noise, self.netG.fixed_labels)
             y_aug[(100 * i):(100 * (i + 1))] = self.netG.fixed_labels.detach()
 
         self.x, self.y = torch.cat((self.x, x_aug.cpu()), dim=0), torch.cat((self.y, y_aug.type(torch.uint8).cpu()), dim=0)

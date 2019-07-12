@@ -718,10 +718,12 @@ class CGAN(nn.Module):
 
         img = self.find_particular_img(gen=gen, net=net, label=label, mistake=mistake)
 
+        real = gen != self.netG
+
         if net == "D":
-            self.netD.draw_cam(img=img, label=label, path=path, show=show)
+            self.netD.draw_cam(img=img, label=label, path=path, show=show, real=real)
         else:
-            self.netE.draw_cam(img=img, path=path, show=show)
+            self.netE.draw_cam(img=img, path=path, show=show, real=real)
 
     def draw_architecture(self, net, show, save):
         """

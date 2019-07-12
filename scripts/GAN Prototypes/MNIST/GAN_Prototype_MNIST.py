@@ -111,5 +111,5 @@ augmented_training_generator = data.DataLoader(augmented_training_set, **cfg.TRA
 generator_augmented_training_set = Generator_Augmented_MNIST_Dataset(x_train, y_train, 10000, CGAN.netG)
 generator_augmented_training_generator = data.DataLoader(generator_augmented_training_set, **cfg.TRAINING_PARAMS)
 
-# TODO: Say it is cDCGAN
-# TODO: Retrain and update notebook
+iterator = generator_augmented_training_generator.__iter__()
+x, y = next(iterator)

@@ -187,7 +187,8 @@ class CGAN_Discriminator(nn.Module, NetUtils):
         plt.imshow(img, cmap='gray')
 
         real_or_fake = 'real' if pred > 0.5 else 'fake'
-        sup = 'Discriminator Gradient Class Activation Map\n\nPredicted to be ' + real_or_fake
+        real_str = 'Real' if real else 'Fake'
+        sup = 'Discriminator Gradient Class Activation Map\n\n' + real_str + ' image predicted to be ' + real_or_fake
         st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
         f.tight_layout()
         st.set_y(0.96)

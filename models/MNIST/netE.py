@@ -233,7 +233,8 @@ class CGAN_Evaluator(nn.Module, NetUtils):
         img = img.squeeze().detach().cpu().numpy()
         plt.imshow(img, cmap='gray')
 
-        sup = 'Evaluator Gradient Class Activation Map\n\nPredicted to be ' + str(pred.argmax(1).detach().cpu().numpy().take(0))
+        real_str = 'Real' if real else 'Fake'
+        sup = 'Evaluator Gradient Class Activation Map\n\n' + real_str + ' image predicted to be ' + str(pred.argmax(1).detach().cpu().numpy().take(0))
         st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
         f.tight_layout()
         st.set_y(0.96)
