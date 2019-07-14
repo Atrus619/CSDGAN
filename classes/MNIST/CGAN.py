@@ -9,6 +9,7 @@ import time
 from utils.utils import *
 import imageio
 from torchviz import make_dot
+import copy
 
 
 class CGAN:
@@ -25,8 +26,14 @@ class CGAN:
         safe_mkdir(self.path)
         safe_mkdir(self.path + "/stored_generators")
 
-        self.sched_netG = sched_netG
+        # Initialize properties
+        self.device = device
+        self.x_dim = x_dim
+        self.nc = nc
+        self.nz = nz
+        self.num_channels = num_channels
 
+        # Anti-discriminator properties
         assert 0.0 <= label_noise <= 1.0, "Label noise must be between 0 and 1"
         self.label_noise = label_noise
         self.label_noise_linear_anneal = label_noise_linear_anneal
@@ -36,14 +43,21 @@ class CGAN:
         self.discrim_noise_linear_anneal = discrim_noise_linear_anneal
         self.dn_rate = 0.0
 
+        # Various generators
         self.train_gen = train_gen
         self.val_gen = val_gen
         self.test_gen = test_gen
 
+        # Evaluator properties
         self.fake_shuffle = True
         self.fake_num_workers = 6
         self.fake_data_set_size = fake_data_set_size
         self.fake_bs = fake_bs
+
+        self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
+        self.netE = None  # Initialized through init_evaluator method
+        self.eval_num_epochs = eval_num_epochs
+        self.early_stopping_patience = early_stopping_patience
 
         # Initialized through init_fake_gen method
         self.fake_train_set = None
@@ -51,32 +65,20 @@ class CGAN:
         self.fake_val_set = None
         self.fake_val_gen = None
 
-        self.device = device
-        self.x_dim = x_dim
-        self.nc = nc
-        self.nz = nz
-        self.num_channels = num_channels
-
+        # Training properties
+        self.epoch = 0
+        self.sched_netG = sched_netG
         self.real_label = 1
         self.fake_label = 0
-
-        self.epoch = 0
-
         self.stored_loss = []
         self.stored_acc = []
+        self.fixed_imgs = [self.gen_fixed_img_grid()]
 
         # Instantiate sub-nets
         self.netG = netG(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
                          lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
         self.netD = netD(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim, path=self.path,
                          lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
-
-        self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
-        self.netE = None  # Initialized through init_evaluator method
-        self.eval_num_epochs = eval_num_epochs
-        self.early_stopping_patience = early_stopping_patience
-
-        self.fixed_imgs = [self.gen_fixed_img_grid()]
 
     def train_gan(self, num_epochs, print_freq, eval_freq=None):
         """
@@ -94,6 +96,7 @@ class CGAN:
             self.dn_rate = self.discrim_noise / num_epochs
 
         print("Beginning training")
+        og_start_time= time.time()
         start_time = time.time()
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
@@ -113,6 +116,8 @@ class CGAN:
                     self.init_fake_gen()
                     self.test_model(train_gen=self.fake_train_gen, val_gen=self.fake_val_gen)
                     print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, self.stored_acc[-1]))
+
+        print("Total training time: %ds" % (time.time() - og_start_time))
 
     def train_one_step(self, x_train, y_train):
         """One full step of the CGAN training process"""

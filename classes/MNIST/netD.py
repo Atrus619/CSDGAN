@@ -16,10 +16,10 @@ class netD(nn.Module, NetUtils):
         NetUtils.__init__(self)
 
         self.path = path
+        self.device = device
 
         self.loss_real = None
         self.loss_fake = None
-        self.device = device
 
         self.nc = nc
         self.nf = nf

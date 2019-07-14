@@ -31,7 +31,7 @@ class NetUtils:
 
     def init_layer_list(self):
         """Initializes list of layers for tracking history"""
-        nn_module_ignore_list = {'batchnorm', 'activation', 'loss', 'Noise'}  # List of nn.modules to ignore when constructing layer_list
+        nn_module_ignore_list = {'batchnorm', 'activation', 'loss', 'Noise', 'CustomCatGANLayer'}  # List of nn.modules to ignore when constructing layer_list
         self.layer_list = [x for x in self._modules.values() if not any(excl in str(type(x)) for excl in nn_module_ignore_list)]
         self.layer_list_names = [x for x in self._modules.keys() if not any(excl in str(type(self._modules[x])) for excl in nn_module_ignore_list)]
 
@@ -291,7 +291,7 @@ class GaussianNoise(nn.Module):
         self.sigma = sigma
 
     def forward(self, x):
-        if self.training and self.sigma != 0:
+        if self.training and self.sigma != 0.0:
             sampled_noise = torch.randn(*x.size(), device=self.device) * self.sigma
             x = x + sampled_noise
         return x

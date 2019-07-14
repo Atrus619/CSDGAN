@@ -1,5 +1,5 @@
 # Title of experiment for output directory
-EXPERIMENT_NAME = 'Notebook_Example'
+EXPERIMENT_NAME = 'MNIST_Notebook_Example'
 
 # Desired Train/Validation/Test split
 SPLITS = [0.15, 0.05, 0.80]
@@ -45,4 +45,5 @@ CGAN_INIT_PARAMS = {'sched_netG': 2,  # Number of batches to train netG per step
                     'fake_bs': BATCH_SIZE,
                     # Evaluator parameters
                     'eval_num_epochs': 40,
-                    'early_stopping_patience': 3}
+                    'early_stopping_patience': 3
+                    }

@@ -2,22 +2,22 @@ import torch.nn as nn
 import torch
 from classes.NetUtils import NetUtils, CustomCatGANLayer
 import torch.optim as optim
+import numpy as np
 
 
 # Generator class
 class netG(nn.Module, NetUtils):
-    def __init__(self, device, nz, H, out_dim, nc, x_dim, lr=2e-4, beta1=0.5, beta2=0.999, wd=0, cat_mask=None, le_dict=None):
+    def __init__(self, device, nz, H, out_dim, nc, lr=2e-4, beta1=0.5, beta2=0.999, wd=0, cat_mask=None, le_dict=None):
         super().__init__()
         NetUtils.__init__(self)
+
         self.device = device
-        self.loss = None
-        self.D_G_z2 = None
+
         self.CCGL = CustomCatGANLayer(cat_mask=cat_mask, le_dict=le_dict)
         self.out_dim = out_dim
 
         # Layers
         self.fc1 = nn.Linear(nz + nc, H, bias=True)
-        # self.fc1_bn = nn.BatchNorm1d(H)
         self.fc2 = nn.Linear(H, H, bias=True)
         self.fc3 = nn.Linear(H, H, bias=True)
         self.output = nn.Linear(H, self.out_dim, bias=True)
@@ -25,25 +25,26 @@ class netG(nn.Module, NetUtils):
         self.sm = nn.Softmax(dim=-2)
 
         # Loss and Optimizer
-        # TODO: Try Wasserstein distance instead of BCE Loss
         self.loss_fn = nn.BCELoss()  # BCE Loss
         self.opt = optim.Adam(self.parameters(), lr=lr, betas=(beta1, beta2), weight_decay=wd)
+
+        # Initialize weights
+        self.custom_weights_init()
 
         # Record history of training
         self.init_layer_list()
         self.init_history()
-        self.losses = []
-        # self.fixed_noise_outputs = []
+        self.update_hist_list()
 
-        # Initialize weights
-        self.custom_weights_init()
+        self.D_G_z2 = []  # Per step
+        self.Avg_G_fakes = []  # Store D_G_z2 across epochs
 
     def forward(self, noise, labels):
         """
         Single dense hidden layer network.
         :param noise: Random Noise vector Z
         :param labels: Label embedding
-        :return: Row of data for iris data set (4 real values)
+        :return: Row of data
         """
         x = torch.cat([noise, labels], 1)
         x = self.act(self.fc1(x))
@@ -55,15 +56,18 @@ class netG(nn.Module, NetUtils):
 
     def train_one_step(self, output, label):
         self.zero_grad()
-        self.loss = self.loss_fn(output, label)
-        self.loss.backward()
-        self.D_G_z2 = output.mean().item()
+        loss_tmp = self.loss_fn(output, label)
+        loss_tmp.backward()
+        self.loss.append(loss_tmp.item())
+        self.D_G_z2.append(output.mean().item())
         self.opt.step()
 
-    def update_history(self):
-        self.update_gnormz(2)
-        self.update_wnormz(2)
-        self.losses.append(self.loss.item())
+        self.store_weight_and_grad_norms()
+
+    def next_epoch_gen(self):
+        """Generator specific actions"""
+        self.Avg_G_fakes.append(np.mean(self.D_G_z2))
+        self.D_G_z2 = []
 
     def custom_weights_init(self):
         for layer_name in self._modules:

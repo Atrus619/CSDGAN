@@ -88,7 +88,7 @@ model_real, score_real = train_test_logistic_reg(x_train=x_train, y_train=y_trai
                                                  param_grid=param_grid, cv=5, random_state=manualSeed, labels=labels_list)
 
 # For diagnostics
-test_range = [bs*2**x for x in range(5)]
+test_range = [bs*2**(x-1) for x in range(5)]
 stored_models = []
 stored_scores = []
 best_score = 0
@@ -108,7 +108,7 @@ for epoch in range(num_epochs):
 
         # All fake batch next
         noise = torch.randn(bs, nz, device=device)  # Generate batch of latent vectors
-        fake = netG(noise, real_classes)  # Fake image batch with netG
+        fake = netG(noise, real_classes)  # Fake batch with netG
         # fake = process_fake_output(fake, le_dict)
         label.fill_(fake_label)
         output = netD(fake.detach(), real_classes).view(-1)
