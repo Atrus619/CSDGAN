@@ -10,6 +10,8 @@ from utils.utils import *
 import imageio
 from torchviz import make_dot
 import copy
+import re
+import shutil
 
 
 class CGAN:
@@ -24,7 +26,11 @@ class CGAN:
                  eval_num_epochs, early_stopping_patience):
         self.path = path  # default file path for saved objects
         safe_mkdir(self.path)
-        safe_mkdir(self.path + "/stored_generators")
+
+        # Empty and rebuild stored generator directory for each CGAN
+        stored_gen_path = os.path.join(self.path, "stored_generators")
+        shutil.rmtree(stored_gen_path)
+        safe_mkdir(stored_gen_path)
 
         # Initialize properties
         self.device = device
@@ -96,7 +102,7 @@ class CGAN:
             self.dn_rate = self.discrim_noise / num_epochs
 
         print("Beginning training")
-        og_start_time= time.time()
+        og_start_time = time.time()
         start_time = time.time()
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
@@ -118,6 +124,7 @@ class CGAN:
                     print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, self.stored_acc[-1]))
 
         print("Total training time: %ds" % (time.time() - og_start_time))
+        print("Training complete")
 
     def train_one_step(self, x_train, y_train):
         """One full step of the CGAN training process"""
@@ -155,7 +162,7 @@ class CGAN:
         """
         self.init_evaluator(train_gen, val_gen)
         self.netE.train_evaluator(num_epochs=self.eval_num_epochs, eval_freq=1, es=self.early_stopping_patience)
-        torch.save(self.netG.state_dict, self.path + "/stored_generators/Epoch_" + str(self.epoch) + "_Generator.pt")
+        torch.save(self.netG.state_dict(), self.path + "/stored_generators/Epoch_" + str(self.epoch) + "_Generator.pt")
         loss, acc = self.netE.eval_once(self.test_gen)
         self.stored_loss.append(loss.item())
         self.stored_acc.append(acc.item())
@@ -405,9 +412,19 @@ class CGAN:
             assert os.path.exists(save), "Check that the desired save path exists."
             f.savefig(save + '/training_plot.png')
 
-    def load_netG(self, epoch):
-        """Load a previously stored netG (likely the one that performed the best)"""
-        self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + epoch + "_Generator.pt"))
+    def load_netG(self, best=False, epoch=None):
+        """Load a previously stored netG"""
+        assert best or epoch is not None, "Either best arg must be True or epoch arg must not be None"
+
+        if best:
+            def parse_epoch(x):
+                pattern = re.compile(r"[0-9]+")
+                return int(re.findall(pattern=pattern, string=x)[0])
+            gens = os.listdir(os.path.join(self.path, "stored_generators"))
+            gens = sorted(gens, key=parse_epoch)
+            epoch = parse_epoch(gens[np.argmax(self.stored_acc) // len(self.test_ranges)])
+
+        self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + str(epoch) + "_Generator.pt"))
 
     def troubleshoot_discriminator(self, exit_early_iters=1000, gen=None, show=True, save=None):
         """
@@ -736,7 +753,7 @@ class CGAN:
         if save is None:
             save = self.path
 
-        iterator = self.train_gen.__iter__()
+        iterator = iter(self.train_gen)
         x, y = next(iterator)
         x, y = x.to(self.device), y.to(self.device).type(torch.float32)
 

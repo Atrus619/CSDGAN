@@ -46,6 +46,9 @@ class TabularDataset(data.Dataset):
         self.x_train, self.x_test, self.y_train, self.y_test = self.preprocess_data()
         self.out_dim = self.x_train.shape[1]
 
+        # Set current device
+        self.device = self.get_dev()
+
     def preprocess_data(self):
         """Converts input arrays of data into tensors ready for training"""
         x_train = torch.tensor(self.x_train_arr, dtype=torch.float)
@@ -65,3 +68,9 @@ class TabularDataset(data.Dataset):
 
     def __getitem__(self, index):
         return self.x_train[index], self.y_train[index]
+
+    def to_dev(self, device):
+        self.x_train, self.y_train, self.x_test, self.y_test = self.x_train.to(device), self.y_train.to(device), self.x_test.to(device), self.y_test.to(device)
+
+    def get_dev(self):
+        return self.x_train.device

@@ -146,7 +146,7 @@ def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, 
     best_score = lr_cv.score(x_test, y_test)
     predictions = lr_cv.predict(x_test)
     if verbose:
-        print("Accuracy:", best_score)
+        print("Best Accuracy: {0:.2%}".format(best_score))
         print("Best Parameters:", lr_cv.best_params_)
         print(classification_report(y_test, predictions, labels=labels_list))
         print(confusion_matrix(np.array(y_test), predictions, labels=labels_list))
@@ -206,20 +206,29 @@ def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, 
 #     print(confusion_matrix(y_test, predictions, labels=labels))
 
 
-def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
+def plot_scatter_matrix(df, cont_inputs, title, scaler=None, show=True, save=None):
     """
     Plot scatter matrix of data set (real or fake)
-    :param X: DataFrame of continuous features
+    :param df: DataFrame
+    :param cont_inputs: List of names of the continuous inputs
     :param title: Title to be attached to saved file
-    :param og_df: Original DataFrame to use for labeling features
     :param scaler: Optional scaler for inverse transforming data back to original scale
+    :param show: Whether to show the plot
     :param save: File path to save the resulting plot. If None, plot is not saved.
     """
+    X = df[cont_inputs]
+
     if scaler:
         X = scaler.inverse_transform(X)
-    pd.plotting.scatter_matrix(pd.DataFrame(X, columns=og_df.columns), figsize=(12, 12))
-    plt.suptitle(title, fontsize='x-large')
-    plt.show()
+    pd.plotting.scatter_matrix(pd.DataFrame(X, columns=cont_inputs), figsize=(12, 12))
+
+    st = plt.suptitle(title + ' Scatter Matrix', fontsize='x-large', fontweight='bold')
+    plt.tight_layout()
+    st.set_y(0.96)
+    plt.subplots_adjust(top=0.9)
+
+    if show:
+        plt.show()
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."
@@ -227,21 +236,27 @@ def plot_scatter_matrix(X, title, og_df, scaler=None, save=None):
         plt.savefig(save + '/scatter_matrices/' + title + '_scatter_matrix.png')
 
 
-def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_dict, og_df, scaler=None, alpha=1.0, save=None):
+def plot_conditional_scatter(col1, col2, real_df, fake_df, dep_var, cont_inputs, class_dict, scaler=None, alpha=1.0, show=True, save=None):
     """
     Plot conditional scatter plot (labels are colors) to compare real and fake data side by side
-    :param x_real: NumPy array of real, continuous values
-    :param y_real: NumPy array of real labels
-    :param x_fake: NumPy array of generated, continuous values
-    :param y_fake: NumPy array of generated labels
-    :param col1: Column index of first feature to be plotted
-    :param col2: Column index of second feature to be plotted
+    :param col1: Column index of first feature to be plotted (x-axis)
+    :param col2: Column index of second feature to be plotted (y-axis)
+    :param real_df: Original DataFrame
+    :param fake_df: Generated DataFrame
+    :param dep_var: Name of dependent variable (string)
+    :param cont_inputs: List of names of the continuous inputs
     :param class_dict: Dictionary with keys as label value (0 or 1 for binary dep var), and values as tuple of (name, 'color')
-    :param og_df: Original DataFrame to use for labeling features
     :param scaler: Optional scaler for inverse transforming data back to original scale
     :param alpha: Optional alpha parameter for matplotlib.pyplot
+    :param show: Whether to show the plot (boolean)
     :param save: File path to save the resulting plot. If None, plot is not saved.
     """
+    x_real, x_fake = real_df[cont_inputs].values, fake_df[cont_inputs].values
+    y_real, y_fake = real_df[dep_var].values, fake_df[dep_var].values
+
+    col1_index = np.where(real_df[cont_inputs].columns == col1)[0].take(0)
+    col2_index = np.where(real_df[cont_inputs].columns == col2)[0].take(0)
+
     if scaler:
         x_real = scaler.inverse_transform(x_real)
         x_fake = scaler.inverse_transform(x_fake)
@@ -252,41 +267,47 @@ def plot_conditional_scatter(x_real, y_real, x_fake, y_fake, col1, col2, class_d
     axes[1].title.set_text("Fake")
 
     for label in class_dict:
-        axes[0].scatter(x=x_real[:, col1][y_real == label], y=x_real[:, col2][y_real == label], label=class_dict[label][0], c=class_dict[label][1], alpha=alpha)
-        axes[1].scatter(x=x_fake[:, col1][y_fake == label], y=x_fake[:, col2][y_fake == label], label=class_dict[label][0], c=class_dict[label][1], alpha=alpha)
+        axes[0].scatter(x=x_real[:, col1_index][y_real == label], y=x_real[:, col2_index][y_real == label], label=class_dict[label][0], c=class_dict[label][1], alpha=alpha)
+        axes[1].scatter(x=x_fake[:, col1_index][y_fake == label], y=x_fake[:, col2_index][y_fake == label], label=class_dict[label][0], c=class_dict[label][1], alpha=alpha)
 
-    axes[0].set_xlabel(og_df.columns[col1])
-    axes[1].set_xlabel(og_df.columns[col1])
-    axes[0].set_ylabel(og_df.columns[col2])
+    axes[0].set_xlabel(col1)
+    axes[1].set_xlabel(col1)
+    axes[0].set_ylabel(col2)
 
     axes[1].legend()
 
-    st = f.suptitle(og_df.columns[col1] + " vs. " + og_df.columns[col2], fontsize='x-large')
+    st = f.suptitle(col1 + " vs. " + col2 + ' Conditional Scatter Plot', fontsize='x-large', fontweight='bold')
     f.tight_layout()
     st.set_y(0.96)
     f.subplots_adjust(top=0.85)
 
-    f.show()
+    if show:
+        f.show()
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/conditional_scatters')
-        f.savefig(save + '/conditional_scatters/' + og_df.columns[col1] + '_vs_' + og_df.columns[col2] + '_conditional_scatter.png')
+        f.savefig(save + '/conditional_scatters/' + col1 + '_vs_' + col2 + '_conditional_scatter.png')
 
 
-def plot_conditional_density(x_real, y_real, x_fake, y_fake, col, class_dict, og_df, scaler=None, save=None):
+def plot_conditional_density(col, real_df, fake_df, dep_var, cont_inputs, class_dict, scaler=None, show=True, save=None):
     """
     Plot conditional density plot (labels are colors) to compare real and fake data side by side
-    :param x_real: NumPy array of real, continuous values
-    :param y_real: NumPy array of real labels
-    :param x_fake: NumPy array of generated, continuous values
-    :param y_fake: NumPy array of generated labels
-    :param col: Column index of feature to be plotted
+    :param col: Column name of feature to be plotted
+    :param real_df: Original DataFrame
+    :param fake_df: Generated DataFrame
+    :param dep_var: Name of dependent variable (string)
+    :param cont_inputs: List of names of the continuous inputs
     :param class_dict: Dictionary with keys as label value (0 or 1 for binary dep var), and values as tuple of (name, 'color')
-    :param og_df: Original DataFrame to use for labeling features
     :param scaler: Optional scaler for inverse transforming data back to original scale
+    :param show: Whether to show the plot (boolean)
     :param save: File path to save the resulting plot. If None, plot is not saved.
     """
+    x_real, x_fake = real_df[cont_inputs].values, fake_df[cont_inputs].values
+    y_real, y_fake = real_df[dep_var].values, fake_df[dep_var].values
+
+    col_index = np.where(real_df[cont_inputs].columns == col)[0].take(0)
+
     if scaler:
         x_real = scaler.inverse_transform(x_real)
         x_fake = scaler.inverse_transform(x_fake)
@@ -297,20 +318,23 @@ def plot_conditional_density(x_real, y_real, x_fake, y_fake, col, class_dict, og
     axes[1].title.set_text("Fake")
 
     for label in class_dict:
-        sns.distplot(a=x_real[:, col][y_real == label], label=class_dict[label][0], color=class_dict[label][1], ax=axes[0])
-        sns.distplot(a=x_fake[:, col][y_fake == label], label=class_dict[label][0], color=class_dict[label][1], ax=axes[1])
+        sns.distplot(a=x_real[:, col_index][y_real == label], label=class_dict[label][0], color=class_dict[label][1], ax=axes[0])
+        sns.distplot(a=x_fake[:, col_index][y_fake == label], label=class_dict[label][0], color=class_dict[label][1], ax=axes[1])
 
-    st = f.suptitle(og_df.columns[col] + ' conditional density plot', fontsize='x-large')
+    axes[1].legend()
+
+    st = f.suptitle(col + ' Conditional Density Plot', fontsize='x-large', fontweight='bold')
     f.tight_layout()
     st.set_y(0.96)
     f.subplots_adjust(top=0.85)
 
-    f.show()
+    if show:
+        f.show()
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."
         safe_mkdir(save + '/conditional_densities')
-        f.savefig(save + '/conditional_densities/' + og_df.columns[col] + '_conditional_density.png')
+        f.savefig(save + '/conditional_densities/' + col + '_conditional_density.png')
 
 
 # def iris_plot_scatters(X, y, title, scaler=None, alpha=1.0, save=None):
@@ -655,14 +679,15 @@ def create_preprocessed_cat_mask(le_dict, x_train):
 #     return df
 
 
-def compare_cats(real, fake, x, y, hue, save=None):
+def compare_cats(real_df, fake_df, x, y, hue, show=True, save=None):
     """
     Visualize categorical variables
-    :param real: DataFrame of original raw data
-    :param fake: DataFrame of generated data. Output of fully_process_fake_output method.
+    :param real_df: DataFrame of original raw data
+    :param fake_df: DataFrame of generated data. Output of fully_process_fake_output method.
     :param x: Name of first feature to be compared (str)
     :param y: Name of second feature to be compared (str)
     :param hue: Name of third feature to be compared (str)
+    :param show: Whether to show the resulting plot
     :param save: File path to save the resulting plot. If None, plot is not saved.
     """
     f, axes = plt.subplots(1, 2, figsize=(8, 8), sharey=True, sharex=True)
@@ -670,11 +695,11 @@ def compare_cats(real, fake, x, y, hue, save=None):
     axes[0].title.set_text('Fake Data')
     axes[1].title.set_text('Real Data')
 
-    sns.catplot(data=real, x=x, y=y, hue=hue, kind='bar', ax=axes[0])
-    sns.catplot(data=fake, x=x, y=y, hue=hue, kind='bar', ax=axes[1])
+    sns.catplot(data=real_df, x=x, y=y, hue=hue, kind='bar', ax=axes[0])
+    sns.catplot(data=fake_df, x=x, y=y, hue=hue, kind='bar', ax=axes[1])
 
     sup = "Comparing {0} by {1} and {2}".format(y, x, hue)
-    st = f.suptitle(sup, fontsize='x-large')
+    st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
     f.tight_layout()
     st.set_y(0.96)
     f.subplots_adjust(top=0.9)
@@ -682,7 +707,9 @@ def compare_cats(real, fake, x, y, hue, save=None):
     # Quick n' dirty solution to sns.catplot creating its own blank subplots
     plt.close(2)
     plt.close(3)
-    f.show()
+
+    if show:
+        f.show()
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."

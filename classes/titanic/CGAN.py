@@ -4,6 +4,9 @@ from utils.utils import *
 import time
 from classes.NetUtils import GaussianNoise
 import numpy as np
+import shutil
+import re
+from torchviz import make_dot
 
 
 class CGAN:
@@ -14,7 +17,11 @@ class CGAN:
                  label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal):
         self.path = path  # default file path for saved objects
         safe_mkdir(self.path)
-        safe_mkdir(self.path + "/stored_generators")
+
+        # Empty and rebuild stored generator directory for each CGAN
+        stored_gen_path = os.path.join(self.path, "stored_generators")
+        shutil.rmtree(stored_gen_path)
+        safe_mkdir(stored_gen_path)
 
         # Initialize properties
         self.device = device
@@ -64,6 +71,7 @@ class CGAN:
         :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur.
         """
         total_epochs = self.epoch + num_epochs
+        device_check = self.data_gen.dataset.device != self.device
 
         if self.label_noise_linear_anneal:
             self.ln_rate = self.label_noise / num_epochs
@@ -77,7 +85,8 @@ class CGAN:
         for epoch in range(num_epochs):
             for i in range(cadence):
                 for x, y in self.data_gen:
-                    x, y = x.to(self.device), y.to(self.device)
+                    if device_check:
+                        x, y = x.to(self.device), y.to(self.device)
                     self.train_one_step(x, y)
 
             self.next_epoch()
@@ -94,6 +103,7 @@ class CGAN:
                     print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
 
         print("Total training time: %ds" % (time.time() - og_start_time))
+        print("Training complete")
 
     def train_one_step(self, x_train, y_train):
         """One full step of the CGAN training process"""
@@ -144,7 +154,7 @@ class CGAN:
 
             fake_scores.append(score_fake_tmp)
 
-            torch.save(self.netG.state_dict, self.path + "/stored_generators/Epoch_" + str(self.epoch) + "_Generator.pt")
+            torch.save(self.netG.state_dict(), self.path + "/stored_generators/Epoch_" + str(self.epoch) + "_Generator.pt")
 
         return fake_scores
 
@@ -158,7 +168,11 @@ class CGAN:
         noise = torch.randn(bs, self.nz, device=self.device)
         fake_labels, output_labels = self.gen_labels(bs=bs, stratify=stratify)
         fake_labels = fake_labels.to(self.device)
-        fake_data = self.netG(noise, fake_labels).cpu().detach().numpy()
+
+        self.netG.eval()
+        with torch.no_grad():
+            fake_data = self.netG(noise, fake_labels).cpu().detach().numpy()
+
         return fake_data, output_labels
 
     def gen_labels(self, bs, stratify=None):
@@ -276,8 +290,7 @@ class CGAN:
             xs[:, i] = np.arange(length) + barWidth * (i + 1)
             plt.bar(xs[:, i], ys[:, i], width=barWidth, edgecolor='white', label=self.test_ranges[i])
 
-        line_len = 2 * num_tests
-        plt.plot(np.linspace(0, line_len, line_len), np.full(line_len, benchmark_acc), linestyle='dashed', color='r')
+        plt.plot(np.linspace(0, length, length), np.full(length, benchmark_acc), linestyle='dashed', color='r')
 
         plt.xlabel('Epoch', fontweight='bold')
         plt.xticks([r + barWidth for r in range(length)], list(range(1, length + 1)))
@@ -345,9 +358,19 @@ class CGAN:
             assert os.path.exists(save), "Check that the desired save path exists."
             f.savefig(save + '/training_plot.png')
 
-    def load_netG(self, epoch):
-        """Load a previously stored netG (likely the one that performed the best)"""
-        self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + epoch + "_Generator.pt"))
+    def load_netG(self, best=False, epoch=None):
+        """Load a previously stored netG"""
+        assert best or epoch is not None, "Either best arg must be True or epoch arg must not be None"
+
+        if best:
+            def parse_epoch(x):
+                pattern = re.compile(r"[0-9]+")
+                return int(re.findall(pattern=pattern, string=x)[0])
+            gens = os.listdir(os.path.join(self.path, "stored_generators"))
+            gens = sorted(gens, key=parse_epoch)
+            epoch = parse_epoch(gens[np.argmax(self.stored_acc) // len(self.test_ranges)])
+
+        self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + str(epoch) + "_Generator.pt"))
 
     def gen_data(self, size, stratify=None):
         """Generates a data set formatted like the original data"""
@@ -364,3 +387,35 @@ class CGAN:
                                                 cont_inputs=self.data_gen.dataset.cont_inputs,
                                                 int_inputs=self.data_gen.dataset.int_inputs)
         return genned_data_df
+
+    def draw_architecture(self, net, show, save):
+        """
+        Utilizes torchviz to print current graph to a pdf
+        :param net: Network to draw graph for. Either netG or netD
+        :param show: Whether to show the graph. To visualize in jupyter notebooks, run the returned viz.
+        :param save: Where to save the graph.
+        """
+        assert net in {self.netG, self.netD}, "Invalid entry for net. Should be netG or netD"
+
+        if save is None:
+            save = self.path
+
+        iterator = iter(self.data_gen)
+        x, y = next(iterator)
+        x, y = x.to(self.device), y.to(self.device).type(torch.float32)
+
+        if net == self.netG:
+            noise = torch.randn(x.shape[0], self.nz, device=self.device)
+            viz = make_dot(net(noise, y), params=dict(net.named_parameters()))
+        else:
+            viz = make_dot(net(x, y), params=dict(net.named_parameters()))
+
+        if net == self.netG:
+            title = "Generator"
+        else:
+            title = "Discriminator"
+
+        safe_mkdir(save + "/architectures")
+        viz.render(filename=save + "/architectures/" + title, view=show)
+
+        return viz

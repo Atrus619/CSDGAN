@@ -6,10 +6,10 @@ TEST_SIZE = 445
 
 # Training and CGAN parameters
 MANUAL_SEED = 999
-NUM_EPOCHS = 100
-CADENCE = 100  # Number of pass-throughs of data set per epoch (generally set to 1, might want to set higher for very tiny data sets)
-PRINT_FREQ = 10
-EVAL_FREQ = 10
+NUM_EPOCHS = 10000
+CADENCE = 1  # Number of pass-throughs of data set per epoch (generally set to 1, might want to set higher for very tiny data sets)
+PRINT_FREQ = 250
+EVAL_FREQ = 250
 CONT_INPUTS = ['SibSp', 'Parch', 'Fare', 'Age']  # Names of features in df that are continuous (not categorical)
 INT_INPUTS = ['SibSp', 'Parch']  # Names of features in df that should be integers
 DEP_VAR = 'Survived'  # Name of dependent variable
@@ -19,11 +19,11 @@ EVAL_PARAM_GRID = {'tol': [1e-5],
                    'C': [0.5],
                    'l1_ratio': [0]}
 EVAL_FOLDS = 5  # Number of cross-validation folds for evaluation
-TEST_RANGES = [891*2**x for x in range(5)]
+TEST_RANGES = [446*2**x for x in range(5)]  # Various multiples of training set size
 
 TRAINING_PARAMS = {'batch_size': 1000,  # Set to be larger than the data set so that it is always one batch per epoch
-                   'shuffle': True,
-                   'num_workers': 1}
+                   'shuffle': False,
+                   'num_workers': 0}
 
 CGAN_INIT_PARAMS = {'nc': 2,  # Number of output classes
                     'nz': 64,  # Size of noise vector
