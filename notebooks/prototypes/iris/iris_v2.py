@@ -2,10 +2,11 @@ import configs.iris as cfg
 from utils.utils import *
 from utils.data_loading import load_processed_dataset
 import os
-from classes.TabularCGAN import TabularCGAN
-from classes.TabularDataset import TabularDataset
+from classes.Tabular.TabularCGAN import TabularCGAN
+from classes.Tabular.TabularDataset import TabularDataset
 from torch.utils import data
 import pickle as pkl
+import random
 
 # Set random seem for reproducibility
 print("Random Seed: ", cfg.MANUAL_SEED)
@@ -91,7 +92,7 @@ plot_conditional_scatter(col1='sepal_len',
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,
                          cont_inputs=cfg.CONT_INPUTS,
-                         class_dict=class_dict,
+                         labels_list=labels_list,
                          scaler=None,
                          alpha=0.25,
                          show=True,
@@ -102,12 +103,7 @@ plot_conditional_density(col='petal_len',
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,
                          cont_inputs=cfg.CONT_INPUTS,
-                         class_dict=class_dict,
+                         labels_list=labels_list,
                          scaler=None,
                          show=True,
                          save=exp_path)
-
-# TODO: Refactor TabularCGAN and cDCGAN
-# TODO: Create util for displaying config file
-# TODO: Automate class_dict
-# TODO: Debug conditional plots for iris

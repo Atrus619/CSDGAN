@@ -4,17 +4,15 @@ from classes.MNIST.netD import netD
 from classes.MNIST.netG import netG
 from classes.MNIST.netE import netE
 from classes.NetUtils import GaussianNoise
+from classes.CGANUtils import CGANUtils
 from utils.MNIST import *
 import time
 from utils.utils import *
 import imageio
-from torchviz import make_dot
 import copy
-import re
-import shutil
 
 
-class CGAN:
+class CGAN(CGANUtils):
     """This CGAN will be set up a bit differently in the hopes of being cleaner. netG and netD will be enclosed in a higher level class titled CGAN."""
 
     def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, sched_netG, path,
@@ -24,13 +22,10 @@ class CGAN:
                  netE_lr, netE_beta1, netE_beta2, netE_wd,
                  fake_data_set_size, fake_bs,
                  eval_num_epochs, early_stopping_patience):
-        self.path = path  # default file path for saved objects
-        safe_mkdir(self.path)
+        super().__init__()
 
-        # Empty and rebuild stored generator directory for each CGAN
-        stored_gen_path = os.path.join(self.path, "stored_generators")
-        shutil.rmtree(stored_gen_path)
-        safe_mkdir(stored_gen_path)
+        self.path = path  # default file path for saved objects
+        self.init_paths()
 
         # Initialize properties
         self.device = device
@@ -61,7 +56,7 @@ class CGAN:
         self.fake_bs = fake_bs
 
         self.netE_params = {'lr': netE_lr, 'beta1': netE_beta1, 'beta2': netE_beta2, 'wd': netE_wd}
-        self.netE = None  # Initialized through init_evaluator method
+
         self.eval_num_epochs = eval_num_epochs
         self.early_stopping_patience = early_stopping_patience
 
@@ -71,6 +66,14 @@ class CGAN:
         self.fake_val_set = None
         self.fake_val_gen = None
 
+        # Instantiate sub-nets
+        self.netG = netG(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
+                         lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
+        self.netD = netD(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim, path=self.path,
+                         lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
+        self.netE = None  # Initialized through init_evaluator method
+        self.nets = {self.netG, self.netD, self.netE}
+
         # Training properties
         self.epoch = 0
         self.sched_netG = sched_netG
@@ -79,12 +82,6 @@ class CGAN:
         self.stored_loss = []
         self.stored_acc = []
         self.fixed_imgs = [self.gen_fixed_img_grid()]
-
-        # Instantiate sub-nets
-        self.netG = netG(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
-                         lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
-        self.netD = netD(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim, path=self.path,
-                         lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
 
     def train_gan(self, num_epochs, print_freq, eval_freq=None):
         """
@@ -126,34 +123,6 @@ class CGAN:
         print("Total training time: %ds" % (time.time() - og_start_time))
         print("Training complete")
 
-    def train_one_step(self, x_train, y_train):
-        """One full step of the CGAN training process"""
-        bs = x_train.shape[0]
-        self.netG.train()
-        self.netD.train()
-        y_train = y_train.float()  # Convert to float so that it can interact with float weights correctly
-
-        # Update Discriminator, all real batch
-        labels = (torch.rand(size=(bs,)) >= self.label_noise).type(torch.float32).to(self.device)
-        real_forward_pass = self.netD(x_train, y_train).view(-1)
-        self.netD.train_one_step_real(real_forward_pass, labels)
-
-        # Update Discriminator, all fake batch
-        noise = torch.randn(bs, self.nz, device=self.device)
-        x_train_fake = self.netG(noise, y_train)
-        labels = (torch.rand(size=(bs,)) <= self.label_noise).type(torch.float32).to(self.device)
-        fake_forward_pass = self.netD(x_train_fake.detach(), y_train).view(-1)
-        self.netD.train_one_step_fake(fake_forward_pass, labels)
-        self.netD.combine_and_update_opt()
-
-        for i in range(self.sched_netG):
-            # Update Generator
-            noise = torch.randn(bs, self.nz, device=self.device)
-            x_train_fake = self.netG(noise, y_train)
-            labels.fill_(self.real_label)  # Reverse labels, fakes are real for generator cost
-            gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
-            self.netG.train_one_step(gen_fake_forward_pass, labels)
-
     def test_model(self, train_gen, val_gen):
         """
         Train a CNN evaluator from scratch
@@ -166,11 +135,6 @@ class CGAN:
         loss, acc = self.netE.eval_once(self.test_gen)
         self.stored_loss.append(loss.item())
         self.stored_acc.append(acc.item())
-
-    def print_progress(self, total_epochs):
-        """Print metrics of interest"""
-        print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-              % (self.epoch, total_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
 
     def next_epoch(self):
         """Run netG and netD methods to prepare for next epoch. Mostly saves histories and resets history collection objects."""
@@ -357,74 +321,6 @@ class CGAN:
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             plt.savefig(save + '/training_progress.png')
-
-    def plot_training_plots(self, show=True, save=None):
-        """
-        Pull together a plot of relevant training diagnostics for both netG and netD
-        :param show: Whether to display the plot
-        :param save: Where to save the plots. If set to None default path is used. If false, not saved.
-        """
-        assert self.epoch > 0, "Model needs to be trained first"
-
-        if save is None:
-            save = self.path
-
-        f, axes = plt.subplots(2, 2, figsize=(12, 12), sharex=True)
-
-        axes[0, 0].title.set_text("Generator and Discriminator Loss During Training")
-        axes[0, 0].plot(self.netG.losses, label="G")
-        axes[0, 0].plot(self.netD.losses, label="D")
-        axes[0, 0].set_xlabel("iterations")
-        axes[0, 0].set_ylabel("loss")
-        axes[0, 0].legend()
-
-        axes[0, 1].title.set_text("Average Discriminator Outputs During Training")
-        axes[0, 1].plot(self.netD.Avg_D_reals, label="Real")
-        axes[0, 1].plot(self.netD.Avg_D_fakes, label="Fake")
-        axes[0, 1].plot(np.linspace(0, self.epoch, self.epoch), np.full(self.epoch, 0.5))
-        axes[0, 1].set_xlabel("iterations")
-        axes[0, 1].set_ylabel("proportion")
-        axes[0, 1].legend()
-
-        axes[1, 0].title.set_text('Gradient Norm History')
-        axes[1, 0].plot(self.netG.gnorm_total_history, label="G")
-        axes[1, 0].plot(self.netD.gnorm_total_history, label="D")
-        axes[1, 0].set_xlabel("iterations")
-        axes[1, 0].set_ylabel("norm")
-        axes[1, 0].legend()
-
-        axes[1, 1].title.set_text('Weight Norm History')
-        axes[1, 1].plot(self.netG.wnorm_total_history, label="G")
-        axes[1, 1].plot(self.netD.wnorm_total_history, label="D")
-        axes[1, 1].set_xlabel("iterations")
-        axes[1, 1].set_ylabel("norm")
-        axes[1, 1].legend()
-
-        st = f.suptitle("Training Diagnostic Plots", fontsize='x-large')
-        f.tight_layout()
-        st.set_y(0.96)
-        f.subplots_adjust(top=0.9)
-
-        if show:
-            f.show()
-
-        if save:
-            assert os.path.exists(save), "Check that the desired save path exists."
-            f.savefig(save + '/training_plot.png')
-
-    def load_netG(self, best=False, epoch=None):
-        """Load a previously stored netG"""
-        assert best or epoch is not None, "Either best arg must be True or epoch arg must not be None"
-
-        if best:
-            def parse_epoch(x):
-                pattern = re.compile(r"[0-9]+")
-                return int(re.findall(pattern=pattern, string=x)[0])
-            gens = os.listdir(os.path.join(self.path, "stored_generators"))
-            gens = sorted(gens, key=parse_epoch)
-            epoch = parse_epoch(gens[np.argmax(self.stored_acc) // len(self.test_ranges)])
-
-        self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + str(epoch) + "_Generator.pt"))
 
     def troubleshoot_discriminator(self, exit_early_iters=1000, gen=None, show=True, save=None):
         """
@@ -740,39 +636,3 @@ class CGAN:
             self.netD.draw_cam(img=img, label=label, path=path, show=show, real=real)
         else:
             self.netE.draw_cam(img=img, path=path, show=show, real=real)
-
-    def draw_architecture(self, net, show, save):
-        """
-        Utilizes torchviz to print current graph to a pdf
-        :param net: Network to draw graph for. One of netG, netD, or netE.
-        :param show: Whether to show the graph. To visualize in jupyter notebooks, run the returned viz.
-        :param save: Where to save the graph.
-        """
-        assert net in {self.netG, self.netD, self.netE}, "Invalid entry for net. Should be netG, netD, or netE."
-
-        if save is None:
-            save = self.path
-
-        iterator = iter(self.train_gen)
-        x, y = next(iterator)
-        x, y = x.to(self.device), y.to(self.device).type(torch.float32)
-
-        if net == self.netG:
-            noise = torch.randn(x.shape[0], self.nz, device=self.device)
-            viz = make_dot(net(noise, y), params=dict(net.named_parameters()))
-        elif net == self.netD:
-            viz = make_dot(net(x, y), params=dict(net.named_parameters()))
-        else:
-            viz = make_dot(net(x), params=dict(net.named_parameters()))
-
-        if net == self.netG:
-            title = "Generator"
-        elif net == self.netD:
-            title = "Discriminator"
-        else:
-            title = "Evaluator"
-
-        safe_mkdir(save + "/architectures")
-        viz.render(filename=save + "/architectures/" + title, view=show)
-
-        return viz

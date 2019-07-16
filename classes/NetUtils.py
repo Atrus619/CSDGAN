@@ -4,10 +4,9 @@ import torch
 import torch.nn as nn
 
 
-# Contains utils to be inherited by other nets in this project
 class NetUtils:
+    """Contains utils to be inherited by other nets in this project"""
     def __init__(self):
-        super().__init__()
         self.epoch = 0
         self.streaming_weight_history = {}
         self.streaming_gradient_history = {}
@@ -148,7 +147,7 @@ class NetUtils:
                 nn.init.normal_(m.weight.data, 1.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
 
-    def plot_layer_scatters(self, figsize=(20, 10), title='', show=True, save=None):
+    def plot_layer_scatters(self, figsize=(20, 10), show=True, save=None):
         """Plot weight and gradient norm history for each layer in layer_list across epochs"""
         assert self.epoch > 0, "Model needs to be trained first"
 
@@ -172,10 +171,7 @@ class NetUtils:
             axes[i, 2].plot(self.wnorm_history[layer]['bias'])
             axes[i, 3].plot(self.gnorm_history[layer]['bias'])
 
-        if title != '':
-            sup = title + " Layer Weight and Gradient Norms"
-        else:
-            sup = "Layer Weight and Gradient Norms"
+        sup = self.name + " Layer Weight and Gradient Norms"
         st = f.suptitle(sup, fontsize='x-large')
         f.tight_layout()
         st.set_y(0.96)
@@ -187,9 +183,9 @@ class NetUtils:
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/layer_scatters')
-            f.savefig(save + '/layer_scatters/' + title + '_layer_scatter.png')
+            f.savefig(save + '/layer_scatters/' + self.name + '_layer_scatter.png')
 
-    def plot_layer_hists(self, epoch=None, figsize=(20, 10), title='', show=True, save=None):
+    def plot_layer_hists(self, epoch=None, figsize=(20, 10), show=True, save=None):
         """Plots histograms of weight and gradients for each layer in layer_list at the desired epoch"""
         if epoch is None:
             epoch = self.epoch
@@ -224,10 +220,7 @@ class NetUtils:
                 plt.sca(axes[i, 3])
                 convert_np_hist_to_plot(self.histogram_gradient_history[layer]['bias'][epoch])
 
-        if title != '':
-            sup = title + " Layer Weight and Gradient Histograms - Epoch " + str(epoch)
-        else:
-            sup = "Layer Weight and Gradient Histograms - Epoch " + str(epoch)
+        sup = self.name + " Layer Weight and Gradient Histograms - Epoch " + str(epoch)
         st = f.suptitle(sup, fontsize='x-large')
         f.tight_layout()
         st.set_y(0.96)
@@ -239,13 +232,12 @@ class NetUtils:
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             safe_mkdir(save + '/layer_histograms')
-            f.savefig(save + '/layer_histograms/' + title + '_epoch_' + str(epoch) + '_layer_histograms.png')
+            f.savefig(save + '/layer_histograms/' + self.name + '_epoch_' + str(epoch) + '_layer_histograms.png')
 
-    def build_hist_gif(self, net, path=None):
+    def build_hist_gif(self, path=None):
         """
         Loop through self.histogram_weight_history and saves the images to a folder.
         :param path: Path to folder to save images. Folder will be created if it does not already exist.
-        :param net: Name of network (Generator or Discriminator). Used for naming files.
         :return: Saves a gif with the title net + _histogram_generation_animation.gif (as well as the images comprising the gif into the layer_histograms folder)
         """
         assert len(self.histogram_weight_history[self.layer_list[0]]['weight']) > 1, "Model not yet trained"
@@ -255,15 +247,15 @@ class NetUtils:
 
         ims = []
         for epoch in range(self.epoch+1):
-            self.plot_layer_hists(epoch=epoch, title=net, show=False, save=path)
-            img_name = path + '/layer_histograms/' + net + '_epoch_' + str(epoch) + '_layer_histograms.png'
+            self.plot_layer_hists(epoch=epoch, show=False, save=path)
+            img_name = path + '/layer_histograms/' + self.name + '_epoch_' + str(epoch) + '_layer_histograms.png'
             ims.append(imageio.imread(img_name))
             plt.close()
             if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
                 for i in range(20):
                     ims.append(imageio.imread(img_name))
                     plt.close()
-        imageio.mimsave(path + '/' + net + '_histogram_generation_animation.gif', ims, fps=2)
+        imageio.mimsave(path + '/' + self.name + '_histogram_generation_animation.gif', ims, fps=2)
 
     @torch.utils.hooks.unserializable_hook
     def activations_hook(self, grad):

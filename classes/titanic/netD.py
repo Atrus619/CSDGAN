@@ -10,6 +10,7 @@ class netD(nn.Module, NetUtils):
     def __init__(self, device, H, out_dim, nc, noise, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
+        self.name = "Discriminator"
 
         self.device = device
 

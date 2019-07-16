@@ -2,10 +2,11 @@ import configs.wine as cfg
 from utils.utils import *
 from utils.data_loading import load_processed_dataset
 import os
-from classes.TabularCGAN import TabularCGAN
-from classes.TabularDataset import TabularDataset
+from classes.Tabular.TabularCGAN import TabularCGAN
+from classes.Tabular.TabularDataset import TabularDataset
 from torch.utils import data
 import pickle as pkl
+import random
 
 # Set random seem for reproducibility
 print("Random Seed: ", cfg.MANUAL_SEED)
@@ -82,28 +83,24 @@ genned_df = CGAN.gen_data(size=cfg.TEST_RANGES[3], stratify=eval_stratify)
 plot_scatter_matrix(df=genned_df, cont_inputs=cfg.CONT_INPUTS[0:3], title="Fake Data", scaler=None, show=True, save=exp_path)
 plot_scatter_matrix(df=wine, cont_inputs=cfg.CONT_INPUTS[0:3], title="Real Data", scaler=None, show=True, save=exp_path)
 
-class_dict = {1: ('Class 1', 'r'),
-              2: ('Class 2', 'b'),
-              3: ('Class 3', 'g')}
-
-plot_conditional_scatter(col1='alcohol',
-                         col2='malic_acid',
+plot_conditional_scatter(col1='sepal_len',
+                         col2='sepal_wid',
                          real_df=wine,
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,
                          cont_inputs=cfg.CONT_INPUTS,
-                         class_dict=class_dict,
+                         labels_list=labels_list,
                          scaler=None,
                          alpha=0.25,
                          show=True,
                          save=exp_path)
 
-plot_conditional_density(col='alcohol',
+plot_conditional_density(col='petal_len',
                          real_df=wine,
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,
                          cont_inputs=cfg.CONT_INPUTS,
-                         class_dict=class_dict,
+                         labels_list=labels_list,
                          scaler=None,
                          show=True,
                          save=exp_path)

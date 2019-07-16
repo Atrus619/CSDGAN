@@ -7,6 +7,7 @@ from classes.MNIST.MNIST_Dataset import MNIST_Dataset, Augmented_MNIST_Dataset, 
 from torch.utils import data
 import os
 import pickle
+import random
 
 
 # Set random seem for reproducibility
