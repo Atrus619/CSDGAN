@@ -2,7 +2,7 @@ import configs.titanic as cfg
 from utils.utils import *
 from utils.data_loading import load_processed_dataset
 import os
-from classes.titanic.CGAN import CGAN
+from classes.TabularCGAN import TabularCGAN
 from classes.TabularDataset import TabularDataset
 from torch.utils import data
 import pickle as pkl
@@ -36,15 +36,15 @@ data_gen = data.DataLoader(dataset, **cfg.TRAINING_PARAMS)
 eval_stratify = list(dataset.y_train.mean(0).detach().cpu().numpy())
 
 # Define GAN
-CGAN = CGAN(data_gen=data_gen,
-            device=device,
-            path=exp_path,
-            seed=cfg.MANUAL_SEED,
-            eval_param_grid=cfg.EVAL_PARAM_GRID,
-            eval_folds=cfg.EVAL_FOLDS,
-            test_ranges=cfg.TEST_RANGES,
-            eval_stratify=eval_stratify,
-            **cfg.CGAN_INIT_PARAMS)
+CGAN = TabularCGAN(data_gen=data_gen,
+                   device=device,
+                   path=exp_path,
+                   seed=cfg.MANUAL_SEED,
+                   eval_param_grid=cfg.EVAL_PARAM_GRID,
+                   eval_folds=cfg.EVAL_FOLDS,
+                   test_ranges=cfg.TEST_RANGES,
+                   eval_stratify=eval_stratify,
+                   **cfg.CGAN_INIT_PARAMS)
 
 # Eval on real data
 score_real = train_test_logistic_reg(x_train=dataset.x_train_arr,
@@ -78,7 +78,7 @@ CGAN.netD.plot_layer_scatters(title="Discriminator", show=True, save=exp_path)
 CGAN.netG.plot_layer_hists(title="Generator", show=True, save=exp_path)
 CGAN.netD.plot_layer_hists(title="Discriminator", show=True, save=exp_path)
 
-genned_df = CGAN.gen_data(size=3000, stratify=eval_stratify)
+genned_df = CGAN.gen_data(size=cfg.TEST_RANGES[3], stratify=eval_stratify)
 plot_scatter_matrix(df=genned_df, cont_inputs=cfg.CONT_INPUTS, title="Fake Data", scaler=None, show=True, save=exp_path)
 plot_scatter_matrix(df=titanic, cont_inputs=cfg.CONT_INPUTS, title="Real Data", scaler=None, show=True, save=exp_path)
 

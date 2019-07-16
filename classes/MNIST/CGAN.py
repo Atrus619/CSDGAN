@@ -347,9 +347,9 @@ class CGAN:
         plt.bar(x=range(length), height=self.stored_acc, tick_label=np.linspace(self.epoch // length, self.epoch, length, dtype=np.int64))
         plt.plot(np.linspace(0, length, length), np.full(length, benchmark_acc), linestyle='dashed', color='r')
 
-        plt.xlabel('Epoch', fontweight='bold')
+        plt.xlabel('Evaluation', fontweight='bold')
         plt.ylabel('Accuracy (%)', fontweight='bold')
-        plt.title('Evaluation Over Training Epochs', fontweight='bold')
+        plt.title('Evaluation Over Training Evaluations', fontweight='bold')
 
         if show:
             plt.show()

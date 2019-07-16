@@ -20,7 +20,8 @@ class CGAN:
 
         # Empty and rebuild stored generator directory for each CGAN
         stored_gen_path = os.path.join(self.path, "stored_generators")
-        shutil.rmtree(stored_gen_path)
+        if os.path.exists(stored_gen_path):
+            shutil.rmtree(stored_gen_path)
         safe_mkdir(stored_gen_path)
 
         # Initialize properties

@@ -251,6 +251,8 @@ def plot_conditional_scatter(col1, col2, real_df, fake_df, dep_var, cont_inputs,
     :param show: Whether to show the plot (boolean)
     :param save: File path to save the resulting plot. If None, plot is not saved.
     """
+    assert col1 in real_df.columns and col2 in real_df.columns, "Column not contained in DataFrame"
+
     x_real, x_fake = real_df[cont_inputs].values, fake_df[cont_inputs].values
     y_real, y_fake = real_df[dep_var].values, fake_df[dep_var].values
 
@@ -303,6 +305,8 @@ def plot_conditional_density(col, real_df, fake_df, dep_var, cont_inputs, class_
     :param show: Whether to show the plot (boolean)
     :param save: File path to save the resulting plot. If None, plot is not saved.
     """
+    assert col in real_df.columns, "Column not contained in DataFrame"
+
     x_real, x_fake = real_df[cont_inputs].values, fake_df[cont_inputs].values
     y_real, y_fake = real_df[dep_var].values, fake_df[dep_var].values
 

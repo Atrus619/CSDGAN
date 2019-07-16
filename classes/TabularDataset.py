@@ -71,6 +71,7 @@ class TabularDataset(data.Dataset):
 
     def to_dev(self, device):
         self.x_train, self.y_train, self.x_test, self.y_test = self.x_train.to(device), self.y_train.to(device), self.x_test.to(device), self.y_test.to(device)
+        self.device = device
 
     def get_dev(self):
         return self.x_train.device

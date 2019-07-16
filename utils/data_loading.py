@@ -97,10 +97,10 @@ def load_processed_dataset(name):
     path_processed = os.path.join(path, 'processed')
 
     if name == 'iris':
-        return pd.read_csv(os.path.join(path_processed, 'iris.data'))
+        return pd.read_csv(os.path.join(path_processed, 'iris.csv'))
 
     elif name == 'wine':
-        return pd.read_csv(os.path.join(path_processed, 'wine.data'))
+        return pd.read_csv(os.path.join(path_processed, 'wine.csv'))
 
     elif name == 'titanic':
         return pd.read_csv(os.path.join(path_processed, 'titanic.csv'))
