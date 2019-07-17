@@ -70,6 +70,7 @@ class TabularDataset(data.Dataset):
         return self.x_train[index], self.y_train[index]
 
     def to_dev(self, device):
+        """Moves entire data set to specified device. Can be helpful in speeding up training times for small data sets (~60-100x improvement in speed)."""
         self.x_train, self.y_train, self.x_test, self.y_test = self.x_train.to(device), self.y_train.to(device), self.x_test.to(device), self.y_test.to(device)
         self.device = device
 

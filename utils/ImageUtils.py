@@ -1,7 +1,28 @@
+from utils.utils import train_val_test_split, encode_y
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import torchvision.utils as vutils
+
+
+def img_dataset_preprocesser(x, y, splits, seed=None):
+    y, le, ohe = encode_y(y)
+
+    x = x.astype('float32')
+
+    x_train, y_train, x_val, y_val, x_test, y_test = train_val_test_split(x, y, splits=splits, random_state=seed)
+
+    train_max = x_train.max()
+    train_min = x_train.min()
+
+    def min_max_scaler(tensor, max, min):
+        return (tensor - min) / (max - min)
+
+    x_train = min_max_scaler(tensor=x_train, max=train_max, min=train_min)
+    x_val = min_max_scaler(tensor=x_val, max=train_max, min=train_min)
+    x_test = min_max_scaler(tensor=x_test, max=train_max, min=train_min)
+
+    return x_train, y_train, x_val, y_val, x_test, y_test, le, ohe
 
 
 def convert_y_to_one_hot(y, nc):

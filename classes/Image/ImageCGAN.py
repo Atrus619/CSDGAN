@@ -1,4 +1,4 @@
-from classes.MNIST.MNIST_Dataset import Fake_MNIST_Dataset
+from classes.Image.ImageDataset import GeneratedImageDataset
 from torch.utils import data
 from classes.Image.ImageNetD import ImageNetD
 from classes.Image.ImageNetG import ImageNetG
@@ -14,8 +14,7 @@ import copy
 
 class ImageCGAN(CGANUtils):
     """CGAN for image-based data sets"""
-
-    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, sched_netG, path,
+    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, sched_netG, path, le, ohe,
                  label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal,
                  netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
                  netD_nf, netD_lr, netD_beta1, netD_beta2, netD_wd,
@@ -34,6 +33,10 @@ class ImageCGAN(CGANUtils):
         self.nz = nz
         self.num_channels = num_channels
 
+        self.le = le
+        self.ohe = ohe
+        self.grid_nrow = 10
+
         # Anti-discriminator properties
         assert 0.0 <= label_noise <= 1.0, "Label noise must be between 0 and 1"
         self.label_noise = label_noise
@@ -44,7 +47,7 @@ class ImageCGAN(CGANUtils):
         self.discrim_noise_linear_anneal = discrim_noise_linear_anneal
         self.dn_rate = 0.0
 
-        # Various generators
+        # Data generator
         self.train_gen = train_gen
         self.val_gen = val_gen
         self.test_gen = test_gen
@@ -68,9 +71,9 @@ class ImageCGAN(CGANUtils):
 
         # Instantiate sub-nets
         self.netG = ImageNetG(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
-                              lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
-        self.netD = ImageNetD(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim, path=self.path,
-                              lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
+                              grid_nrow=self.grid_nrow, lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
+        self.netD = ImageNetD(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim,
+                              path=self.path, lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
         self.netE = None  # Initialized through init_evaluator method
         self.nets = {self.netG, self.netD, self.netE}
 
@@ -101,6 +104,7 @@ class ImageCGAN(CGANUtils):
         print("Beginning training")
         og_start_time = time.time()
         start_time = time.time()
+
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
                 x, y = x.to(self.device), y.to(self.device)
@@ -158,16 +162,20 @@ class ImageCGAN(CGANUtils):
         Initialize the netE sub-net. This is done as a separate method because we want to reinitialize netE each time we want to evaluate it.
         We can also evaluate on the original, real data by specifying these training generators.
         """
-        self.netE = ImageNetE(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, x_dim=self.x_dim, num_channels=self.num_channels,
-                              nc=self.nc, path=self.path, **self.netE_params).to(self.device)
+        self.netE = ImageNetE(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, x_dim=self.x_dim, le=self.le,
+                              num_channels=self.num_channels, nc=self.nc, path=self.path, **self.netE_params).to(self.device)
 
     def init_fake_gen(self):
         # Initialize fake training set and validation set to be same size
-        self.fake_train_set = Fake_MNIST_Dataset(self.netG, self.fake_data_set_size, self.nz, self.nc, self.device)
-        self.fake_train_gen = data.DataLoader(self.fake_train_set, batch_size=self.fake_bs, shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
+        self.fake_train_set = GeneratedImageDataset(netG=self.netG, size=self.fake_data_set_size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
+                                                    ohe=self.ohe, device=self.device)
+        self.fake_train_gen = data.DataLoader(self.fake_train_set, batch_size=self.fake_bs,
+                                              shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
 
-        self.fake_val_set = Fake_MNIST_Dataset(self.netG, self.fake_data_set_size, self.nz, self.nc, self.device)
-        self.fake_val_gen = data.DataLoader(self.fake_val_set, batch_size=self.fake_bs, shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
+        self.fake_val_set = GeneratedImageDataset(netG=self.netG, size=self.fake_data_set_size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
+                                                  ohe=self.ohe, device=self.device)
+        self.fake_val_gen = data.DataLoader(self.fake_val_set, batch_size=self.fake_bs,
+                                            shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
 
     def eval_on_real_data(self, num_epochs, train_gen=None, val_gen=None, test_gen=None, es=None):
         """
@@ -195,13 +203,19 @@ class ImageCGAN(CGANUtils):
         return og_result, copy.copy(self.netE)
 
     def show_img(self, label):
-        """Generate a 28x28 image based on the desired class label index (integer 0-9)"""
-        assert 0 <= label <= 9 and type(label) is int, "Make sure label is an integer between 0 and 9 (inclusive)."
+        """Generate an image based on the desired class label index (integer 0-9)"""
+        assert label in self.le.classes_, "Make sure label is a valid class"
+        label = self.le.transform([label])
+
         noise = torch.randn(1, self.nz, device=self.device)
-        processed_label = torch.zeros([1, 10], dtype=torch.uint8, device='cpu')
+        processed_label = torch.zeros([1, self.nc], dtype=torch.uint8, device='cpu')
         label = torch.full((1, 1), label, dtype=torch.int64)
         processed_label = processed_label.scatter(1, label, 1).float().to(self.device)
-        output = self.netG(noise, processed_label).view(28, 28).detach().cpu().numpy()
+
+        self.netG.eval()
+        with torch.no_grad():
+            output = self.netG(noise, processed_label).view(28, 28).detach().cpu().numpy()
+
         plt.imshow(output, cmap='gray')
         plt.show()
 
@@ -213,7 +227,7 @@ class ImageCGAN(CGANUtils):
         self.netG.eval()
         with torch.no_grad():
             fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
-        return vutils.make_grid(tensor=fixed_imgs, nrow=10, normalize=True).detach().cpu()
+        return vutils.make_grid(tensor=fixed_imgs, nrow=self.grid_nrow, normalize=True).detach().cpu()
 
     def show_grid(self, index):
         """
@@ -268,16 +282,16 @@ class ImageCGAN(CGANUtils):
         self.plot_progress(benchmark_acc=benchmark_acc, show=show, save=save)
 
         self.build_gif(path=save)
-        self.netG.build_hist_gif(path=save, net="Generator")
-        self.netD.build_hist_gif(path=save, net="Discriminator")
+        self.netG.build_hist_gif(path=save)
+        self.netD.build_hist_gif(path=save)
 
         self.plot_training_plots(show=show, save=save)
 
-        self.netG.plot_layer_scatters(title="Generator", show=show, save=save)
-        self.netD.plot_layer_scatters(title="Discriminator", show=show, save=save)
+        self.netG.plot_layer_scatters(show=show, save=save)
+        self.netD.plot_layer_scatters(show=show, save=save)
 
-        self.netG.plot_layer_hists(title="Generator", show=show, save=save)
-        self.netD.plot_layer_hists(title="Discriminator", show=show, save=save)
+        self.netG.plot_layer_hists(show=show, save=save)
+        self.netD.plot_layer_hists(show=show, save=save)
 
         self.troubleshoot_discriminator(show=show, save=save)
         self.troubleshoot_evaluator(real_netE=real_netE, show=show, save=save)
@@ -324,11 +338,11 @@ class ImageCGAN(CGANUtils):
 
     def troubleshoot_discriminator(self, exit_early_iters=1000, gen=None, show=True, save=None):
         """
-        Produce several 10x10 grids of examples of interest for troubleshooting the model
-        1. 10x10 grid of generated examples discriminator labeled as fake.
-        2. 10x10 grid of generated examples discriminator labeled as real.
-        3. 10x10 grid of real examples discriminator labeled as fake.
-        4. 10x10 grid of real examples discriminator labeled as real.
+        Produce several nrow x nc grids of examples of interest for troubleshooting the model
+        1. Grid of generated examples discriminator labeled as fake.
+        2. Grid of generated examples discriminator labeled as real.
+        3. Grid of real examples discriminator labeled as fake.
+        4. Grid of real examples discriminator labeled as real.
         :param exit_early_iters: Number of iterations to exit after if not enough images are found for grids 1 and 2
         :param gen: Generator to use for grids 3 and 4
         :param show: Whether to show the plots
@@ -343,8 +357,10 @@ class ImageCGAN(CGANUtils):
         grid1, grid2 = self.build_grid1_and_grid2(exit_early_iters=exit_early_iters)
         grid3, grid4 = self.build_grid3_and_grid4(gen=gen)
 
-        grid1, grid2 = vutils.make_grid(tensor=grid1, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid2, nrow=10, normalize=True).detach().cpu()
-        grid3, grid4 = vutils.make_grid(tensor=grid3, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid4, nrow=10, normalize=True).detach().cpu()
+        grid1 = vutils.make_grid(tensor=grid1, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid2 = vutils.make_grid(tensor=grid2, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid3 = vutils.make_grid(tensor=grid3, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid4 = vutils.make_grid(tensor=grid4, nrow=self.grid_nrow, normalize=True).detach().cpu()
 
         f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
@@ -377,11 +393,11 @@ class ImageCGAN(CGANUtils):
 
     def troubleshoot_evaluator(self, real_netE, show=True, save=None):
         """
-        Produce several 10x10 grids of examples of interest for troubleshooting the model
-        5. 10x10 grid of real examples that the evaluator failed to identify correctly (separate plot).
-        6. 10x10 grid of what the evaluator THOUGHT each example in grid 5 should be.
-        7. 10x10 grid of misclassified examples by model trained on real data.
-        8. 10x10 grid of what the evaluator THOUGHT each example in grid 7 should be.
+        Produce several nrow x nc grids of examples of interest for troubleshooting the model
+        5. Grid of real examples that the evaluator failed to identify correctly (separate plot).
+        6. Grid of what the evaluator THOUGHT each example in grid 5 should be.
+        7. Grid of misclassified examples by model trained on real data.
+        8. Grid of what the evaluator THOUGHT each example in grid 7 should be.
         :param show: Whether to show the plots
         :param save: Where to save the plots. If set to None default path is used. If false, not saved.
         """
@@ -391,8 +407,10 @@ class ImageCGAN(CGANUtils):
         grid5, grid6 = self.build_eval_grids(netE=self.netE)
         grid7, grid8 = self.build_eval_grids(netE=real_netE)
 
-        grid5, grid6 = vutils.make_grid(tensor=grid5, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid6, nrow=10, normalize=True).detach().cpu()
-        grid7, grid8 = vutils.make_grid(tensor=grid7, nrow=10, normalize=True).detach().cpu(), vutils.make_grid(tensor=grid8, nrow=10, normalize=True).detach().cpu()
+        grid5 = vutils.make_grid(tensor=grid5, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid6 = vutils.make_grid(tensor=grid6, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid7 = vutils.make_grid(tensor=grid7, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid8 = vutils.make_grid(tensor=grid8, nrow=self.grid_nrow, normalize=True).detach().cpu()
 
         f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
@@ -429,21 +447,21 @@ class ImageCGAN(CGANUtils):
         self.netD.eval()
         bs = 128  # Seems to be a good number with training above.
 
-        grid1 = torch.zeros(100, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid2 = torch.zeros(100, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid1 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid2 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid1_counts = {}  # Represents the number of each class acquired so far for this grid
         grid2_counts = {}
 
-        for i in range(10):
+        for i in range(self.nc):
             grid1_counts[i] = 0
             grid2_counts[i] = 0
 
         count = 0
 
-        while not (all(x == 10 for x in grid1_counts.values()) and all(x == 10 for x in grid2_counts.values())) and count < exit_early_iters:
+        while not (all(x == self.grid_nrow for x in grid1_counts.values()) and all(x == self.grid_nrow for x in grid2_counts.values())) and count < exit_early_iters:
             noise = torch.randn(bs, self.nz, device=self.device)
-            random_labels = convert_y_to_one_hot(torch.from_numpy(np.random.randint(0, 10, bs))).to(self.device).type(torch.float32)
+            random_labels = convert_y_to_one_hot(y=torch.from_numpy(np.random.randint(0, self.nc, bs)), nc=self.nc).to(self.device).type(torch.float32)
 
             with torch.no_grad():
                 fakes = self.netG(noise, random_labels)
@@ -453,11 +471,11 @@ class ImageCGAN(CGANUtils):
                 grid1_contenders = fakes[(random_labels[:, i] == 1) * (fwd[:, 0] < 0.5)]
                 grid2_contenders = fakes[(random_labels[:, i] == 1) * (fwd[:, 0] > 0.5)]
 
-                grid1_retain = min(10 - grid1_counts[i], len(grid1_contenders))
-                grid2_retain = min(10 - grid2_counts[i], len(grid2_contenders))
+                grid1_retain = min(self.grid_nrow - grid1_counts[i], len(grid1_contenders))
+                grid2_retain = min(self.grid_nrow - grid2_counts[i], len(grid2_contenders))
 
-                grid1[(i * 10) + grid1_counts[i]:(i * 10) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
-                grid2[(i * 10) + grid2_counts[i]:(i * 10) + grid2_counts[i] + grid2_retain] = grid2_contenders[:grid2_retain]
+                grid1[(i * self.grid_nrow) + grid1_counts[i]:(i * self.grid_nrow) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                grid2[(i * self.grid_nrow) + grid2_counts[i]:(i * self.grid_nrow) + grid2_counts[i] + grid2_retain] = grid2_contenders[:grid2_retain]
 
                 grid1_counts[i] += grid1_retain
                 grid2_counts[i] += grid2_retain
@@ -473,13 +491,13 @@ class ImageCGAN(CGANUtils):
         """
         self.netD.eval()
 
-        grid3 = torch.zeros(100, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid4 = torch.zeros(100, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid3 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid4 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid3_counts = {}  # Represents the number of each class acquired so far for this grid
         grid4_counts = {}
 
-        for i in range(10):
+        for i in range(self.nc):
             grid3_counts[i] = 0
             grid4_counts[i] = 0
 
@@ -493,17 +511,17 @@ class ImageCGAN(CGANUtils):
                 grid3_contenders = x[(y[:, i] == 1) * (fwd[:, 0] < 0.5)]
                 grid4_contenders = x[(y[:, i] == 1) * (fwd[:, 0] > 0.5)]
 
-                grid3_retain = min(10 - grid3_counts[i], len(grid3_contenders))
-                grid4_retain = min(10 - grid4_counts[i], len(grid4_contenders))
+                grid3_retain = min(self.grid_nrow - grid3_counts[i], len(grid3_contenders))
+                grid4_retain = min(self.grid_nrow - grid4_counts[i], len(grid4_contenders))
 
-                grid3[(i * 10) + grid3_counts[i]:(i * 10) + grid3_counts[i] + grid3_retain] = grid3_contenders[:grid3_retain]
-                grid4[(i * 10) + grid4_counts[i]:(i * 10) + grid4_counts[i] + grid4_retain] = grid4_contenders[:grid4_retain]
+                grid3[(i * self.grid_nrow) + grid3_counts[i]:(i * self.grid_nrow) + grid3_counts[i] + grid3_retain] = grid3_contenders[:grid3_retain]
+                grid4[(i * self.grid_nrow) + grid4_counts[i]:(i * self.grid_nrow) + grid4_counts[i] + grid4_retain] = grid4_contenders[:grid4_retain]
 
                 grid3_counts[i] += grid3_retain
                 grid4_counts[i] += grid4_retain
 
                 # Exit early if grid filled up
-                if all(x == 10 for x in grid3_counts.values()) and all(x == 10 for x in grid4_counts.values()):
+                if all(x == self.grid_nrow for x in grid3_counts.values()) and all(x == self.grid_nrow for x in grid4_counts.values()):
                     return grid3, grid4
 
         return grid3, grid4
@@ -512,12 +530,12 @@ class ImageCGAN(CGANUtils):
         """Construct grids 5-8 for troubleshoot_evaluator method"""
         netE.eval()
 
-        grid1 = torch.zeros(100, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid2 = torch.zeros(100, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid1 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid2 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid1_counts = {}  # Represents the number of each class acquired so far for this grid
 
-        for i in range(10):
+        for i in range(self.grid_nrow):
             grid1_counts[i] = 0
 
         for x, y in self.test_gen:
@@ -526,7 +544,7 @@ class ImageCGAN(CGANUtils):
             with torch.no_grad():
                 fwd = netE(x)
 
-            for i in range(10):
+            for i in range(self.grid_nrow):
                 grid1_contenders = x[(torch.argmax(y, -1) != torch.argmax(fwd, -1)) * (torch.argmax(y, -1) == i)]
 
                 if len(grid1_contenders) > 0:
@@ -534,17 +552,18 @@ class ImageCGAN(CGANUtils):
 
                     grid2_contenders = torch.zeros(0, self.num_channels, self.x_dim[0], self.x_dim[1]).to(self.device)
                     for mistake in grid1_intended:
-                        grid2_contenders = torch.cat((grid2_contenders, x[torch.argmax(y, -1) == mistake][0].view(-1, self.num_channels, self.x_dim[0], self.x_dim[1])), dim=0)
+                        grid2_contenders = torch.cat((grid2_contenders,
+                                                      x[torch.argmax(y, -1) == mistake][0].view(-1, self.num_channels, self.x_dim[0], self.x_dim[1])), dim=0)
 
-                    grid1_retain = min(10 - grid1_counts[i], len(grid1_contenders))
+                    grid1_retain = min(self.grid_nrow - grid1_counts[i], len(grid1_contenders))
 
-                    grid1[(i * 10) + grid1_counts[i]:(i * 10) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
-                    grid2[(i * 10) + grid1_counts[i]:(i * 10) + grid1_counts[i] + grid1_retain] = grid2_contenders[:grid1_retain]
+                    grid1[(i * self.grid_nrow) + grid1_counts[i]:(i * self.grid_nrow) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                    grid2[(i * self.grid_nrow) + grid1_counts[i]:(i * self.grid_nrow) + grid1_counts[i] + grid1_retain] = grid2_contenders[:grid1_retain]
 
                     grid1_counts[i] += grid1_retain
 
                 # Exit early if grid filled up
-                if all(x == 10 for x in grid1_counts.values()):
+                if all(x == self.grid_nrow for x in grid1_counts.values()):
                     return grid1, grid2
 
         return grid1, grid2
@@ -559,20 +578,21 @@ class ImageCGAN(CGANUtils):
         :return: torch tensor of image (x_dim[0] x x_dim[1])
         """
         assert gen in {self.train_gen, self.val_gen, self.test_gen, self.netG}, "Please use a valid generator (train/val/test/generator)"
-        assert net in {"D", "E"}, "Please use a valid net ('D' or 'E')"
-        assert label in range(self.nc), "Please use a valid label #"
+        assert net in {self.netD, self.netE}, "Please use a valid net (netD or netE)"
         assert mistake in {True, False}, "Mistake should be True or False"
+        assert label in self.le.classes_, "Make sure label is a valid class"
+
+        label = self.le.transform([label])
 
         bs = 128
 
-        subnet = self.netD if net == "D" else self.netE
-        subnet.eval()
+        net.eval()
 
         while True:  # Search until a match is found
             # Generate examples
             if gen == self.netG:
                 noise = torch.randn(bs, self.nz, device=self.device)
-                y = convert_y_to_one_hot(torch.full((bs, 1), label, dtype=torch.int64)).to(self.device).type(torch.float32)
+                y = convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
 
                 with torch.no_grad():
                     x = self.netG(noise, y)
@@ -581,19 +601,19 @@ class ImageCGAN(CGANUtils):
                 iterator = gen.__iter__()
                 x, y = next(iterator)
                 x, y = x.to(self.device), y.type(torch.float32).to(self.device)
-                intended_y = convert_y_to_one_hot(torch.full((bs, 1), label, dtype=torch.int64)).to(self.device).type(torch.float32)
+                intended_y = convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
                 boolz = torch.argmax(y, -1) == torch.argmax(intended_y, -1)
                 x, y = x[boolz], y[boolz]
 
             with torch.no_grad():
-                if net == "D":
-                    fwd = subnet(x, y)
+                if net == self.netD:
+                    fwd = net(x, y)
                 else:
-                    fwd = subnet(x)
+                    fwd = net(x)
 
             # Check if conditions are met and exit, otherwise continue.
             # netD and incorrect
-            if net == "D":
+            if net == self.netD:
                 if mistake:
                     if gen == self.netG:  # Incorrect means classifying as real
                         contenders = x[fwd > 0.5]
@@ -621,18 +641,20 @@ class ImageCGAN(CGANUtils):
         Wrapper function for find_particular_img and draw_cam
         :param gen: Generator to use. netG is a valid generator to use for fake data.
         :param net: Network to use. Either "D" or "E".
-        :param label: Label to return (0-9)
+        :param label: Label to return
         :param mistake: Whether the example should be a mistake (True or False)
         :param show: Whether to show the image
         :param path: Path to create image file. Needs full file name. Should end in .jpg
         """
         assert path.split(".")[-1] == "jpg", "Please make sure path ends in '.jpg'"
+        assert label in self.le.classes_, "Make sure label is a valid class"
 
         img = self.find_particular_img(gen=gen, net=net, label=label, mistake=mistake)
 
         real = gen != self.netG
 
         if net == "D":
+            label = self.le.transform([label])
             self.netD.draw_cam(img=img, label=label, path=path, show=show, real=real)
         else:
             self.netE.draw_cam(img=img, path=path, show=show, real=real)

@@ -7,7 +7,7 @@ import numpy as np
 
 # Generator class
 class ImageNetG(nn.Module, NetUtils):
-    def __init__(self, nz, nf, num_channels, path, x_dim, nc, device, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
+    def __init__(self, nz, nf, num_channels, path, x_dim, nc, device, grid_nrow, lr=2e-4, beta1=0.5, beta2=0.999, wd=0):
         super().__init__()
         NetUtils.__init__(self)
         self.name = "Generator"
@@ -22,11 +22,11 @@ class ImageNetG(nn.Module, NetUtils):
         self.nf = nf
         self.epoch = 0
 
-        self.fixed_count_per_label = 10
-        self.fixed_noise = torch.randn(self.fixed_count_per_label * nc, nz, device=self.device)  # 10x10, 10 examples of each of the 10 labels
+        self.grid_nrow = grid_nrow
+        self.fixed_noise = torch.randn(self.grid_nrow * self.nc, self.nz, device=self.device)
         self.fixed_labels = self.init_fixed_labels().to(self.device)
 
-        # Layers
+        # Layers  # TODO: Somehow make this work for any image input size...Write a clever loop.
         # Noise with one-hot encoded category conditional inputs
         self.ct1 = nn.ConvTranspose2d(in_channels=self.nz + self.nc, out_channels=self.nf*2, kernel_size=7, stride=1, padding=0, bias=True)
         self.ct1_bn = nn.BatchNorm2d(self.nf*2)
@@ -56,10 +56,10 @@ class ImageNetG(nn.Module, NetUtils):
         self.Avg_G_fakes = []  # Store D_G_z2 across epochs
 
     def init_fixed_labels(self):
-        tmp = torch.empty((self.nc * self.fixed_count_per_label, 1), dtype=torch.int64)
+        tmp = torch.empty((self.grid_nrow * self.nc, 1), dtype=torch.int64)
         for i in range(self.nc):
-            tmp[i * self.fixed_count_per_label:((i + 1) * self.fixed_count_per_label), ] = torch.full((self.fixed_count_per_label, 1), i)
-        fixed_labels = torch.zeros(self.nc * self.fixed_count_per_label, self.nc)
+            tmp[i * self.grid_nrow:((i + 1) * self.grid_nrow), ] = torch.full((self.grid_nrow, 1), i)
+        fixed_labels = torch.zeros(self.nc * self.grid_nrow, self.nc)
         fixed_labels.scatter_(1, tmp, 1)
         return fixed_labels
 

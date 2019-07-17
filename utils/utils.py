@@ -382,3 +382,18 @@ def print_dc_config(cfg):
     print("\nCGAN Class Initialization Parameters:")  # See the config file for more detail behind what these choices represent
     for key, value in cfg.CGAN_INIT_PARAMS.items():
         print(key + ": " + str(value))
+
+
+def encode_y(y):
+    """
+    Encodes a vector of labels to be one hot encoded and saves the encoders for inverse transformations
+    :param y: Vector of labels
+    :return: Tuple of label encoded and one hot encoded vector, the fitted label encoder, and the fitted one hot encoder
+    """
+    le = LabelEncoder()
+    y = le.fit_transform(y)
+    y = y.reshape(-1, 1)
+    ohe = OneHotEncoder(sparse=False)
+    y = ohe.fit_transform(y)
+
+    return y, le, ohe

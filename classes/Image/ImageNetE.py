@@ -15,7 +15,7 @@ import matplotlib
 
 # Evaluator class
 class ImageNetE(nn.Module, NetUtils):
-    def __init__(self, train_gen, val_gen, test_gen, device, path, x_dim, num_channels, nc, lr, beta1, beta2, wd):
+    def __init__(self, train_gen, val_gen, test_gen, device, path, x_dim, num_channels, nc, le, lr, beta1, beta2, wd):
         super().__init__()
         self.name = "Evaluator"
 
@@ -23,6 +23,7 @@ class ImageNetE(nn.Module, NetUtils):
         self.nc = nc
         self.nf = 10  # Completely arbitrary. Works well for now.
         self.x_dim = x_dim
+        self.le = le
 
         # Generators
         self.train_gen = train_gen
@@ -31,7 +32,7 @@ class ImageNetE(nn.Module, NetUtils):
 
         self.device = device
 
-        # Layers
+        # Layers  # TODO: Somehow make this work for any image input size...Write a clever loop.
         self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.nf, kernel_size=5, stride=1, padding=2, bias=True)
         self.cn1_bn = nn.BatchNorm2d(10)
         self.cn2 = nn.Conv2d(in_channels=self.nf, out_channels=self.nf*2, kernel_size=5, stride=1, padding=2, bias=True)
@@ -132,14 +133,13 @@ class ImageNetE(nn.Module, NetUtils):
 
     def classification_stats(self, title='', show=True, save=None):
         """Return a confusion matrix, classification report, and plots/saves a heatmap confusion matrix on the predictions"""
-        self.eval()
-
         if save is None:
             save = self.path
 
         ground_truth = torch.empty(size=(0, 0), dtype=torch.int64, device=self.device).view(-1)
         preds = torch.empty_like(ground_truth)
 
+        self.eval()
         with torch.no_grad():
             for batch, labels in self.test_gen:
                 batch, labels = batch.to(self.device), labels.to(self.device)
@@ -174,11 +174,11 @@ class ImageNetE(nn.Module, NetUtils):
         :param show: Whether to show the image
         :return: Pair of images, side by side, left image is drawn over, right image is original
         """
-        self.eval()
-
         # Preprocess inputs
         img = img.to(self.device)
         img = img.view(-1, 1, self.x_dim[0], self.x_dim[1])
+
+        self.eval()
 
         pred = self.forward(img)
         pred[:, pred.argmax(1)].backward()
@@ -235,7 +235,8 @@ class ImageNetE(nn.Module, NetUtils):
         plt.imshow(img, cmap='gray')
 
         real_str = 'Real' if real else 'Fake'
-        sup = 'Evaluator Gradient Class Activation Map\n\n' + real_str + ' image predicted to be ' + str(pred.argmax(1).detach().cpu().numpy().take(0))
+        pred_index = pred.argmax(1).detach().cpu().numpy().take(0)
+        sup = 'Evaluator Gradient Class Activation Map\n\n' + real_str + ' image predicted to be ' + str(self.le.inverse_transform(pred_index).take(0))
         st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
         f.tight_layout()
         st.set_y(0.96)

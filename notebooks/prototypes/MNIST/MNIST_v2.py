@@ -1,13 +1,14 @@
-from classes.MNIST.CGAN import CGAN
+from classes.Image.ImageCGAN import ImageCGAN
 import configs.MNIST as cfg
 from utils.utils import *
 from utils.data_loading import *
 from utils.MNIST import *
-from classes.MNIST.MNIST_Dataset import MNIST_Dataset, Augmented_MNIST_Dataset, Generator_Augmented_MNIST_Dataset
+from classes.Image.ImageDataset import ImageDataset, GeneratedImageDataset
 from torch.utils import data
 import os
 import pickle
 import random
+from utils.ImageUtils import img_dataset_preprocesser
 
 
 # Set random seem for reproducibility
@@ -21,7 +22,7 @@ exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
 # Import data and split
 mnist = load_processed_dataset('MNIST')
 x_comb, y_comb = torch.cat((mnist[0][0], mnist[1][0]), 0).numpy(), torch.cat((mnist[0][1], mnist[1][1]), 0).numpy()
-x_train, y_train, x_val, y_val, x_test, y_test = train_val_test_split(x_comb, y_comb, cfg.SPLITS, cfg.MANUAL_SEED)
+x_train, y_train, x_val, y_val, x_test, y_test, le, ohe = img_dataset_preprocesser(x=x_comb, y=y_comb, splits=cfg.SPLITS, seed=cfg.MANUAL_SEED)
 
 # Automatically determine these parameters
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")  # GPU if exists, else CPU
@@ -31,30 +32,28 @@ x_dim = (x_train.shape[1], x_train.shape[2])  # Dimensions of input images
 print("Train Set Size:", x_train.shape[0])
 print("Validation Set Size:", x_val.shape[0])
 print("Test Set Size:", x_test.shape[0])
-print("Each image size:", x_test.shape[1], "x", x_test.shape[2])
-
-# Print an example image
-print(y_train[2])
-# plt.imshow(x_train[2], cmap='gray')
+print("Each image size:", x_dim[0], "x", x_dim[1])
 
 # Define generators
-training_set = MNIST_Dataset(x_train, y_train)
-training_generator = data.DataLoader(training_set, **cfg.TRAINING_PARAMS)
+train_dataset = ImageDataset(x=x_train, y=y_train)
+train_gen = data.DataLoader(train_dataset, **cfg.TRAINING_PARAMS)
 
-validation_set = MNIST_Dataset(x_val, y_val)
-validation_generator = data.DataLoader(validation_set, **cfg.TRAINING_PARAMS)
+val_dataset = ImageDataset(x=x_val, y=y_val)
+val_gen = data.DataLoader(val_dataset, **cfg.TRAINING_PARAMS)
 
-test_set = MNIST_Dataset(x_test, y_test)
-test_generator = data.DataLoader(test_set, **cfg.TRAINING_PARAMS)
+test_dataset = ImageDataset(x=x_test, y=y_test)
+test_gen = data.DataLoader(test_dataset, **cfg.TRAINING_PARAMS)
 
 # Define GAN
-CGAN = CGAN(train_gen=training_generator,
-            val_gen=validation_generator,
-            test_gen=test_generator,
-            device=device,
-            x_dim=x_dim,
-            path=exp_path,
-            **cfg.CGAN_INIT_PARAMS)
+CGAN = ImageCGAN(train_gen=train_gen,
+                 val_gen=val_gen,
+                 test_gen=test_gen,
+                 le=le,
+                 ohe=ohe,
+                 device=device,
+                 x_dim=x_dim,
+                 path=exp_path,
+                 **cfg.CGAN_INIT_PARAMS)
 
 # Check performance on real data
 try:
@@ -89,13 +88,13 @@ with open(exp_path + "/CGAN.pkl", 'rb') as f:
 
 # Test Grad CAM
 x, y = CGAN.test_gen.__iter__().__next__()
-CGAN.netD.draw_cam(img=x[0], label=y[0], path=exp_path+"/plswork.jpg")
+CGAN.netD.draw_cam(img=x[0], label=y[0], path=exp_path + "/plswork.jpg")
 
 CGAN.init_evaluator(CGAN.train_gen, CGAN.val_gen)
-CGAN.netE.draw_cam(img=x[1], path=exp_path+"/plswork2.jpg")
+CGAN.netE.draw_cam(img=x[1], path=exp_path + "/plswork2.jpg")
 
 x = CGAN.find_particular_img(CGAN.train_gen, "D", 3, True)
-CGAN.netD.draw_cam(img=x, label=3, path=exp_path+"/plswork.jpg")
+CGAN.netD.draw_cam(img=x, label=3, path=exp_path + "/plswork.jpg")
 
 CGAN.draw_cam(gen=CGAN.train_gen, net="E", label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
 
@@ -104,12 +103,3 @@ CGAN.draw_architecture(net=CGAN.netG, show=True, save="test")
 CGAN.draw_architecture(net=CGAN.netD, show=True, save="test")
 CGAN.draw_architecture(net=CGAN.netE, show=True, save="test")
 
-# Test augmented dataset
-augmented_training_set = Augmented_MNIST_Dataset(x_train, y_train, 10000)
-augmented_training_generator = data.DataLoader(augmented_training_set, **cfg.TRAINING_PARAMS)
-
-generator_augmented_training_set = Generator_Augmented_MNIST_Dataset(x_train, y_train, 10000, CGAN.netG)
-generator_augmented_training_generator = data.DataLoader(generator_augmented_training_set, **cfg.TRAINING_PARAMS)
-
-iterator = generator_augmented_training_generator.__iter__()
-x, y = next(iterator)

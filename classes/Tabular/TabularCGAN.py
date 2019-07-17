@@ -152,7 +152,7 @@ class TabularCGAN(CGANUtils):
         :return: Tuple of generated data and associated labels
         """
         noise = torch.randn(bs, self.nz, device=self.device)
-        fake_labels, output_labels = self.gen_labels(bs=bs, stratify=stratify)
+        fake_labels, output_labels = self.gen_labels(num=bs, stratify=stratify)
         fake_labels = fake_labels.to(self.device)
 
         self.netG.eval()
@@ -161,18 +161,18 @@ class TabularCGAN(CGANUtils):
 
         return fake_data, output_labels
 
-    def gen_labels(self, bs, stratify=None):
+    def gen_labels(self, num, stratify=None):
         """
         Generate labels for generating fake data
-        :param bs: Number of desired labels
+        :param num: Number of desired labels
         :param stratify: How to proportion out the labels. If None, a straight average is used.
         :return: Tuple of one hot encoded labels and the labels themselves
         """
         if stratify is None:
             stratify = [1 / self.nc for i in range(self.nc)]
-        counts = np.round(np.dot(stratify, bs), decimals=0).astype('int')
-        while np.sum(counts) != bs:
-            if np.sum(counts) > bs:
+        counts = np.round(np.dot(stratify, num), decimals=0).astype('int')
+        while np.sum(counts) != num:
+            if np.sum(counts) > num:
                 counts[random.choice(range(self.nc))] -= 1
             else:
                 counts[random.choice(range(self.nc))] += 1

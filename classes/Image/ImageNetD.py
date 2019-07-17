@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
-from utils.MNIST import convert_y_to_one_hot
+from utils.ImageUtils import convert_y_to_one_hot
 
 
 # Discriminator class
@@ -31,7 +31,7 @@ class ImageNetD(nn.Module, NetUtils):
 
         self.noise = GaussianNoise(device=self.device, sigma=noise)
 
-        # Convolutional layers
+        # Convolutional layers  # TODO: Somehow make this work for any image input size...Write a clever loop.
         # Image input size of num_channels x 28 x 28
         self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.nf, kernel_size=4, stride=2, padding=1, bias=True)
         self.cn1_bn = nn.BatchNorm2d(self.nf)
@@ -129,7 +129,7 @@ class ImageNetD(nn.Module, NetUtils):
         self.eval()
 
         # Preprocess inputs
-        label = convert_y_to_one_hot(torch.full((1, 1), label, dtype=torch.int64))
+        label = convert_y_to_one_hot(y=torch.full((1, 1), label, dtype=torch.int64), nc=self.nc)
         img, label = img.to(self.device), label.to(self.device)
         img = img.view(-1, 1, self.x_dim[0], self.x_dim[1])
         label = label.view(-1, self.nc).type(torch.float32)
