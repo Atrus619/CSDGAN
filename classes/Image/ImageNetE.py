@@ -1,16 +1,14 @@
-import torch.nn as nn
-import torch
 from classes.NetUtils import NetUtils
 import torch.optim as optim
-import numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
-import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import os
 from utils.utils import safe_mkdir
 import cv2
 import matplotlib
+from collections import OrderedDict
+from utils.ImageUtils import *
 
 
 # Evaluator class
@@ -22,6 +20,8 @@ class ImageNetE(nn.Module, NetUtils):
         self.path = path
         self.nc = nc
         self.nf = 10  # Completely arbitrary. Works well for now.
+        self.fc_features = 64  # Completely arbitrary also.
+        self.num_channels = num_channels
         self.x_dim = x_dim
         self.le = le
 
@@ -32,18 +32,18 @@ class ImageNetE(nn.Module, NetUtils):
 
         self.device = device
 
-        # Layers  # TODO: Somehow make this work for any image input size...Write a clever loop.
-        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.nf, kernel_size=5, stride=1, padding=2, bias=True)
-        self.cn1_bn = nn.BatchNorm2d(10)
-        self.cn2 = nn.Conv2d(in_channels=self.nf, out_channels=self.nf*2, kernel_size=5, stride=1, padding=2, bias=True)
-        self.cn2_bn = nn.BatchNorm2d(20)
+        # Layers
+        self.arch = OrderedDict()
+        self.final_conv_output = None
 
-        self.mp = nn.MaxPool2d(kernel_size=2, stride=2)
+        # FC layers - Initialized in assemble_architecture method
+        self.flattened_dim = None
+        self.fc1 = None
+        self.output = None
 
-        self.fc1 = nn.Linear(in_features=14 * 14 * 20, out_features=64)
-        self.output = nn.Linear(in_features=64, out_features=self.nc)
+        self.assemble_architecture(h=self.x_dim[0], w=self.x_dim[1])
 
-        # Activations
+        # Activations/Dropouts
         self.do2d = nn.Dropout2d(0.2)
         self.do1d = nn.Dropout(0.2)
         self.act = nn.LeakyReLU(0.2)
@@ -66,17 +66,24 @@ class ImageNetE(nn.Module, NetUtils):
         self.final_conv_output = None
 
     def forward(self, x):
-        x = self.do2d(self.act(self.cn1_bn(self.cn1(x))))
+        """
+        Deep Convolutional Network of Variable Image Size (on creation only)
+        Using Max Pooling for Downsampling
+        layer[0] = Conv2d
+        layer[1] = BatchNorm2d
+        layer[2] = MaxPool2d
+        """
+        for i, (layer_name, layer) in enumerate(self.arch.items()):
+            if i < (len(self.arch) - 1):
+                x = layer[2](self.do2d(self.act(layer[1](layer[0](x)))))
+            else:  # Handle final conv layer specially for grad CAM purposes
+                self.final_conv_output = layer[0](x)
+                self.final_conv_output.requires_grad_()
+                h = self.final_conv_output.register_hook(self.activations_hook)
+                # Continue
+                x = layer[2](self.do2d(self.act(layer[1](self.final_conv_output))))
 
-        # Register hook for Grad CAM
-        self.final_conv_output = self.cn2(x)
-        self.final_conv_output.requires_grad_()
-        h = self.final_conv_output.register_hook(self.activations_hook)
-
-        # Continue
-        x = self.do2d(self.act(self.cn2_bn(self.final_conv_output)))
-        x = self.mp(x)
-        x = x.view(-1, 14 * 14 * 20)
+        x = x.view(-1, self.flattened_dim)
         x = self.do1d(self.act(self.fc1(x)))
         return self.output(x)  # No softmax activation needed because it is built into CrossEntropyLoss in pytorch
 
@@ -187,7 +194,7 @@ class ImageNetE(nn.Module, NetUtils):
         activations = self.get_activations().detach()
 
         # Weight the channels by corresponding gradients
-        for i in range(self.nf*2):
+        for i in range(self.nf * 2):
             activations[:, i, :, :] *= pooled_gradients[i]
 
         # Average the channels of the activations
@@ -201,7 +208,7 @@ class ImageNetE(nn.Module, NetUtils):
         heatmap = heatmap.numpy()
 
         # Save original image
-        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy()*255
+        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy() * 255
         matplotlib.image.imsave(path, img_transformed, cmap='gray')
 
         # Read in image and cut pixels in half for visibility
@@ -246,3 +253,30 @@ class ImageNetE(nn.Module, NetUtils):
 
         if show:
             plt.show()
+
+    def assemble_architecture(self, h, w):
+        """Fills in an ordered dictionaries with tuples, one for the layers and one for the corresponding batch norm layers"""
+        h_best_crop, h_best_first, h_pow_2 = find_pow_2_arch(h)
+        w_best_crop, w_best_first, w_pow_2 = find_pow_2_arch(w)
+        assert (h_best_crop, w_best_crop) == (0, 0), "Crop not working properly"
+
+        # Conv Layers
+        num_intermediate_downsample_layers = max(h_pow_2, w_pow_2) - 1
+
+        h_rem, w_rem = self.x_dim - (h_best_crop, w_best_crop)
+        h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
+
+        h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+        self.arch['cn1'] = evaluator_cn2_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
+
+        # For the evaluator, we will use max pooling, so we will build layers that perform no downsampling
+        for i in range(num_intermediate_downsample_layers):
+            h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+            self.arch['cn' + str(i + 2)] = evaluator_cn2_block(h=h_curr, w=w_curr,
+                                                               in_channels=self.nf * 2 ** i,
+                                                               out_channels=self.nf * 2 ** (i + 1))
+
+        # FC Layers
+        self.flattened_dim = self.nf * 2 ** num_intermediate_downsample_layers * h_best_first * w_best_first
+        self.fc1 = nn.Linear(in_features=self.flattened_dim, out_features=self.fc_features)
+        self.output = nn.Linear(in_features=self.fc_features, out_features=self.nc)

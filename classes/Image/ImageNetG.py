@@ -1,8 +1,7 @@
-import torch.nn as nn
-import torch
 from classes.NetUtils import NetUtils
 import torch.optim as optim
-import numpy as np
+from collections import OrderedDict
+from utils.ImageUtils import *
 
 
 # Generator class
@@ -26,16 +25,11 @@ class ImageNetG(nn.Module, NetUtils):
         self.fixed_noise = torch.randn(self.grid_nrow * self.nc, self.nz, device=self.device)
         self.fixed_labels = self.init_fixed_labels().to(self.device)
 
-        # Layers  # TODO: Somehow make this work for any image input size...Write a clever loop.
-        # Noise with one-hot encoded category conditional inputs
-        self.ct1 = nn.ConvTranspose2d(in_channels=self.nz + self.nc, out_channels=self.nf*2, kernel_size=7, stride=1, padding=0, bias=True)
-        self.ct1_bn = nn.BatchNorm2d(self.nf*2)
-        # Intermediate size of (nf*2) x 7 x 7
-        self.ct2 = nn.ConvTranspose2d(in_channels=self.nf*2, out_channels=self.nf, kernel_size=5, stride=2, padding=2, output_padding=1, bias=True)
-        self.ct2_bn = nn.BatchNorm2d(self.nf)
-        # Intermediate size of (nf*1) x 14 x 14
-        self.output = nn.ConvTranspose2d(in_channels=self.nf, out_channels=self.num_channels, kernel_size=5, stride=2, padding=2, output_padding=1, bias=True)
-        # Output size of num_channels x 28 x 28
+        # Layers
+        self.arch = OrderedDict()
+        self.output = None  # Initialized in line below
+        self.assemble_architecture(h=self.x_dim[0], w=self.x_dim[1])
+
         # Activations
         self.act = nn.LeakyReLU(0.2)
         self.m = nn.Sigmoid()
@@ -65,14 +59,16 @@ class ImageNetG(nn.Module, NetUtils):
 
     def forward(self, noise, labels):
         """
-        Single dense hidden layer network.
-        :param noise: Random Noise vector Z
-        :param labels: Label embedding of labels
-        :return: MNIST img with values squashed by sigmoid to be between 0 and 1
+        Deep Convolutional Upsampling Network of Variable Image Size (on creation only)
+        layer[0] = ConvTranspose2d
+        layer[1] = BatchNorm2d
+        :param noise: Random Noise vector Z (must be float!)
+        :param labels: Label embedding of labels (must be float!)
+        :return: Image of dimensions num_channels x cropped image size with values squashed by sigmoid to be between 0 and 1
         """
         x = torch.cat([noise, labels], -1).view(-1, self.nz + self.nc, 1, 1)
-        x = self.act(self.ct1_bn(self.ct1(x)))
-        x = self.act(self.ct2_bn(self.ct2(x)))
+        for layer_name, layer in self.arch.items():
+            x = self.act(layer[1](layer[0](x)))
         return self.m(self.output(x))
 
     def train_one_step(self, output, label):
@@ -89,3 +85,27 @@ class ImageNetG(nn.Module, NetUtils):
         """Generator specific actions"""
         self.Avg_G_fakes.append(np.mean(self.D_G_z2))
         self.D_G_z2 = []
+
+    def assemble_architecture(self, h, w):
+        """Fills in an ordered dictionaries with tuples, one for the layers and one for the corresponding batch norm layers"""
+        h_best_crop, h_best_first, h_pow_2 = find_pow_2_arch(h)
+        w_best_crop, w_best_first, w_pow_2 = find_pow_2_arch(w)
+        assert (h_best_crop, w_best_crop) == (0, 0), "Crop not working properly"
+
+        num_intermediate_upsample_layers = max(h_pow_2, w_pow_2) - 1  # Not counting the final layer
+        self.arch['ct1'] = self.first_block(h=h_best_first, w=w_best_first, in_channels=self.nz + self.nc,
+                                            out_channels=self.nf * 2 ** num_intermediate_upsample_layers)
+        # Upsample by 2x until it is no longer necessary, then upsample by 1x
+        h_rem, w_rem = self.x_dim - (h_best_crop, w_best_crop)
+        h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
+        for i in range(num_intermediate_upsample_layers):
+            h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+            self.arch['ct' + str(i + 2)] = ct2_upsample_block(h=h_curr, w=w_curr,
+                                                              in_channels=self.nf * 2 ** (num_intermediate_upsample_layers - i),
+                                                              out_channels=self.nf * 2 ** (num_intermediate_upsample_layers - (i + 1)))
+        # Final layer
+        h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+        self.output, __ = ct2_upsample_block(h=h_curr, w=w_curr,
+                                             in_channels=self.nf,
+                                             out_channels=self.num_channels,
+                                             add_op=(h_best_crop, w_best_crop))

@@ -1,12 +1,9 @@
-import torch.nn as nn
-import torch
 from classes.NetUtils import NetUtils, GaussianNoise
 import torch.optim as optim
-import numpy as np
 import cv2
 import matplotlib
-import matplotlib.pyplot as plt
-from utils.ImageUtils import convert_y_to_one_hot
+from collections import OrderedDict
+from utils.ImageUtils import *
 
 
 # Discriminator class
@@ -24,6 +21,7 @@ class ImageNetD(nn.Module, NetUtils):
 
         self.nc = nc
         self.nf = nf
+        self.num_channels = num_channels
         self.x_dim = x_dim
         self.epoch = 0
         self.fc_labels_size = 128
@@ -31,19 +29,17 @@ class ImageNetD(nn.Module, NetUtils):
 
         self.noise = GaussianNoise(device=self.device, sigma=noise)
 
-        # Convolutional layers  # TODO: Somehow make this work for any image input size...Write a clever loop.
-        # Image input size of num_channels x 28 x 28
-        self.cn1 = nn.Conv2d(in_channels=num_channels, out_channels=self.nf, kernel_size=4, stride=2, padding=1, bias=True)
-        self.cn1_bn = nn.BatchNorm2d(self.nf)
-        # Intermediate size of nf x 14 x 14
-        self.cn2 = nn.Conv2d(in_channels=self.nf, out_channels=self.nf * 2, kernel_size=4, stride=2, padding=1, bias=True)
-        self.cn2_bn = nn.BatchNorm2d(self.nf * 2)
-        # Intermediate size of nf*2 x 7 x 7
+        # Convolutional layers
+        self.arch = OrderedDict()
+        self.final_conv_output = None
 
-        # FC layers
-        self.fc_labels = nn.Linear(in_features=self.nc, out_features=self.fc_labels_size, bias=True)
-        self.fc_agg = nn.Linear(in_features=self.nf * 2 * 7 * 7 + self.fc_labels_size, out_features=self.agg_size, bias=True)
-        self.fc_output = nn.Linear(in_features=self.agg_size, out_features=1, bias=True)
+        # FC layers - Initialized in assemble_architecture method
+        self.flattened_dim = None
+        self.fc_labels = None
+        self.fc_agg = None
+        self.fc_output = None
+
+        self.assemble_architecture(h=self.x_dim[0], w=self.x_dim[1])
 
         # Activations
         self.act = nn.LeakyReLU(0.2)
@@ -72,21 +68,26 @@ class ImageNetD(nn.Module, NetUtils):
 
     def forward(self, img, labels):
         """
-        :param img: Input image of size 28 x 28
+        Deep Convolutional Downsampling Network of Variable Image Size (on creation only)
+        layer[0] = Conv2d
+        layer[1] = BatchNorm2d
+        :param img: Input image of cropped size
         :param labels: Label embedding
         :return: Binary classification (sigmoid activation on a single unit hidden layer)
         """
-        img = self.noise(img)
-        x = self.act(self.cn1_bn(self.cn1(img)))
+        x = self.noise(img)
 
-        # Register hook for Grad CAM
-        self.final_conv_output = self.cn2(x)
-        self.final_conv_output.requires_grad_()
-        h = self.final_conv_output.register_hook(self.activations_hook)
+        for i, (layer_name, layer) in enumerate(self.arch.items()):
+            if i < (len(self.arch) - 1):
+                x = self.act(layer[1](layer[0](x)))
+            else:  # Handle final conv layer specially for grad CAM purposes
+                self.final_conv_output = layer[0](x)
+                self.final_conv_output.requires_grad_()
+                h = self.final_conv_output.register_hook(self.activations_hook)
+                # Continue
+                x = self.act(layer[1](self.final_conv_output))
 
-        # Continue
-        x = self.act(self.cn2_bn(self.final_conv_output))
-        x = x.view(-1, self.nf * 2 * 7 * 7)
+        x = x.view(-1, self.flattened_dim)
         y = self.act(self.fc_labels(labels))
         agg = torch.cat((x, y), 1)
         agg = self.act(self.fc_agg(agg))
@@ -141,7 +142,7 @@ class ImageNetD(nn.Module, NetUtils):
         activations = self.get_activations().detach()
 
         # Weight the channels by corresponding gradients
-        for i in range(self.nf*2):
+        for i in range(self.nf * 2):
             activations[:, i, :, :] *= pooled_gradients[i]
 
         # Average the channels of the activations
@@ -155,7 +156,7 @@ class ImageNetD(nn.Module, NetUtils):
         heatmap = heatmap.numpy()
 
         # Save original image
-        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy()*255
+        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy() * 255
         matplotlib.image.imsave(path, img_transformed, cmap='gray')
 
         # Read in image and cut pixels in half for visibility
@@ -199,3 +200,32 @@ class ImageNetD(nn.Module, NetUtils):
 
         if show:
             plt.show()
+
+    def assemble_architecture(self, h, w):
+        """Fills in an ordered dictionaries with tuples, one for the layers and one for the corresponding batch norm layers"""
+        h_best_crop, h_best_first, h_pow_2 = find_pow_2_arch(h)
+        w_best_crop, w_best_first, w_pow_2 = find_pow_2_arch(w)
+        assert (h_best_crop, w_best_crop) == (0, 0), "Crop not working properly"
+
+        # Conv Layers
+        num_intermediate_downsample_layers = max(h_pow_2, w_pow_2) - 1
+
+        h_rem, w_rem = self.x_dim - (h_best_crop, w_best_crop)
+        h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
+
+        h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+        self.arch['cn1'] = cn2_downsample_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
+
+        # Downsample by 2x until it is no longer necessary, then downsample by 1x
+        for i in range(num_intermediate_downsample_layers):
+            h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+            self.arch['cn' + str(i + 2)] = ct2_upsample_block(h=h_curr, w=w_curr,
+                                                              in_channels=self.nf * 2 ** i,
+                                                              out_channels=self.nf * 2 ** (i + 1))
+
+        # FC Layers
+        self.fc_labels = nn.Linear(in_features=self.nc, out_features=self.fc_labels_size, bias=True)
+        self.flattened_dim = self.nf * 2 ** num_intermediate_downsample_layers * h_best_first * w_best_first
+        self.fc_agg = nn.Linear(in_features=self.flattened_dim + self.fc_labels_size,
+                                out_features=self.agg_size, bias=True)
+        self.fc_output = nn.Linear(in_features=self.agg_size, out_features=1, bias=True)

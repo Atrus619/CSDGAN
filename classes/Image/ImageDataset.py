@@ -6,22 +6,39 @@
 4. FashionMNIST
 5. Add config printing utility
 6. Begin productionizing
-7. Build ImageDataset file
 8. Table of results for README
+9. Add Dropout?!?
+10. Fix hard-coded values throughout
+11. Stretch Goal: Add automatic augmentation to help ImageCGAN
 """
 
 from torch.utils import data
-from utils.MNIST import *
-import torch
 import random
+import torchvision.transforms as t
+from utils.ImageUtils import *
 
 
 class ImageDataset(data.Dataset):
     """Accepts input from img_dataset_preprocesser method"""
     def __init__(self, x, y):
+
+        # If image only has 1 channel, it may need to be reshaped
         if x.dim() == 3:
             x = x.reshape(-1, 1, x.shape[1], x.shape[2])
 
+        # Crop image for advantageous dimensions
+        h_best_crop, __, __ = find_pow_2_arch(x.shape[-2])
+        w_best_crop, __, __ = find_pow_2_arch(x.shape[-1])
+
+        transformer = t.Compose([
+            t.ToPILImage(),
+            t.CenterCrop((h_best_crop, w_best_crop)),
+            t.ToTensor()
+        ])
+
+        x = transformer(x)
+
+        # Finalize data set
         self.x, self.y = x, y
 
     def __len__(self):

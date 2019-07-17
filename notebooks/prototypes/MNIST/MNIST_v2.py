@@ -51,7 +51,6 @@ CGAN = ImageCGAN(train_gen=train_gen,
                  le=le,
                  ohe=ohe,
                  device=device,
-                 x_dim=x_dim,
                  path=exp_path,
                  **cfg.CGAN_INIT_PARAMS)
 
@@ -70,7 +69,7 @@ except RuntimeError:
 
 # Display final grid
 # CGAN.show_grid(-1)
-# show_real_grid(x_train, y_train)
+# show_real_grid(x_train, y_train) NEEDS FIXING
 
 # Generate sample images
 # CGAN.show_img(0)

@@ -14,7 +14,7 @@ import copy
 
 class ImageCGAN(CGANUtils):
     """CGAN for image-based data sets"""
-    def __init__(self, train_gen, val_gen, test_gen, device, x_dim, nc, nz, num_channels, sched_netG, path, le, ohe,
+    def __init__(self, train_gen, val_gen, test_gen, device, nc, nz, num_channels, sched_netG, path, le, ohe,
                  label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal,
                  netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
                  netD_nf, netD_lr, netD_beta1, netD_beta2, netD_wd,
@@ -28,7 +28,7 @@ class ImageCGAN(CGANUtils):
 
         # Initialize properties
         self.device = device
-        self.x_dim = x_dim
+        self.x_dim = self.extract_x_dim()
         self.nc = nc
         self.nz = nz
         self.num_channels = num_channels
@@ -658,3 +658,8 @@ class ImageCGAN(CGANUtils):
             self.netD.draw_cam(img=img, label=label, path=path, show=show, real=real)
         else:
             self.netE.draw_cam(img=img, path=path, show=show, real=real)
+
+    def extract_x_dim(self):
+        iterator = iter(self.train_gen)
+        x, __ = next(iterator)
+        return x.shape[-2], x.shape[-1]
