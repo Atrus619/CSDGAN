@@ -26,6 +26,11 @@ class ImageCGAN(CGANUtils):
         self.path = path  # default file path for saved objects
         self.init_paths()
 
+        # Data generator
+        self.train_gen = train_gen
+        self.val_gen = val_gen
+        self.test_gen = test_gen
+
         # Initialize properties
         self.device = device
         self.x_dim = self.extract_x_dim()
@@ -46,11 +51,6 @@ class ImageCGAN(CGANUtils):
         self.discrim_noise = discrim_noise
         self.discrim_noise_linear_anneal = discrim_noise_linear_anneal
         self.dn_rate = 0.0
-
-        # Data generator
-        self.train_gen = train_gen
-        self.val_gen = val_gen
-        self.test_gen = test_gen
 
         # Evaluator properties
         self.fake_shuffle = True
@@ -84,13 +84,14 @@ class ImageCGAN(CGANUtils):
         self.fake_label = 0
         self.stored_loss = []
         self.stored_acc = []
+
         self.fixed_imgs = [self.gen_fixed_img_grid()]
 
     def train_gan(self, num_epochs, print_freq, eval_freq=None):
         """
         Primary method for training
         :param num_epochs: Desired number of epochs to train for
-        :param print_freq: How freqently to print out training statistics (i.e., freq of 5 will result in information being printed every 5 epochs)
+        :param print_freq: How frequently to print out training statistics (i.e., freq of 5 will result in information being printed every 5 epochs)
         :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur. Evaluation takes a significant amount of time.
         """
         total_epochs = self.epoch + num_epochs
@@ -164,6 +165,7 @@ class ImageCGAN(CGANUtils):
         """
         self.netE = ImageNetE(train_gen=train_gen, val_gen=val_gen, test_gen=self.test_gen, device=self.device, x_dim=self.x_dim, le=self.le,
                               num_channels=self.num_channels, nc=self.nc, path=self.path, **self.netE_params).to(self.device)
+        self.nets = {self.netG, self.netD, self.netE}
 
     def init_fake_gen(self):
         # Initialize fake training set and validation set to be same size
@@ -572,7 +574,7 @@ class ImageCGAN(CGANUtils):
         """
         Searches through the generator to find a single image of interest based on search parameters
         :param gen: Generator to use. netG is a valid generator to use for fake data.
-        :param net: Network to use. Either "D" or "E".
+        :param net: Network to use. Either netD or netE.
         :param label: Label to return (0-9)
         :param mistake: Whether the example should be a mistake (True or False)
         :return: torch tensor of image (x_dim[0] x x_dim[1])
@@ -582,7 +584,7 @@ class ImageCGAN(CGANUtils):
         assert mistake in {True, False}, "Mistake should be True or False"
         assert label in self.le.classes_, "Make sure label is a valid class"
 
-        label = self.le.transform([label])
+        label = self.le.transform([label]).take(0)
 
         bs = 128
 

@@ -243,7 +243,7 @@ class ImageNetE(nn.Module, NetUtils):
 
         real_str = 'Real' if real else 'Fake'
         pred_index = pred.argmax(1).detach().cpu().numpy().take(0)
-        sup = 'Evaluator Gradient Class Activation Map\n\n' + real_str + ' image predicted to be ' + str(self.le.inverse_transform(pred_index).take(0))
+        sup = 'Evaluator Gradient Class Activation Map\n\n' + real_str + ' image predicted to be ' + str(self.le.inverse_transform([pred_index]).take(0))
         st = f.suptitle(sup, fontsize='x-large', fontweight='bold')
         f.tight_layout()
         st.set_y(0.96)
@@ -263,11 +263,14 @@ class ImageNetE(nn.Module, NetUtils):
         # Conv Layers
         num_intermediate_downsample_layers = max(h_pow_2, w_pow_2) - 1
 
-        h_rem, w_rem = self.x_dim - (h_best_crop, w_best_crop)
+        h_rem, w_rem = self.x_dim[0] - h_best_crop, self.x_dim[1] - w_best_crop
         h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
 
         h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
         self.arch['cn1'] = evaluator_cn2_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
+        self.add_module('cn1', self.arch['cn1'][0])
+        self.add_module('cn1_bn', self.arch['cn1'][1])
+        self.add_module('cn1_mp', self.arch['cn1'][2])
 
         # For the evaluator, we will use max pooling, so we will build layers that perform no downsampling
         for i in range(num_intermediate_downsample_layers):
@@ -275,6 +278,9 @@ class ImageNetE(nn.Module, NetUtils):
             self.arch['cn' + str(i + 2)] = evaluator_cn2_block(h=h_curr, w=w_curr,
                                                                in_channels=self.nf * 2 ** i,
                                                                out_channels=self.nf * 2 ** (i + 1))
+            self.add_module('cn' + str(i + 2), self.arch['cn' + str(i + 2)][0])
+            self.add_module('cn' + str(i + 2) + '_bn', self.arch['cn' + str(i + 2)][1])
+            self.add_module('cn' + str(i + 2) + '_mp', self.arch['cn' + str(i + 2)][2])
 
         # FC Layers
         self.flattened_dim = self.nf * 2 ** num_intermediate_downsample_layers * h_best_first * w_best_first

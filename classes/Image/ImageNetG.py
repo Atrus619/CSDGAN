@@ -93,16 +93,22 @@ class ImageNetG(nn.Module, NetUtils):
         assert (h_best_crop, w_best_crop) == (0, 0), "Crop not working properly"
 
         num_intermediate_upsample_layers = max(h_pow_2, w_pow_2) - 1  # Not counting the final layer
-        self.arch['ct1'] = self.first_block(h=h_best_first, w=w_best_first, in_channels=self.nz + self.nc,
-                                            out_channels=self.nf * 2 ** num_intermediate_upsample_layers)
+        self.arch['ct1'] = first_block(h=h_best_first, w=w_best_first, in_channels=self.nz + self.nc,
+                                       out_channels=self.nf * 2 ** num_intermediate_upsample_layers)
+        self.add_module('ct1', self.arch['ct1'][0])
+        self.add_module('ct1_bn', self.arch['ct1'][1])
+
         # Upsample by 2x until it is no longer necessary, then upsample by 1x
-        h_rem, w_rem = self.x_dim - (h_best_crop, w_best_crop)
+        h_rem, w_rem = self.x_dim[0] - h_best_crop, self.x_dim[1] - w_best_crop
         h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
         for i in range(num_intermediate_upsample_layers):
             h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
             self.arch['ct' + str(i + 2)] = ct2_upsample_block(h=h_curr, w=w_curr,
                                                               in_channels=self.nf * 2 ** (num_intermediate_upsample_layers - i),
                                                               out_channels=self.nf * 2 ** (num_intermediate_upsample_layers - (i + 1)))
+            self.add_module('ct' + str(i + 2), self.arch['ct' + str(i + 2)][0])
+            self.add_module('ct' + str(i + 2) + '_bn', self.arch['ct' + str(i + 2)][1])
+
         # Final layer
         h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
         self.output, __ = ct2_upsample_block(h=h_curr, w=w_curr,

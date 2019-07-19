@@ -10,6 +10,7 @@
 9. Add Dropout?!?
 10. Fix hard-coded values throughout
 11. Stretch Goal: Add automatic augmentation to help ImageCGAN
+12. Stretch Goal: Histogram GIF with static axes
 """
 
 from torch.utils import data
@@ -19,24 +20,27 @@ from utils.ImageUtils import *
 
 
 class ImageDataset(data.Dataset):
-    """Accepts input from img_dataset_preprocesser method"""
+    """Accepts input from img_dataset_preprocesser method. Assumes data set in (batch, channel, height, width) format."""
     def __init__(self, x, y):
+
+        og_x_dim = (x.shape[-2], x.shape[-1])
 
         # If image only has 1 channel, it may need to be reshaped
         if x.dim() == 3:
-            x = x.reshape(-1, 1, x.shape[1], x.shape[2])
+            x = x.view(-1, 1, og_x_dim[0], og_x_dim[1])
 
         # Crop image for advantageous dimensions
-        h_best_crop, __, __ = find_pow_2_arch(x.shape[-2])
-        w_best_crop, __, __ = find_pow_2_arch(x.shape[-1])
+        h_best_crop, __, __ = find_pow_2_arch(og_x_dim[0])
+        w_best_crop, __, __ = find_pow_2_arch(og_x_dim[1])
 
         transformer = t.Compose([
             t.ToPILImage(),
-            t.CenterCrop((h_best_crop, w_best_crop)),
+            t.CenterCrop((og_x_dim[0] - h_best_crop, og_x_dim[1] - w_best_crop)),
             t.ToTensor()
         ])
 
-        x = transformer(x)
+        for i in range(len(x)):
+            x[i] = transformer(x[i])
 
         # Finalize data set
         self.x, self.y = x, y
@@ -61,9 +65,7 @@ class GeneratedImageDataset(data.Dataset):
 
         self.device = device
 
-        self.y = self.gen_labels(stratify=stratify)
-
-        self.x = self.gen_data()
+        self.x, self.y = self.gen_data(stratify=stratify)
 
     def gen_labels(self, stratify=None):
         """
@@ -87,12 +89,13 @@ class GeneratedImageDataset(data.Dataset):
             labels[current_index:(current_index + counts[i])] = i
             current_index += counts[i]
         # One hot encode labels
-        arr = self.ohe.transform(labels)
+        arr = self.ohe.transform(labels.reshape(-1, 1))
         # Convert to tensor
-        return torch.from_numpy(arr)
+        return torch.from_numpy(arr).type(dtype=torch.float32)
 
-    def gen_data(self):
+    def gen_data(self, stratify=None):
         """Generate fake training data examples for netE. Requires prior run of gen_labels"""
+        y = self.gen_labels(stratify=stratify)
         x = torch.empty((self.size, 1, 28, 28), dtype=torch.float32, device='cpu')
         self.netG.eval()
         num_batches = self.size // self.bs
@@ -100,15 +103,15 @@ class GeneratedImageDataset(data.Dataset):
         with torch.no_grad():
             for i in range(num_batches):
                 noise = torch.randn(self.bs, self.nz, device=self.device)
-                y_batch = self.y[i*self.bs:(i+1)*self.bs].to(self.device)
-                self.x[i*self.bs:(i+1)*self.bs] = self.netG(noise, y_batch).to('cpu')
+                y_batch = y[i*self.bs:(i+1)*self.bs].to(self.device)
+                x[i*self.bs:(i+1)*self.bs] = self.netG(noise, y_batch).to('cpu')
             if self.size > (self.bs * num_batches):  # Fill in remaining spots
                 remaining = self.size - (self.bs * num_batches)
                 noise = torch.randn(remaining, self.nz, device=self.device)
-                y_batch = self.y[(self.bs*num_batches):].to(self.device)
-                self.x[(self.bs*num_batches):] = self.netG(noise, y_batch).to('cpu')
+                y_batch = y[(self.bs*num_batches):].to(self.device)
+                x[(self.bs*num_batches):] = self.netG(noise, y_batch).to('cpu')
 
-        return x
+        return x, y
 
     def __len__(self):
         return self.size

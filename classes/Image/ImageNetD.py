@@ -89,7 +89,8 @@ class ImageNetD(nn.Module, NetUtils):
 
         x = x.view(-1, self.flattened_dim)
         y = self.act(self.fc_labels(labels))
-        agg = torch.cat((x, y), 1)
+
+        agg = torch.cat((x, y), dim=1)
         agg = self.act(self.fc_agg(agg))
         return self.m(self.fc_output(agg))
 
@@ -210,18 +211,22 @@ class ImageNetD(nn.Module, NetUtils):
         # Conv Layers
         num_intermediate_downsample_layers = max(h_pow_2, w_pow_2) - 1
 
-        h_rem, w_rem = self.x_dim - (h_best_crop, w_best_crop)
+        h_rem, w_rem = self.x_dim[0] - h_best_crop, self.x_dim[1] - w_best_crop
         h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
 
         h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
         self.arch['cn1'] = cn2_downsample_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
+        self.add_module('cn1', self.arch['cn1'][0])
+        self.add_module('cn1_bn', self.arch['cn1'][1])
 
         # Downsample by 2x until it is no longer necessary, then downsample by 1x
         for i in range(num_intermediate_downsample_layers):
             h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
-            self.arch['cn' + str(i + 2)] = ct2_upsample_block(h=h_curr, w=w_curr,
-                                                              in_channels=self.nf * 2 ** i,
-                                                              out_channels=self.nf * 2 ** (i + 1))
+            self.arch['cn' + str(i + 2)] = cn2_downsample_block(h=h_curr, w=w_curr,
+                                                                in_channels=self.nf * 2 ** i,
+                                                                out_channels=self.nf * 2 ** (i + 1))
+            self.add_module('cn' + str(i + 2), self.arch['cn' + str(i + 2)][0])
+            self.add_module('cn' + str(i + 2) + '_bn', self.arch['cn' + str(i + 2)][1])
 
         # FC Layers
         self.fc_labels = nn.Linear(in_features=self.nc, out_features=self.fc_labels_size, bias=True)

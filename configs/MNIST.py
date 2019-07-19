@@ -1,5 +1,5 @@
 # Title of experiment for output directory
-EXPERIMENT_NAME = 'MNIST_Notebook_Example'
+EXPERIMENT_NAME = 'MNIST_Notebook_Example2'
 
 # Desired Train/Validation/Test split
 SPLITS = [0.15, 0.05, 0.80]

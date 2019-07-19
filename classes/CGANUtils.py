@@ -103,7 +103,7 @@ class CGANUtils:
             assert os.path.exists(save), "Check that the desired save path exists."
             f.savefig(save + '/training_plot.png')
 
-    def load_netG(self, best=False, epoch=None):
+    def load_netG(self, best=True, epoch=None):
         """Load a previously stored netG"""
         assert best or epoch is not None, "Either best arg must be True or epoch arg must not be None"
 
@@ -119,12 +119,12 @@ class CGANUtils:
 
     def draw_architecture(self, net, show, save):
         """
-        Utilizes torchviz to print current graph to a pdf
+        Utilize torchviz to print current graph to a pdf
         :param net: Network to draw graph for. One of netG, netD, or netE.
         :param show: Whether to show the graph. To visualize in jupyter notebooks, run the returned viz.
         :param save: Where to save the graph.
         """
-        assert net in self.nets, "Invalid entry for net. Should be contained in " + str([net.name for net in self.nets])
+        assert net in self.nets, "Invalid entry for net. Should be one of netG, netD, or netE"
 
         if save is None:
             save = self.path

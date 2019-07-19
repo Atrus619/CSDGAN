@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torchvision.utils as vutils
 import torch.nn as nn
-import math
 
 
 def img_dataset_preprocesser(x, y, splits, seed=None):
@@ -51,40 +50,6 @@ def show_real_grid(x_train, y_train, nc, num_channels, grid_rows, x_dim):
     plt.show()
 
 
-def find_architecture(dim, max_prime=7):
-    """Finds the makeup of primes of the input dimension that results in the least amount of cropping necessary so that the largest prime will be as selected"""
-    cropped_dim = dim
-    while max(primeFactors(cropped_dim)) > max_prime:
-        cropped_dim -= 1
-
-    return cropped_dim, primeFactors(cropped_dim)
-
-
-def primeFactors(n):
-    """Returns a list of the prime factors of n"""
-    primes = []
-    # Print the number of two's that divide n
-    while n % 2 == 0:
-        primes.append(2)
-        n = n / 2
-
-    # n must be odd at this point
-    # so a skip of 2 ( i = i + 2) can be used
-    for i in range(3, int(math.sqrt(n)) + 1, 2):
-
-        # while i divides n , print i ad divide n
-        while n % i == 0:
-            primes.append(i)
-            n = n / i
-
-            # Condition if n is a prime
-    # number greater than 2
-    if n > 2:
-        primes.append(n)
-
-    return primes
-
-
 def pow_2(n, first):
     return np.floor(np.log(n / first)/np.log(2))
 
@@ -97,16 +62,16 @@ def find_pow_2_arch(dim):
         if crop < best_crop:
             best_crop = crop
             best_first = first
-    return best_crop, best_first, pow_2(dim, best_first)
+    return int(best_crop), int(best_first), int(pow_2(dim, best_first))
 
 
-# Block methods below will define the layers needed to compose the required architecture based on the amount of upsampling
+# Block methods below define the layers needed to compose the required architecture based on the amount of upsampling
 def first_block(h, w, in_channels, out_channels):
     """First block, sets dimensions to be an odd number less than 11"""
     viable_options = {3, 5, 7, 9, 11}
     assert h in viable_options and w in viable_options, "Please make sure w and h are viable options"
 
-    ct2 = nn.convTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(w, h), stride=1, padding=0, output_padding=0, bias=True)
+    ct2 = nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(w, h), stride=1, padding=0, output_padding=0, bias=True)
     ct2_bn = nn.BatchNorm2d(out_channels)
 
     return ct2, ct2_bn
@@ -116,7 +81,9 @@ def ct2_upsample_block(h, w, in_channels, out_channels, add_op=(0, 0)):
     """2x upsample if h=2 or w=2, 1x upsample if equal to 1. Final block will get additional output_padding (add_op)"""
     assert h in {1, 2} and w in {1, 2}, "Invalid value for h or w"
 
-    ct2 = nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=5, stride=(h, w), padding=2, output_padding=(h-1, w-1) + add_op, bias=True)
+    output_padding = h - 1 + add_op[0], w - 1 + add_op[1]
+
+    ct2 = nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=5, stride=(h, w), padding=2, output_padding=output_padding, bias=True)
     ct2_bn = nn.BatchNorm2d(out_channels)
 
     return ct2, ct2_bn
@@ -126,7 +93,7 @@ def cn2_downsample_block(h, w, in_channels, out_channels):
     """2x downsample if h=2 or w=2, 1x downsample if equal to 1."""
     assert h in {1, 2} and w in {1, 2}, "Invalid value for h or w"
 
-    kernel_size = (h, w) + (2, 2)
+    kernel_size = (h + 2, w + 2)
     cn2 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=(h, w), padding=1, bias=True)
     cn2_bn = nn.BatchNorm2d(out_channels)
 

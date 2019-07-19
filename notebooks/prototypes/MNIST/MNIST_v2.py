@@ -87,12 +87,11 @@ with open(exp_path + "/CGAN.pkl", 'rb') as f:
 
 # Test Grad CAM
 x, y = CGAN.test_gen.__iter__().__next__()
-CGAN.netD.draw_cam(img=x[0], label=y[0], path=exp_path + "/plswork.jpg")
+CGAN.netD.draw_cam(img=x[0], label=3, real=True, path=exp_path + "/plswork.jpg")
 
-CGAN.init_evaluator(CGAN.train_gen, CGAN.val_gen)
-CGAN.netE.draw_cam(img=x[1], path=exp_path + "/plswork2.jpg")
+CGAN.netE.draw_cam(img=x[2], real=True, path=exp_path + "/plswork2.jpg")
 
-x = CGAN.find_particular_img(CGAN.train_gen, "D", 3, True)
+x = CGAN.find_particular_img(CGAN.train_gen, CGAN.netD, 3, True)
 CGAN.netD.draw_cam(img=x, label=3, path=exp_path + "/plswork.jpg")
 
 CGAN.draw_cam(gen=CGAN.train_gen, net="E", label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
