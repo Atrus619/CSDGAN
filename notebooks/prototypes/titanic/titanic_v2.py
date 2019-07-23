@@ -22,8 +22,6 @@ titanic = load_processed_dataset('titanic')
 
 # Automatically determine these parameters and complete preprocessing
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-out_dim = titanic.shape[1]
-labels_list = list(titanic[cfg.DEP_VAR].unique())
 
 # Instantiate data set and generator
 dataset = TabularDataset(df=titanic,
@@ -34,7 +32,6 @@ dataset = TabularDataset(df=titanic,
                          seed=cfg.MANUAL_SEED)
 dataset.to_dev(device)
 data_gen = data.DataLoader(dataset, **cfg.TRAINING_PARAMS)
-eval_stratify = list(dataset.y_train.mean(0).detach().cpu().numpy())
 
 # Define GAN
 CGAN = TabularCGAN(data_gen=data_gen,
@@ -44,18 +41,18 @@ CGAN = TabularCGAN(data_gen=data_gen,
                    eval_param_grid=cfg.EVAL_PARAM_GRID,
                    eval_folds=cfg.EVAL_FOLDS,
                    test_ranges=cfg.TEST_RANGES,
-                   eval_stratify=eval_stratify,
+                   eval_stratify=dataset.eval_stratify,
                    **cfg.CGAN_INIT_PARAMS)
 
 # Eval on real data
-score_real = train_test_logistic_reg(x_train=dataset.x_train_arr,
-                                     y_train=dataset.y_train_arr,
-                                     x_test=dataset.x_test_arr,
-                                     y_test=dataset.y_test_arr,
+score_real = train_test_logistic_reg(x_train=dataset.x_train.numpy(),
+                                     y_train=dataset.y_train.numpy(),
+                                     x_test=dataset.x_test.numpy(),
+                                     y_test=dataset.y_test.numpy(),
                                      param_grid=cfg.EVAL_PARAM_GRID,
                                      cv=cfg.EVAL_FOLDS,
                                      random_state=cfg.MANUAL_SEED,
-                                     labels_list=labels_list,
+                                     labels_list=dataset.labels_list,
                                      verbose=True)
 
 # Train GAN
@@ -79,7 +76,7 @@ CGAN.netD.plot_layer_scatters(title="Discriminator", show=True, save=exp_path)
 CGAN.netG.plot_layer_hists(title="Generator", show=True, save=exp_path)
 CGAN.netD.plot_layer_hists(title="Discriminator", show=True, save=exp_path)
 
-genned_df = CGAN.gen_data(size=cfg.TEST_RANGES[3], stratify=eval_stratify)
+genned_df = CGAN.gen_data(size=cfg.TEST_RANGES[3], stratify=dataset.eval_stratify)
 plot_scatter_matrix(df=genned_df, cont_inputs=cfg.CONT_INPUTS, title="Fake Data", scaler=None, show=True, save=exp_path)
 plot_scatter_matrix(df=titanic, cont_inputs=cfg.CONT_INPUTS, title="Real Data", scaler=None, show=True, save=exp_path)
 
@@ -91,7 +88,7 @@ plot_conditional_scatter(col1='sepal_len',
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,
                          cont_inputs=cfg.CONT_INPUTS,
-                         labels_list=labels_list,
+                         labels_list=dataset.labels_list,
                          scaler=None,
                          alpha=0.25,
                          show=True,
@@ -102,7 +99,7 @@ plot_conditional_density(col='petal_len',
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,
                          cont_inputs=cfg.CONT_INPUTS,
-                         labels_list=labels_list,
+                         labels_list=dataset.labels_list,
                          scaler=None,
                          show=True,
                          save=exp_path)

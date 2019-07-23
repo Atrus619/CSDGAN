@@ -125,7 +125,7 @@ class TabularCGAN(CGANUtils):
 
             fake_scores.append(score_fake_tmp)
 
-            torch.save(self.netG.state_dict(), self.path + "/stored_generators/Epoch_" + str(self.epoch) + "_Generator.pt")
+            torch.save(self.netG.state_dict(), os.path.join(self.path, "stored_generators", "Epoch_" + str(self.epoch) + "_Generator.pt"))
 
         return fake_scores
 
@@ -234,7 +234,7 @@ class TabularCGAN(CGANUtils):
         df[int_inputs] = df[int_inputs].round(decimals=0).astype('int')
 
         # Fix data types to match original DataFrame
-        df = df.astype(self.data_gen.dataset.df.dtypes)
+        df = df.astype(self.data_gen.dataset.df_dtypes)
 
         return df
 

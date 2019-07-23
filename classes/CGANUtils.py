@@ -103,17 +103,21 @@ class CGANUtils:
             assert os.path.exists(save), "Check that the desired save path exists."
             f.savefig(save + '/training_plot.png')
 
+    def find_best_epoch(self):
+        def parse_epoch(x):
+            pattern = re.compile(r"[0-9]+")
+            return int(re.findall(pattern=pattern, string=x)[0])
+
+        gens = os.listdir(os.path.join(self.path, "stored_generators"))
+        gens = sorted(gens, key=parse_epoch)
+        return parse_epoch(gens[np.argmax(self.stored_acc) // len(self.test_ranges)])
+
     def load_netG(self, best=True, epoch=None):
         """Load a previously stored netG"""
         assert best or epoch is not None, "Either best arg must be True or epoch arg must not be None"
 
         if best:
-            def parse_epoch(x):
-                pattern = re.compile(r"[0-9]+")
-                return int(re.findall(pattern=pattern, string=x)[0])
-            gens = os.listdir(os.path.join(self.path, "stored_generators"))
-            gens = sorted(gens, key=parse_epoch)
-            epoch = parse_epoch(gens[np.argmax(self.stored_acc) // len(self.test_ranges)])
+            epoch = self.find_best_epoch()
 
         self.netG.load_state_dict(torch.load(self.path + "/stored_generators/Epoch_" + str(epoch) + "_Generator.pt"))
 

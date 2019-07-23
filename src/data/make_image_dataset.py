@@ -2,6 +2,7 @@ import argparse
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+import utils.constants as cs
 from utils.data_loading import *
 
 """
@@ -27,7 +28,7 @@ parser.add_argument('--splits', type=tuple, help="enter desired train/val/test s
 
 args = parser.parse_args()
 
-id = args.id[0]
+run_id = args.id[0]
 path = args.path[0]
 bs = args.bs[0]
 x_dim = args.x_dim[0] if args.x_dim is not None else None
@@ -40,16 +41,16 @@ splits = args.splits if args.splits is not None else None
 assert os.path.splitext(path)[1] == '.zip', "Image file path passed is not zip"
 
 # Create directory for downloads
-data_dir = os.path.join('downloads', id)
-safe_mkdir(data_dir)
+run_dir = os.path.join(cs.RUN_DIR, run_id)
+safe_mkdir(run_dir)
 
 # Unzip folders
 zip_ref = zipfile.ZipFile(path, 'r')
-zip_ref.extractall(data_dir)
+zip_ref.extractall(run_dir)
 zip_ref.close()
 
 # Preprocess data
-unprocessed_img_path = os.path.join(data_dir, os.path.splitext(os.path.basename(path))[0])
+unprocessed_img_path = os.path.join(run_dir, os.path.splitext(os.path.basename(path))[0])
 assert os.path.exists(unprocessed_img_path), \
     "Image folder not named the same as zip file"
 assert all([os.path.isdir(os.path.join(unprocessed_img_path, x)) for x in os.listdir(unprocessed_img_path)]), \
@@ -66,7 +67,7 @@ val_gen = import_dataset(os.path.join(unprocessed_img_path, 'val'), bs=bs, shuff
 test_gen = import_dataset(os.path.join(unprocessed_img_path, 'test'), bs=bs, shuffle=False)
 
 # Pickle relevant objects
-model_objects_path = os.path.join(data_dir, "model_objects")
+model_objects_path = os.path.join(run_dir, cs.MODEL_OBJECTS)
 safe_mkdir(model_objects_path)
 
 with open(os.path.join(model_objects_path, "le.pkl"), "wb") as f:
