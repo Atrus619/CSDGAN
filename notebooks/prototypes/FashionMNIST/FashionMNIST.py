@@ -1,10 +1,9 @@
 from classes.Image.ImageCGAN import ImageCGAN
-import configs.MNIST as cfg
+import configs.FashionMNIST as cfg
 from utils.data_loading import *
 from classes.Image.ImageDataset import ImageDataset
 from torch.utils import data
 import os
-import pickle
 import random
 from utils.ImageUtils import img_dataset_preprocesser
 
@@ -18,8 +17,8 @@ torch.manual_seed(cfg.MANUAL_SEED)
 exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
 
 # Import data and split
-mnist = load_processed_dataset('MNIST')
-x_comb, y_comb = torch.cat((mnist[0][0], mnist[1][0]), 0).numpy(), torch.cat((mnist[0][1], mnist[1][1]), 0).numpy()
+fmnist = load_processed_dataset('FashionMNIST')
+x_comb, y_comb = torch.cat((fmnist[0][0], fmnist[1][0]), 0).numpy(), torch.cat((fmnist[0][1], fmnist[1][1]), 0).numpy()
 x_train, y_train, x_val, y_val, x_test, y_test, le, ohe = img_dataset_preprocesser(x=x_comb, y=y_comb, splits=cfg.SPLITS, seed=cfg.MANUAL_SEED)
 
 # Automatically determine these parameters
@@ -64,38 +63,3 @@ try:
     CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, eval_freq=cfg.EVAL_FREQ)
 except RuntimeError:
     CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, eval_freq=cfg.EVAL_FREQ)
-
-# Display final grid
-# CGAN.show_grid(-1)
-# show_real_grid(x_train, y_train) NEEDS FIXING
-
-# Generate sample images
-# CGAN.show_img(0)
-
-# Diagnostics
-CGAN.run_all_diagnostics(real_netE=real_netE, benchmark_acc=benchmark_acc, save=exp_path, show=True)
-
-# Save model
-with open(exp_path + "/CGAN.pkl", 'wb') as f:
-    pickle.dump(CGAN, f)
-
-# Load model
-with open(exp_path + "/CGAN.pkl", 'rb') as f:
-    CGAN = pickle.load(f)
-
-# Test Grad CAM
-x, y = CGAN.test_gen.__iter__().__next__()
-CGAN.netD.draw_cam(img=x[0], label=3, real=True, path=exp_path + "/plswork.jpg")
-
-CGAN.netE.draw_cam(img=x[2], real=True, path=exp_path + "/plswork2.jpg")
-
-x = CGAN.find_particular_img(CGAN.train_gen, CGAN.netD, 3, True)
-CGAN.netD.draw_cam(img=x, label=3, path=exp_path + "/plswork.jpg")
-
-CGAN.draw_cam(gen=CGAN.train_gen, net="E", label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
-
-# Test drawing architectures
-CGAN.draw_architecture(net=CGAN.netG, show=True, save="test")
-CGAN.draw_architecture(net=CGAN.netD, show=True, save="test")
-CGAN.draw_architecture(net=CGAN.netE, show=True, save="test")
-

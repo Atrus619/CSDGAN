@@ -87,26 +87,42 @@ class ImageNetE(nn.Module, NetUtils):
         x = self.do1d(self.act(self.fc1(x)))
         return self.output(x)  # No softmax activation needed because it is built into CrossEntropyLoss in pytorch
 
-    def train_one_epoch(self):
+    def train_one_epoch_real(self):
         self.train()
         train_loss = 0
         running_count = 0
         for batch, labels in self.train_gen:
-            # Forward pass
-            batch, labels = batch.to(self.device), labels.to(self.device)
-            self.zero_grad()
-            fwd = self.forward(batch)
-            # Calculate loss and update optimizer
-            label_ind = torch.argmax(labels, -1)
-            self.loss = self.loss_fn(fwd, label_ind)
-            self.loss.backward()
-            self.opt.step()
+            self.train_step(batch=batch, labels=labels)
             # Update running totals
             train_loss += self.loss
             running_count += len(batch)
         return train_loss / running_count
 
-    def eval_once(self, gen):
+    def train_one_epoch_fake(self):
+        self.train()
+        train_loss = 0
+        running_count = 0
+        self.train_gen.dataset.next_epoch()
+        for i in range(self.train_gen.dataset.batches_per_epoch):
+            batch, labels = self.train_gen.dataset.next_batch()
+            self.train_step(batch=batch, labels=labels)
+            # Update running totals
+            train_loss += self.loss
+            running_count += len(batch)
+        return train_loss / running_count
+
+    def train_step(self, batch, labels):
+        # Forward pass
+        batch, labels = batch.to(self.device), labels.to(self.device)
+        self.zero_grad()
+        fwd = self.forward(batch)
+        # Calculate loss and update optimizer
+        label_ind = torch.argmax(labels, -1)
+        self.loss = self.loss_fn(fwd, label_ind)
+        self.loss.backward()
+        self.opt.step()
+
+    def eval_once_real(self, gen):
         self.eval()
         val_loss = 0
         num_correct = torch.zeros(1)
@@ -123,13 +139,38 @@ class ImageNetE(nn.Module, NetUtils):
                 running_count += len(batch)
         return val_loss / running_count, num_correct / running_count
 
-    def train_evaluator(self, num_epochs, eval_freq, es=None):
+    def eval_once_fake(self, gen):
+        self.eval()
+        val_loss = 0
+        num_correct = torch.zeros(1)
+        running_count = 0
+        gen.dataset.next_epoch()
+        with torch.no_grad():
+            for i in range(gen.dataset.batches_per_epoch):
+                batch, labels = gen.dataset.next_batch()
+                # Forward pass
+                batch, labels = batch.to(self.device), labels.to(self.device)
+                fwd = self.forward(batch)
+                # Calculate loss and accuracy, and update running totals
+                label_ind = torch.argmax(labels, -1)
+                val_loss += self.loss_fn(fwd, label_ind)
+                num_correct += sum(torch.argmax(fwd, -1) == label_ind)
+                running_count += len(batch)
+        return val_loss / running_count, num_correct / running_count
+
+    def train_evaluator(self, num_epochs, eval_freq, real, es=None):
         for epoch in range(num_epochs):
-            total_loss = self.train_one_epoch()
+            if real:
+                total_loss = self.train_one_epoch_real()
+            else:
+                total_loss = self.train_one_epoch_fake()
             self.train_losses.append(total_loss.item())
 
             if epoch % eval_freq == 0 or (epoch == num_epochs - 1):
-                total_loss, total_acc = self.eval_once(self.val_gen)
+                if real:
+                    total_loss, total_acc = self.eval_once_real(gen=self.val_gen)
+                else:
+                    total_loss, total_acc = self.eval_once_fake(gen=self.val_gen)
                 self.val_losses.append(total_loss.item())
                 self.val_acc.append(total_acc.item())
 
@@ -172,12 +213,13 @@ class ImageNetE(nn.Module, NetUtils):
 
         return cm, cr
 
-    def draw_cam(self, img, path, real, show=True):
+    def draw_cam(self, img, path, real, scale, show=True):
         """
         Implements Grad CAM for netE
         :param img: Image to draw over
         :param path: Path to save output image to. Full image path that should end in .jpg
         :param real: Whether the image is real or not
+        :param scale: Multiplier to scale image back to original values
         :param show: Whether to show the image
         :return: Pair of images, side by side, left image is drawn over, right image is original
         """
@@ -208,7 +250,7 @@ class ImageNetE(nn.Module, NetUtils):
         heatmap = heatmap.numpy()
 
         # Save original image
-        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy() * 255
+        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy() * scale
         matplotlib.image.imsave(path, img_transformed, cmap='gray')
 
         # Read in image and cut pixels in half for visibility
@@ -217,7 +259,7 @@ class ImageNetE(nn.Module, NetUtils):
 
         # Create heatmap
         heatmap = cv2.resize(heatmap, (cv_img.shape[1], cv_img.shape[0]))
-        heatmap = np.uint8(255 * heatmap)
+        heatmap = np.uint8(scale * heatmap)
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
 
         # Superimpose

@@ -1,11 +1,11 @@
-from classes.Image.ImageDataset import GeneratedImageDataset
+from classes.Image.ImageDataset import OnlineGeneratedImageDataset
 from torch.utils import data
 from classes.Image.ImageNetD import ImageNetD
 from classes.Image.ImageNetG import ImageNetG
 from classes.Image.ImageNetE import ImageNetE
 from classes.NetUtils import GaussianNoise
 from classes.CGANUtils import CGANUtils
-from utils.MNIST import *
+from utils.ImageUtils import *
 import time
 from utils.utils import *
 import imageio
@@ -14,6 +14,7 @@ import copy
 
 class ImageCGAN(CGANUtils):
     """CGAN for image-based data sets"""
+
     def __init__(self, train_gen, val_gen, test_gen, device, nc, nz, num_channels, sched_netG, path, le, ohe,
                  label_noise, label_noise_linear_anneal, discrim_noise, discrim_noise_linear_anneal,
                  netG_nf, netG_lr, netG_beta1, netG_beta2, netG_wd,
@@ -135,9 +136,9 @@ class ImageCGAN(CGANUtils):
         :param val_gen: Same as above ^
         """
         self.init_evaluator(train_gen, val_gen)
-        self.netE.train_evaluator(num_epochs=self.eval_num_epochs, eval_freq=1, es=self.early_stopping_patience)
+        self.netE.train_evaluator(num_epochs=self.eval_num_epochs, eval_freq=1, real=False, es=self.early_stopping_patience)
         torch.save(self.netG.state_dict(), self.path + "/stored_generators/Epoch_" + str(self.epoch) + "_Generator.pt")
-        loss, acc = self.netE.eval_once(self.test_gen)
+        loss, acc = self.netE.eval_once_real(self.test_gen)
         self.stored_loss.append(loss.item())
         self.stored_acc.append(acc.item())
 
@@ -169,13 +170,13 @@ class ImageCGAN(CGANUtils):
 
     def init_fake_gen(self):
         # Initialize fake training set and validation set to be same size
-        self.fake_train_set = GeneratedImageDataset(netG=self.netG, size=self.fake_data_set_size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
-                                                    ohe=self.ohe, device=self.device)
+        self.fake_train_set = OnlineGeneratedImageDataset(netG=self.netG, size=self.fake_data_set_size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
+                                                          ohe=self.ohe, device=self.device, x_dim=self.x_dim)
         self.fake_train_gen = data.DataLoader(self.fake_train_set, batch_size=self.fake_bs,
                                               shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
 
-        self.fake_val_set = GeneratedImageDataset(netG=self.netG, size=self.fake_data_set_size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
-                                                  ohe=self.ohe, device=self.device)
+        self.fake_val_set = OnlineGeneratedImageDataset(netG=self.netG, size=self.fake_data_set_size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
+                                                        ohe=self.ohe, device=self.device, x_dim=self.x_dim)
         self.fake_val_gen = data.DataLoader(self.fake_val_set, batch_size=self.fake_bs,
                                             shuffle=self.fake_shuffle, num_workers=self.fake_num_workers)
 
@@ -199,8 +200,8 @@ class ImageCGAN(CGANUtils):
             test_gen = self.test_gen
 
         self.init_evaluator(train_gen, val_gen)
-        self.netE.train_evaluator(num_epochs=num_epochs, eval_freq=1, es=es)
-        _, og_result = self.netE.eval_once(test_gen)
+        self.netE.train_evaluator(num_epochs=num_epochs, eval_freq=1, real=True, es=es)
+        _, og_result = self.netE.eval_once_real(test_gen)
         og_result = og_result.numpy().take(0)
         return og_result, copy.copy(self.netE)
 
@@ -231,7 +232,7 @@ class ImageCGAN(CGANUtils):
             fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
         return vutils.make_grid(tensor=fixed_imgs, nrow=self.grid_nrow, normalize=True).detach().cpu()
 
-    def show_grid(self, index):
+    def show_grid(self, index=-1):
         """
         Print a specified fixed image grid from the self.fixed_imgs list
         :param index: Evaluation index to display
@@ -400,6 +401,7 @@ class ImageCGAN(CGANUtils):
         6. Grid of what the evaluator THOUGHT each example in grid 5 should be.
         7. Grid of misclassified examples by model trained on real data.
         8. Grid of what the evaluator THOUGHT each example in grid 7 should be.
+        :param real_netE: A version of netE trained on real data, rather than synthetic data
         :param show: Whether to show the plots
         :param save: Where to save the plots. If set to None default path is used. If false, not saved.
         """
@@ -638,7 +640,7 @@ class ImageCGAN(CGANUtils):
             if len(contenders) > 0:
                 return contenders[0]
 
-    def draw_cam(self, gen, net, label, mistake, show, path):
+    def draw_cam(self, gen, net, label, mistake, show, path, scale=None):
         """
         Wrapper function for find_particular_img and draw_cam
         :param gen: Generator to use. netG is a valid generator to use for fake data.
@@ -647,9 +649,13 @@ class ImageCGAN(CGANUtils):
         :param mistake: Whether the example should be a mistake (True or False)
         :param show: Whether to show the image
         :param path: Path to create image file. Needs full file name. Should end in .jpg
+        :param scale: Multiplier to scale image back to original values
         """
         assert path.split(".")[-1] == "jpg", "Please make sure path ends in '.jpg'"
         assert label in self.le.classes_, "Make sure label is a valid class"
+
+        if scale is None:
+            scale = 1 if self.nc > 1 else 255
 
         img = self.find_particular_img(gen=gen, net=net, label=label, mistake=mistake)
 
@@ -657,9 +663,9 @@ class ImageCGAN(CGANUtils):
 
         if net == "D":
             label = self.le.transform([label])
-            self.netD.draw_cam(img=img, label=label, path=path, show=show, real=real)
+            self.netD.draw_cam(img=img, label=label, path=path, scale=scale, show=show, real=real)
         else:
-            self.netE.draw_cam(img=img, path=path, show=show, real=real)
+            self.netE.draw_cam(img=img, path=path, scale=scale, show=show, real=real)
 
     def extract_x_dim(self):
         iterator = iter(self.train_gen)

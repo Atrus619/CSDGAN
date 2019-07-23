@@ -118,13 +118,14 @@ class ImageNetD(nn.Module, NetUtils):
         self.Avg_D_fakes.append(np.mean(self.D_G_z1))
         self.D_G_z1 = []
 
-    def draw_cam(self, img, label, path, real, show=True):
+    def draw_cam(self, img, label, path, real, scale, show=True):
         """
         Implements Grad CAM for netD
         :param img: Image to draw over
         :param label: Corresponding label for img
         :param path: Path to save output image to. Full image path that should end in .jpg
         :param real: Whether the image is real or not
+        :param scale: Multiplier to scale image back to original values
         :param show: Whether to show the image
         :return: Pair of images, side by side, left image is drawn over, right image is original
         """
@@ -157,7 +158,7 @@ class ImageNetD(nn.Module, NetUtils):
         heatmap = heatmap.numpy()
 
         # Save original image
-        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy() * 255
+        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy() * scale
         matplotlib.image.imsave(path, img_transformed, cmap='gray')
 
         # Read in image and cut pixels in half for visibility
@@ -166,7 +167,7 @@ class ImageNetD(nn.Module, NetUtils):
 
         # Create heatmap
         heatmap = cv2.resize(heatmap, (cv_img.shape[1], cv_img.shape[0]))
-        heatmap = np.uint8(255 * heatmap)
+        heatmap = np.uint8(scale * heatmap)
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
 
         # Superimpose
