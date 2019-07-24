@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-import utils.constants as cs
+import src.constants as cs
 from utils.data_loading import *
 
 """

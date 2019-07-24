@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from utils.data_loading import *
-import utils.constants as cs
+import src.constants as cs
 
 """
 Loads a tabular CGAN created by train_tabular_model.py. Generates data based on user specifications.
