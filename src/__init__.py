@@ -1,6 +1,5 @@
 import os
 from flask import Flask
-import sys
 import src.constants as cs
 
 
@@ -10,8 +9,11 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY=cs.SECRET_KEY,
         DATABASE=os.path.join(app.instance_path, 'csdgan.sqlite'),
+        UPLOAD_FOLDER=cs.UPLOAD_FOLDER,
+        MAX_CONTENT_LENGTH=cs.MAX_CONTENT_LENGTH
     )
 
+    # TODO: Not sure if this is doing anything
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_pyfile('config.py', silent=True)
@@ -24,11 +26,6 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
-
-    # a simple page that says hello
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
 
     from . import db
     db.init_app(app)

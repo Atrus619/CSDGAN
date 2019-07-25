@@ -1,6 +1,6 @@
 RUN_DIR = 'model_runs'  # Directory for saving data after processing
 MODEL_OBJECTS = 'model_objects'  # Subdirectory of DATA_DIR/run_id for pickling model-related objects
-TABULAR_MEM_THRESHOLD = 1024**3 * 5  # Threshold for determining if entire tabular data set can be stored on GPU (significant speedup)
+TABULAR_MEM_THRESHOLD = 1024 ** 3 * 5  # Threshold for determining if entire tabular data set can be stored on GPU (significant speedup)
 
 # Evaluation parameters for tabular data sets
 TABULAR_EVAL_PARAM_GRID = {'tol': [1e-5],
@@ -42,5 +42,6 @@ TABULAR_DEFAULT_GENNED_DATA_FILENAME = 'genned_data.txt'
 # App constants
 UPLOAD_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/downloads/incoming_raw_data'
 ALLOWED_EXTENSIONS = {'txt', 'csv', 'zip'}
-MAX_CONTENT_LENGTH = 1024**3 * 16  # Maximum data size of 16GB
+MAX_CONTENT_LENGTH = 1024 ** 3 * 16  # Maximum data size of 16GB
 SECRET_KEY = 'abc'
+AVAILABLE_FORMATS = ['Tabular', 'Image']
