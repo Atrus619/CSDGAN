@@ -4,10 +4,11 @@ This project involves analyzing a variety of well-known data sets and designing 
 The goal is to be able to train generative models with a deep enough understanding of the underlying data distribution so that a model trained on only fake data can outperform models trained on the original real data. This goal has been achieved, and there are lots of ways for a user to interact with the models contained within this repository in order to learn about GANs and generate better models.
 
 ## Motivation
-The two most important applications of generating synthetic data are as follows:
+The three most important applications of generating synthetic data are as follows:
 
-1. Data augmentation for data sets of insufficient size to train high quality models
-2. Ability to share valuable training data that may not otherwise be shareable due to confidentiality or privacy concerns.
+1. Data augmentation for imbalanced data sets
+2. Data augmentation for data sets of insufficient size to train high quality models
+3. Ability to share valuable training data that may not otherwise be shareable due to confidentiality or privacy concerns.
 
 ## Datasets Included
 1. Iris (UCI Repository, https://archive.ics.uci.edu/ml/machine-learning-databases/iris/)
