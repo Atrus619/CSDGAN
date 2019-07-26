@@ -6,8 +6,8 @@ from werkzeug.utils import secure_filename
 
 from src.auth import login_required
 from src.db import get_db
-import os
 from src.utils import *
+import pickle as pkl
 
 bp = Blueprint('home', __name__)
 
@@ -25,7 +25,7 @@ def index():
 
 @bp.route('/create', methods=('GET', 'POST'))
 @login_required
-def create():  # TODO: Return here and add SQL/next step DO STUFF WITH FORMAT!
+def create():
     if request.method == 'POST':
         title = request.form['title']
 
@@ -48,55 +48,29 @@ def create():  # TODO: Return here and add SQL/next step DO STUFF WITH FORMAT!
             else:
                 format = request.form['format']
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                return redirect(url_for('uploaded_file',
-                                        filename=filename))
+                new_run_mkdir(upload_folder=current_app.config['UPLOAD_FOLDER'], username=g.user['username'], title=title)
+                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], g.user['username'], title, filename))
+                filesize = len(pkl.dumps(file, -1))
+                query_init_run(title=title, user_id=g.user['id'], format=format, filesize=filesize)
+                if format == 'Tabular':
+                    return redirect(url_for('create_tabular'))
+                else:  # Image
+                    return redirect(url_for('create_image'))
         if error:
             flash(error)
 
     return render_template('home/create.html', available_formats=cs.AVAILABLE_FORMATS)
 
 
-def get_post(id, check_author=True):
-    post = get_db().execute(
-        'SELECT p.id, title, body, created, author_id, username'
-        ' FROM post p JOIN user u ON p.author_id = u.id'
-        ' WHERE p.id = ?',
-        (id,)
-    ).fetchone()
-
-    if post is None:
-        abort(404, "Post id {0} doesn't exist.".format(id))
-
-    if check_author and post['author_id'] != g.user['id']:
-        abort(403)
-
-    return post
-
-
-@bp.route('/<int:id>/update', methods=('GET', 'POST'))
+@bp.route('/create_tabular', methods=('GET', 'POST'))
 @login_required
-def update(id):
-    post = get_post(id)
-
+def create_tabular():
     if request.method == 'POST':
-        title = request.form['title']
-        body = request.form['body']
-        error = None
+        pass
 
-        if not title:
-            error = 'Title is required.'
 
-        if error is not None:
-            flash(error)
-        else:
-            db = get_db()
-            db.execute(
-                'UPDATE post SET title = ?, body = ?'
-                ' WHERE id = ?',
-                (title, body, id)
-            )
-            db.commit()
-            return redirect(url_for('home.index'))
-
-    return render_template('home/update.html', post=post)
+@bp.route('/create_image', methods=('GET', 'POST'))
+@login_required
+def create_image():
+    if request.method == 'POST':
+        pass

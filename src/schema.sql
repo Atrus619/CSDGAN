@@ -1,10 +1,10 @@
-DROP TABLE IF EXISTS user;
-DROP TABLE IF EXISTS run;
-DROP TABLE IF EXISTS status;
-DROP TABLE IF EXISTS status_info;
-DROP TABLE IF EXISTS post;
+drop table IF EXISTS user;
+drop table IF EXISTS run;
+drop table IF EXISTS status;
+drop table IF EXISTS status_info;
+drop table IF EXISTS post;
 
-CREATE TABLE user (
+create TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
@@ -12,34 +12,44 @@ CREATE TABLE user (
   num_logins INTEGER NOT NULL
 );
 
-CREATE TABLE run (
+create TABLE run (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
   user_id INTEGER NOT NULL,
   start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  end_time TIMESTAMP NOT NULL,
-  type TEXT NOT NULL,
+  end_time TIMESTAMP,
+  format TEXT NOT NULL,
   filesize INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES user (id)
 );
 
-CREATE TABLE status (
+create TABLE status (
   run_id INTEGER NOT NULL,
-  line_nbr INTEGER NOT NULL,
   status_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
   update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (run_id, line_nbr),
+  PRIMARY KEY (run_id, status_id),
+  FOREIGN KEY (run_id) REFERENCES run (id)
   FOREIGN KEY (status_id) REFERENCES status_info (id)
-  FOREIGN KEY (user_id) REFERENCES user (id)
 );
 
-CREATE TABLE status_info (
+create TABLE status_info (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   descr TEXT NOT NULL
 );
 
-CREATE TABLE post (
+insert into status_info (descr)
+  values
+  ('Not started'),
+  ('Preprocessing data'),
+  ('Training in progress...0/4'),
+  ('Training in progress...1/4'),
+  ('Training in progress...1/2'),
+  ('Training in progress...3/4'),
+  ('Training complete - Generating data'),
+  ('All complete - Data available'),
+  ('Error - Run failed');
+
+create TABLE post (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   author_id INTEGER NOT NULL,
   created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
