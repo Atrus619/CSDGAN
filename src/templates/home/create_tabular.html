@@ -1,10 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
 
-</body>
-</html>
+{% block header %}
+<h1>{% block title %}New Run - {{ title }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Dependent Variable (should be categorical, select one)</h2>
+    <select name="dep_var">
+        {% for col in cols %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+    </select>
+    <h2>Continuous Features (select multiple with ctrl)</h2><br>
+    <select name="cont_inputs" multiple size="5">
+        {% for col in cols %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+    </select>
+    <h2>Integer Features (should be a subset of continuous features, select multiple with ctrl)</h2>
+    <select name="int_inputs" multiple size="5">
+        {% for col in cols %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <input type="submit" value="Submit">
+</form>
+{% endblock %}

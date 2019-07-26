@@ -23,7 +23,7 @@ def register():
         elif not password:
             error = 'Password is required.'
         elif db.execute(
-            'SELECT id FROM user WHERE username = ?', (username,)
+            'SELECT id FROM user WHERE username = ?', (username, )
         ).fetchone() is not None:
             error = 'User {} is already registered.'.format(username)
 

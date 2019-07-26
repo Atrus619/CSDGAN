@@ -1,6 +1,7 @@
 import src.constants as cs
-from src.db import get_db
 import os
+import pandas as pd
+import shutil
 
 
 def allowed_file(filename):
@@ -17,66 +18,33 @@ def safe_mkdir(path):
 
 
 def new_run_mkdir(upload_folder, username, title):
-    """Initialize directories for a new run"""
+    """Initialize directories for a new run. Clears out prior uploads with same title."""
     safe_mkdir(os.path.join(upload_folder, username))
+    try:
+        shutil.rmtree(os.path.join(upload_folder, username, title))
+    except OSError:
+        pass
     safe_mkdir(os.path.join(upload_folder, username, title))
 
 
-def query_init_run(title, user_id, format, filesize):
-    """Insert rows into db for a run and the initial status"""
-    db = get_db()
-    # run table
-    db.execute(
-        'INSERT INTO run ('
-        'title, user_id, format, filesize)'
-        'VALUES'
-        '(?, ?, ?, ?)',
-        (title, user_id, format, filesize)
-    )
-    db.commit()
-    # retrieve run id
-    run_id = db.execute(
-        'SELECT max(id) FROM run'
-    ).fetchone()
-    # status table
-    db.execute(
-        'INSERT INTO status ('
-        'run_id, status_id)'
-        'VALUES'
-        '(?, ?)',
-        (run_id[0], 1)
-    )
-    db.commit()
+def parse_tabular(upload_folder, username, title):
+    """Parses an uploaded tabular data set and returns a list of columns"""
+    filename = os.listdir(os.path.join(upload_folder, username, title))[0]
+    data = pd.read_csv(os.path.join(upload_folder, username, title, filename), nrows=0)
+    return data.columns
 
 
-def query_next_status(run_id):
-    """Updates status table with the next status"""
-    db = get_db()
-    current_status = db.execute(
-        'SELECT max(status_id) FROM status WHERE run_id = ?', run_id
-    ).fetchone()
-    db.execute(
-        'INSERT INTO status ('
-        'run_id, status_id)'
-        'VALUES'
-        '(?, ?)',
-        (run_id, current_status[0] + 1)
-    )
-    db.commit()
+def validate_tabular_choices(dep_var, cont_inputs, int_inputs):
+    """Checks to see if user choices are consistent with expectations"""
+    if dep_var in cont_inputs:
+        return 'Dependent variable should not be continuous'
+    if dep_var in int_inputs:
+        return 'Dependent variable should not be integer'
+    if any([int_input not in cont_inputs for int_input in int_inputs]):
+        return 'Selected integer features should be a subset of selected continuous features'
+    return None
 
 
-def query_run_failed(run_id):
-    """Updates status table with failure"""
-    db = get_db()
-    # max status is always the fail status
-    max_status = db.execute(
-        'SELECT max(id) FROM status_info'
-    ).fetchone()
-    db.execute(
-        'INSERT INTO status ('
-        'run_id, status_id)'
-        'VALUES'
-        '(?, ?)',
-        (run_id, max_status[0])
-    )
-    db.commit()
+def parse_image(upload_folder, username, title):
+    # TODO
+    pass
