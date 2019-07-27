@@ -17,20 +17,21 @@ def safe_mkdir(path):
         pass
 
 
-def new_run_mkdir(upload_folder, username, title):
+def new_run_mkdir(directory, username, title):
     """Initialize directories for a new run. Clears out prior uploads with same title."""
-    safe_mkdir(os.path.join(upload_folder, username))
+    safe_mkdir(os.path.join(directory, username))
     try:
-        shutil.rmtree(os.path.join(upload_folder, username, title))
+        shutil.rmtree(os.path.join(directory, username, title))
     except OSError:
         pass
-    safe_mkdir(os.path.join(upload_folder, username, title))
+    safe_mkdir(os.path.join(directory, username, title))
 
 
-def parse_tabular(upload_folder, username, title):
+def parse_tabular(directory, run_id):
     """Parses an uploaded tabular data set and returns a list of columns"""
-    filename = os.listdir(os.path.join(upload_folder, username, title))[0]
-    data = pd.read_csv(os.path.join(upload_folder, username, title, filename), nrows=0)
+    run_id = str(run_id)
+    filename = os.listdir(os.path.join(directory, run_id))[0]
+    data = pd.read_csv(os.path.join(directory, run_id, filename), nrows=0)
     return data.columns
 
 
@@ -48,3 +49,4 @@ def validate_tabular_choices(dep_var, cont_inputs, int_inputs):
 def parse_image(upload_folder, username, title):
     # TODO
     pass
+

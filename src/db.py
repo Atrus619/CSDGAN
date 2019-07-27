@@ -43,8 +43,20 @@ def init_app(app):
     app.cli.add_command(init_db_command)
 
 
+def query_check_unique_title_for_user(user_id, title):
+    """Returns True if unique, False otherwise"""
+    result = get_db().execute(
+        'SELECT * FROM run WHERE user_id = ? and title = ?',
+        (user_id, title)
+    ).fetchone()
+    return result
+
+
 def query_init_run(title, user_id, format, filesize):
-    """Insert rows into db for a run and the initial status"""
+    """
+    Insert rows into db for a run and the initial status
+    Returns the run id corresponding to this run
+    """
     db = get_db()
     # run table
     db.execute(
@@ -71,18 +83,15 @@ def query_init_run(title, user_id, format, filesize):
     return run_id[0]
 
 
-def query_next_status(run_id):
+def query_set_status(run_id, status_id):
     """Updates status table with the next status"""
     db = get_db()
-    current_status = db.execute(
-        'SELECT max(status_id) FROM status WHERE run_id = ?', (run_id,)
-    ).fetchone()
     db.execute(
         'INSERT INTO status ('
         'run_id, status_id)'
         'VALUES'
         '(?, ?)',
-        (run_id, current_status[0] + 1)
+        (run_id, status_id)
     )
     db.commit()
 
@@ -106,8 +115,7 @@ def query_run_failed(run_id):
 
 def query_title(run_id):
     """Retrieves the title associated with the specified run_id"""
-    db = get_db()
-    title = db.execute(
+    title = get_db().execute(
         'SELECT title FROM run WHERE id = ?', (run_id,)
     ).fetchone()
     return title[0]
@@ -115,8 +123,7 @@ def query_title(run_id):
 
 def query_all_runs(user_id):
     """Retrieves information on all runs associated with the specified user_id"""
-    db = get_db()
-    result = db.execute(
+    result = get_db().execute(
         'SELECT run.title, run.start_time, run.format, status.update_time, status_info.descr '
         'FROM run '
         'LEFT JOIN ('
@@ -126,7 +133,10 @@ def query_all_runs(user_id):
         '   ) as b on a.run_id = b.run_id and a.status_id = b.status_id'
         ') as status on run.id = status.run_id '
         'LEFT JOIN status_info on status.status_id = status_info.id '
-        'WHERE run.user_id = ?',
+        'WHERE run.user_id = ? '
+        'ORDER BY status.update_time DESC',
         (user_id,)
     ).fetchall()
     return result
+
+

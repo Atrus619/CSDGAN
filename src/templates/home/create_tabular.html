@@ -6,24 +6,34 @@
 
 {% block content %}
 <form method=post>
-    <h2>Dependent Variable (should be categorical, select one)</h2>
+    <h2>Dependent Variable</h2>
+    <p>This should be a categorical variable.</p>
     <select name="dep_var">
         {% for col in cols %}
         <option value="{{ col }}">{{ col }}</option>
         {% endfor %}
     </select>
-    <h2>Continuous Features (select multiple with ctrl)</h2><br>
+    <hr>
+    <h2>Continuous Features</h2>
+    <p>You can select multiple by holding ctrl/cmd.</p>
     <select name="cont_inputs" multiple size="5">
         {% for col in cols %}
         <option value="{{ col }}">{{ col }}</option>
         {% endfor %}
     </select>
-    <h2>Integer Features (should be a subset of continuous features, select multiple with ctrl)</h2>
+    <hr>
+    <h2>Integer Features</h2>
+    <p>This should be a subset of your continuous features. Again, you can select multiple by holding ctrl/cmd.</p>
     <select name="int_inputs" multiple size="5">
         {% for col in cols %}
         <option value="{{ col }}">{{ col }}</option>
         {% endfor %}
     </select>
+    <hr>
+    <h2>Number of Epochs</h2>
+    <p>This represents the number of times to iterate over the data set when training. Higher values mean training will take longer, but could yield better results.
+        If left blank, a default value of {{ default_num_epochs }} will be used.</p>
+    <input name="num_epochs" id="num_epochs" value="{{ request.form['num_epochs'] }}">
     <br>
     <input type="submit" value="Submit">
 </form>

@@ -1,6 +1,8 @@
 import os
 from flask import Flask
 import src.constants as cs
+from redis import Redis
+import rq
 
 
 def create_app(test_config=None):
@@ -12,6 +14,8 @@ def create_app(test_config=None):
         UPLOAD_FOLDER=cs.UPLOAD_FOLDER,
         MAX_CONTENT_LENGTH=cs.MAX_CONTENT_LENGTH
     )
+    app.redis = Redis.from_url(cs.REDIS_URL)
+    app.task_queue = rq.Queue('???', connection=app.redis)
 
     # TODO: Not sure if this is doing anything
     if test_config is None:

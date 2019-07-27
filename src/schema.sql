@@ -39,15 +39,15 @@ create TABLE status_info (
 
 insert into status_info (descr)
   values
-  ('Not started'),
-  ('Preprocessing data'),
-  ('Training in progress...0/4'),
-  ('Training in progress...1/4'),
-  ('Training in progress...1/2'),
-  ('Training in progress...3/4'),
-  ('Training complete - Generating data'),
-  ('All complete - Data available'),
-  ('Error - Run failed');
+  ('Not started'),  -- 1
+  ('Preprocessing data'),  -- 2
+  ('Training in progress...0/4'),  -- 3
+  ('Training in progress...1/4'),  -- 4
+  ('Training in progress...1/2'),  -- 5
+  ('Training in progress...3/4'),  -- 6
+  ('Training complete - Generating data'),  -- 7
+  ('Complete - Data available'),  -- 8
+  ('Error - Run failed');  -- 9
 
 create TABLE post (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

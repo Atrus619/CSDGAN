@@ -8,21 +8,48 @@
 {% endblock %}
 
 {% block content %}
-{% for post in posts %}
-<article class="post">
-    <header>
-        <div>
-            <h1>{{ post['title'] }}</h1>
-            <div class="about">by {{ post['username'] }} on {{ post['created'].strftime('%Y-%m-%d') }}</div>
-        </div>
-        {% if g.user['id'] == post['author_id'] %}
-        <a class="action" href="{{ url_for('home.update', id=post['id']) }}">Edit</a>
+<h2>Run Status</h2>
+
+{% if not logged_in %}
+<p>It doesn't look like you are logged in yet. <a href="{{ url_for('auth.login') }}">Click here</a> to log in or
+    <a href="{{ url_for('auth.register') }}">here</a> to register if you haven't already.</p>
+{% elif runs is not defined %}
+<p>It doesn't look like you have any runs yet. <a href="{{ url_for('home.create') }}">Click here</a> to get started!</p>
+{% else %}
+
+<table border="1" class="dataframe">
+    <thead>
+    <tr style="text-align: right;">
+        <th>Name</th>
+        <th>Data Format</th>
+        <th>Start Time</th>
+        <th>Last Updated</th>
+        <th>Status</th>
+        <th>Download</th>
+        <th>Want More?</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for run in runs %}
+    <tr>
+        <td>{{ run.title }}</td>
+        <td>{{ run.format }}</td>
+        <td>{{ run.start_time }}</td>
+        <td>{{ run.update_time }}</td>
+        <td>{{ run.descr }}</td>
+        {% if 'Data available' in run.descr %}
+        <td>Download Data</td>
+        <td>Generate More Data</td>
+        {% else %}
+        <td>----</td>
+        <td>----</td>
         {% endif %}
-    </header>
-    <p class="body">{{ post['body'] }}</p>
-</article>
-{% if not loop.last %}
-<hr>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
 {% endif %}
-{% endfor %}
+
 {% endblock %}
+

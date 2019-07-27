@@ -6,6 +6,7 @@ from classes.CGANUtils import CGANUtils
 from classes.NetUtils import GaussianNoise
 import numpy as np
 import random
+from src.db import query_set_status
 
 
 class TabularCGAN(CGANUtils):
@@ -61,16 +62,19 @@ class TabularCGAN(CGANUtils):
         self.fake_label = 0
         self.stored_acc = []
 
-    def train_gan(self, num_epochs, cadence, print_freq, eval_freq=None):
+    def train_gan(self, num_epochs, cadence, print_freq, eval_freq=None, run_id=None):
         """
         Primary method for training
         :param num_epochs: Desired number of epochs to train for
         :param cadence: Number of pass-throughs of data set per epoch (generally set to 1, might want to set higher for very tiny data sets)
         :param print_freq: How freqently to print out training statistics (i.e., freq of 5 will result in information being printed every 5 epochs)
         :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur.
+        :param run_id: If not None, will update database as it progresses through training in quarter increments.
         """
         total_epochs = self.epoch + num_epochs
         device_check = self.data_gen.dataset.device != self.device
+        if run_id:
+            checkpoints = [int(num_epochs * i / 4) for i in range(1, 4)]
 
         if self.label_noise_linear_anneal:
             self.ln_rate = self.label_noise / num_epochs
@@ -100,6 +104,11 @@ class TabularCGAN(CGANUtils):
                 if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
                     self.stored_acc.append(self.test_model(stratify=self.eval_stratify))
                     print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
+
+            if run_id:
+                if self.epoch in checkpoints:
+                    status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
+                    query_set_status(run_id=run_id, status_id=status_id)
 
         print("Total training time: %ds" % (time.time() - og_start_time))
         print("Training complete")

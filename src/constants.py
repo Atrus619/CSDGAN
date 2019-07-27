@@ -1,5 +1,5 @@
-RUN_DIR = 'model_runs'  # Directory for saving data after processing
-MODEL_OBJECTS = 'model_objects'  # Subdirectory of DATA_DIR/run_id for pickling model-related objects
+import os
+
 TABULAR_MEM_THRESHOLD = 1024 ** 3 * 5  # Threshold for determining if entire tabular data set can be stored on GPU (significant speedup)
 
 # Evaluation parameters for tabular data sets
@@ -33,7 +33,7 @@ TABULAR_DEFAULT_NETD_H = 32
 # Tabular training parameters
 TABULAR_DEFAULT_NUM_EPOCHS = 10000
 TABULAR_DEFAULT_CADENCE = 1
-TABULAR_DEFAULT_PRINT_FREQ = 250
+TABULAR_DEFAULT_PRINT_FREQ = 250  # TODO: Logging instead of printing
 TABULAR_DEFAULT_EVAL_FREQ = 250
 
 # Tabular output constants
@@ -45,3 +45,17 @@ ALLOWED_EXTENSIONS = {'txt', 'csv', 'zip'}
 MAX_CONTENT_LENGTH = 1024 ** 3 * 16  # Maximum data size of 16GB
 SECRET_KEY = 'abc'
 AVAILABLE_FORMATS = ['Tabular', 'Image']
+REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
+
+# Run constants
+RUN_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/runs'
+
+STATUS_DICT = {'Not started': 1,
+               'Preprocessing data': 2,
+               'Train 0/4': 3,
+               'Train 1/4': 4,
+               'Train 2/4': 5,
+               'Train 3/4': 6,
+               'Generating data': 7,
+               'Complete': 8,
+               'Error': 9}
