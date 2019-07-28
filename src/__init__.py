@@ -15,7 +15,7 @@ def create_app(test_config=None):
         MAX_CONTENT_LENGTH=cs.MAX_CONTENT_LENGTH
     )
     app.redis = Redis.from_url(cs.REDIS_URL)
-    app.task_queue = rq.Queue('???', connection=app.redis)
+    app.task_queue = rq.Queue('CSDGAN', connection=app.redis)
 
     # TODO: Not sure if this is doing anything
     if test_config is None:

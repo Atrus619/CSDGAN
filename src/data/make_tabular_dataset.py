@@ -14,7 +14,7 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
 
     # Create directory for current run and place unzipped data set there
     run_dir = os.path.join(cs.RUN_FOLDER, username, title)
-    new_run_mkdir(directory=cs.RUN_FOLDER, username=username, title=title)
+    assert os.path.exists(run_dir)
 
     # Perform various checks and load in data
     path = os.path.join(cs.UPLOAD_FOLDER, run_id)

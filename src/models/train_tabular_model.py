@@ -16,7 +16,7 @@ def train_tabular_model(run_id, username, title, bs):
         "Data set object not found"
 
     # Load data set and create CGAN object
-    with open(os.path.join(run_dir, cs.MODEL_OBJECTS, "dataset.pkl"), 'rb') as f:
+    with open(os.path.join(run_dir, "dataset.pkl"), 'rb') as f:
         dataset = pkl.load(f)
 
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")

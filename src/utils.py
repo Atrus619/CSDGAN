@@ -25,6 +25,7 @@ def new_run_mkdir(directory, username, title):
     except OSError:
         pass
     safe_mkdir(os.path.join(directory, username, title))
+    return os.path.join(directory, username, title)
 
 
 def parse_tabular(directory, run_id):
@@ -33,6 +34,14 @@ def parse_tabular(directory, run_id):
     filename = os.listdir(os.path.join(directory, run_id))[0]
     data = pd.read_csv(os.path.join(directory, run_id, filename), nrows=0)
     return data.columns
+
+
+def parse_dep(directory, run_id, dep_var):
+    """Parses an uploaded tabular data set and returns a list of unique values for the dependent variable"""
+    run_id = str(run_id)
+    filename = os.listdir(os.path.join(directory, run_id))[0]
+    data = pd.read_csv(os.path.join(directory, run_id, filename), usecols=[dep_var])
+    return sorted(data[dep_var].unique())
 
 
 def validate_tabular_choices(dep_var, cont_inputs, int_inputs):

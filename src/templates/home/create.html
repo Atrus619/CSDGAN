@@ -15,7 +15,7 @@
     <h2>Data Format</h2>
     <ul>
         {% for format in available_formats %}
-        <input type="radio" name="format" id=format value={{ format }}> {{ format }}</input><br>
+        <input type="radio" name="format" id=format value="{{ format }}"> {{ format }}</input><br>
         {% endfor %}
     </ul>
     <input type="submit" value="Next">
