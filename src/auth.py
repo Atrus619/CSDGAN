@@ -63,6 +63,7 @@ def login():
             db.commit()
             session.clear()
             session['user_id'] = user['id']
+            session['username'] = username
             return redirect(url_for('index'))
 
         flash(error)

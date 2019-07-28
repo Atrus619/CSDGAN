@@ -45,6 +45,9 @@ TABULAR_GEN_DICT_NAME = 'gen_dict.pkl'
 TABULAR_MAX_EXAMPLE_PER_CLASS = 10000
 
 # App constants
+TESTING = True
+DEBUG = True
+DATABASE = 'instance/csdgan.sqlite'
 UPLOAD_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/downloads/incoming_raw_data'
 ALLOWED_EXTENSIONS = {'txt', 'csv', 'zip'}
 MAX_CONTENT_LENGTH = 1024 ** 3 * 16  # Maximum data size of 16GB

@@ -7,6 +7,7 @@ from classes.NetUtils import GaussianNoise
 import numpy as np
 import random
 from src.db import query_set_status
+import src.constants as cs
 
 
 class TabularCGAN(CGANUtils):
@@ -108,7 +109,7 @@ class TabularCGAN(CGANUtils):
             if run_id:
                 if self.epoch in checkpoints:
                     status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
-                    query_set_status(run_id=run_id, status_id=status_id)
+                    query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
 
         print("Total training time: %ds" % (time.time() - og_start_time))
         print("Training complete")
@@ -128,7 +129,7 @@ class TabularCGAN(CGANUtils):
                 genned_data = self.reencode(genned_data, self.data_gen.dataset.le_dict)
 
             score_fake_tmp = train_test_logistic_reg(x_train=genned_data, y_train=genned_labels,
-                                                     x_test=self.data_gen.dataset.x_test_arr, y_test=self.data_gen.dataset.y_test_arr,
+                                                     x_test=self.data_gen.dataset.x_test.cpu().detach().numpy(), y_test=self.data_gen.dataset.y_test.cpu().detach().numpy(),
                                                      param_grid=self.eval_param_grid, cv=self.eval_folds, random_state=self.seed,
                                                      labels_list=self.labels_list, verbose=0)
 

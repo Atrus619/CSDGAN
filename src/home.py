@@ -17,6 +17,8 @@ bp = Blueprint('home', __name__)
 def index():
     # TODO: Add generate more data button
     # TODO: Add download generated data button
+    # TODO: Add delete old run button
+    # TODO: Update with failed if failed
     # import pdb; pdb.set_trace()
     if g.user:
         runs = query_all_runs(session['user_id'])
@@ -28,120 +30,3 @@ def index():
         return render_template('home/index.html', logged_in=False)
 
 
-@bp.route('/create', methods=('GET', 'POST'))
-@login_required
-def create():  # TODO: Add cancel option
-    if request.method == 'POST':
-        title = request.form['title']
-
-        if 'format' not in request.form:
-            error = 'Please select a Data Format.'
-
-        elif not title:
-            error = 'Title is required.'
-
-        elif query_check_unique_title_for_user(user_id=g.user['id'], title=title):
-            error = 'You have already have a run with that title. Please select a different title.'
-
-        elif 'file' not in request.files:
-            error = 'No file part'
-
-        else:
-            file = request.files['file']
-            if file.filename == '':
-                error = 'No selected file'
-
-            elif not allowed_file(file.filename):
-                error = 'File contains an invalid extension. Valid extensions include ' + ', '.join(cs.ALLOWED_EXTENSIONS)
-
-            else:
-                session['format'] = request.form['format']
-                filename = secure_filename(file.filename)
-                filesize = len(pkl.dumps(file, -1))
-                run_id = query_init_run(title=title, user_id=g.user['id'], format=format, filesize=filesize)
-                session['run_id'] = run_id
-                safe_mkdir(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id)))  # Raw data gets saved to a folder titled with the run_id
-                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id), filename))
-
-                if session['format'] == 'Tabular':
-                    return redirect(url_for('home.create_tabular'))
-                else:  # Image
-                    return redirect(url_for('home.create_image'))
-        if error:
-            flash(error)
-
-    return render_template('home/create.html', available_formats=cs.AVAILABLE_FORMATS)
-
-
-@bp.route('/create_tabular', methods=('GET', 'POST'))
-@login_required
-def create_tabular():  # TODO: Add advanced options
-    title = query_title(session['run_id'])
-    cols = parse_tabular(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
-    if request.method == 'POST':
-        dep_var = request.form['dep_var']
-        cont_inputs = request.form.getlist('cont_inputs')
-        int_inputs = request.form.getlist('int_inputs')
-        num_epochs = cs.TABULAR_DEFAULT_NUM_EPOCHS if request.form['num_epochs'] == '' else request.form['num_epochs']
-        num_epochs = int(num_epochs)
-        error = validate_tabular_choices(dep_var=dep_var, cont_inputs=cont_inputs, int_inputs=int_inputs)
-        if error:
-            flash(error)
-        else:
-            session['dep_var'] = dep_var
-            session['cont_inputs'] = cont_inputs
-            session['int_inputs'] = int_inputs
-            session['num_epochs'] = num_epochs
-            return redirect(url_for('home.create_tabular_specify_output'))
-    return render_template('home/create_tabular.html', title=title, cols=cols, default_num_epochs='{:,d}'.format(cs.TABULAR_DEFAULT_NUM_EPOCHS),
-                           max_num_epochs=cs.TABULAR_MAX_NUM_EPOCHS)
-
-
-@bp.route('/create_tabular_specify_output', methods=('GET', 'POST'))
-@login_required
-def create_tabular_specify_output():
-    title = query_title(session['run_id'])
-    dep_var = session['dep_var']
-    dep_choices = parse_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=dep_var)
-    if request.method == 'POST':
-        gen_dict = dict(request.form)
-        for key, value in gen_dict.items():
-            gen_dict[key] = 0 if value == '' else int(value)
-        run_dir = new_run_mkdir(directory=cs.RUN_FOLDER, username=g.user['username'], title=title)  # Initialize directory for outputs
-        with open(os.path.join(run_dir, cs.TABULAR_GEN_DICT_NAME), 'wb') as f:
-            pkl.dump(gen_dict, f)
-        return redirect(url_for('home.create_success'))
-    return render_template('home/create_tabular_specify_output.html', title=title, dep_var=dep_var,
-                           dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.TABULAR_MAX_EXAMPLE_PER_CLASS))
-
-
-@bp.route('/create_image', methods=('GET', 'POST'))
-@login_required
-def create_image():
-    title = query_title(session['run_id'])
-    cols = parse_image(upload_folder=current_app.config['UPLOAD_FOLDER'], username=g.user['username'], title=title)
-    if request.method == 'POST':
-        return redirect(url_for('home.create_success'))
-    return render_template('home/create_image.html', title=title, cols=cols)
-
-
-@bp.route('/create_success', methods=('GET', 'POST'))
-@login_required
-def create_success():
-    title = query_title(session['run_id'])
-    if request.method == 'POST':
-        if session['format'] == 'Tabular':
-            # Commence tabular run
-            make_dataset = current_app.task_queue.enqueue('src.data.make_tabular_dataset.make_tabular_dataset',
-                                                          args=(session['run_id'], g.user['username'], title, session['dep_var'], session['cont_inputs'],
-                                                                session['int_inputs'], cs.TABULAR_DEFAULT_TEST_SIZE))
-            train_model = current_app.task_queue.enqueue('src.models.train_tabular_model.train_tabular_model',
-                                                         args=(session['run_id'], g.user['username'], title, session['dep_var'], cs.TABULAR_DEFAULT_BATCH_SIZE),
-                                                         depends_on=make_dataset)
-            generate_data = current_app.task_queue.enqueue('src.generate.generate_tabular_data.generate_tabular_data',
-                                                           args=(session['run_id'], g.user['username'], title),
-                                                           depends_on=train_model)
-        else:
-            pass
-        return redirect(url_for('index'))
-    return render_template('home/create_success.html', title=title)

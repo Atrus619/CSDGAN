@@ -8,6 +8,7 @@ def train_tabular_model(run_id, username, title, bs):
     """
     Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions
     """
+    run_id = str(run_id)
     query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
 
     # Check for objects created by make_tabular_dataset.py

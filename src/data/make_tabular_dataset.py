@@ -9,7 +9,7 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
     Requirements of data set is that it is contained in a flat file and the continuous vs. categorical vs. integer vs. dependent
     variables are specified. It should also be specified how to deal with missing data (stretch goal).
     """
-    # Update status
+    run_id = str(run_id)
     query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Preprocessing data'])
 
     # Create directory for current run and place unzipped data set there
@@ -18,20 +18,22 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
 
     # Perform various checks and load in data
     path = os.path.join(cs.UPLOAD_FOLDER, run_id)
-    assert os.path.splitext(path)[1] in {'.txt', '.csv', '.zip'}, "Path is not zip or flat file"
-    if os.path.splitext(path)[1] == '.zip':
+    file = os.listdir(path)[0]
+    assert os.path.splitext(file)[1] in {'.txt', '.csv', '.zip'}, "Path is not zip or flat file"
+    if os.path.splitext(file)[1] == '.zip':
         zip_ref = zipfile.ZipFile(path, 'r')
         zip_ref.extractall(run_dir)
         zip_ref.close()
 
-        unzipped_path = os.path.join(run_dir, os.path.splitext(os.path.basename(path))[0])
+        unzipped_path = os.path.join(run_dir, os.path.splitext(file)[0])
         assert os.path.exists(unzipped_path), \
             "Flat file in zip not named the same as zip file"
-        assert os.path.splitext(run_dir)[1] in {'.txt', '.csv'}, \
+        unzipped_file = os.listdir(unzipped_path)[0]
+        assert os.path.splitext(unzipped_file)[1] in {'.txt', '.csv'}, \
             "Flat file in zip should be .txt or .csv"
-        data = pd.read_csv(run_dir, header=0)
+        data = pd.read_csv(os.path.join(run_dir, unzipped_file), header=0)
     else:
-        data = pd.read_csv(path, header=0)
+        data = pd.read_csv(os.path.join(path, file), header=0)
 
     # Initialize data set object
     dataset = TabularDataset(df=data,

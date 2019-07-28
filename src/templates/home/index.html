@@ -3,7 +3,7 @@
 {% block header %}
 <h1>{% block title %}Welcome to CSDGAN!{% endblock %}</h1>
 {% if g.user %}
-<a class="action" href="{{ url_for('home.create') }}">New Run</a>
+<a class="action" href="{{ url_for('create.create') }}">New Run</a>
 {% endif %}
 {% endblock %}
 
@@ -14,7 +14,7 @@
 <p>It doesn't look like you are logged in yet. <a href="{{ url_for('auth.login') }}">Click here</a> to log in or
     <a href="{{ url_for('auth.register') }}">here</a> to register if you haven't already.</p>
 {% elif runs is not defined %}
-<p>It doesn't look like you have any runs yet. <a href="{{ url_for('home.create') }}">Click here</a> to get started!</p>
+<p>It doesn't look like you have any runs yet. <a href="{{ url_for('create.create') }}">Click here</a> to get started!</p>
 {% else %}
 
 <table border="1" class="dataframe">

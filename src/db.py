@@ -1,5 +1,5 @@
 import sqlite3
-
+import src.constants as cs
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
@@ -84,8 +84,12 @@ def query_init_run(title, user_id, format, filesize):
 
 
 def query_set_status(run_id, status_id):
-    """Updates status table with the next status"""
-    db = get_db()
+    """Updates status table with the next status. Configured to work with functions outside of app"""
+    db = sqlite3.connect(
+        cs.DATABASE,
+        detect_types=sqlite3.PARSE_DECLTYPES
+    )
+    db.row_factory = sqlite3.Row
     db.execute(
         'INSERT INTO status ('
         'run_id, status_id)'
@@ -94,6 +98,7 @@ def query_set_status(run_id, status_id):
         (run_id, status_id)
     )
     db.commit()
+    db.close()
 
 
 def query_run_failed(run_id):
@@ -138,5 +143,3 @@ def query_all_runs(user_id):
         (user_id,)
     ).fetchall()
     return result
-
-
