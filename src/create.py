@@ -4,7 +4,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from src.auth import login_required
-from src.db import *
+from utils.db import *
 from src.utils.utils import *
 import pickle as pkl
 
@@ -62,7 +62,6 @@ def create():  # TODO: Add cancel option
 @bp.route('/tabular', methods=('GET', 'POST'))
 @login_required
 def tabular():  # TODO: Add advanced options
-    title = query_title(session['run_id'])
     cols = parse_tabular(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
     if request.method == 'POST':
         dep_var = request.form['dep_var']
@@ -79,7 +78,7 @@ def tabular():  # TODO: Add advanced options
             session['int_inputs'] = int_inputs
             session['num_epochs'] = num_epochs
             return redirect(url_for('create.tabular_specify_output'))
-    return render_template('create/tabular.html', title=title, cols=cols, default_num_epochs='{:,d}'.format(cs.TABULAR_DEFAULT_NUM_EPOCHS),
+    return render_template('create/tabular.html', title=session['title'], cols=cols, default_num_epochs='{:,d}'.format(cs.TABULAR_DEFAULT_NUM_EPOCHS),
                            max_num_epochs=cs.TABULAR_MAX_NUM_EPOCHS)
 
 
@@ -111,22 +110,21 @@ def image():
 @bp.route('/success', methods=('GET', 'POST'))
 @login_required
 def success():
-    title = query_title(session['run_id'])
     if request.method == 'POST':
         if session['format'] == 'Tabular':
             # Commence tabular run
             make_dataset = current_app.task_queue.enqueue('src.data.make_tabular_dataset.make_tabular_dataset',
-                                                          args=(session['run_id'], g.user['username'], title, session['dep_var'], session['cont_inputs'],
+                                                          args=(session['run_id'], g.user['username'], session['title'], session['dep_var'], session['cont_inputs'],
                                                                 session['int_inputs'], cs.TABULAR_DEFAULT_TEST_SIZE))
             train_model = current_app.task_queue.enqueue('src.models.train_tabular_model.train_tabular_model',
-                                                         args=(session['run_id'], g.user['username'], title, session['num_epochs'], cs.TABULAR_DEFAULT_BATCH_SIZE),
+                                                         args=(session['run_id'], g.user['username'], session['title'], session['num_epochs'], cs.TABULAR_DEFAULT_BATCH_SIZE),
                                                          depends_on=make_dataset,
                                                          job_timeout=-1)
             generate_data = current_app.task_queue.enqueue('src.generate.generate_tabular_data.generate_tabular_data',
-                                                           args=(session['run_id'], g.user['username'], title),
+                                                           args=(session['run_id'], g.user['username'], session['title']),
                                                            depends_on=train_model)
         else:
             # TODO: Fill in here for image
             pass
         return redirect(url_for('index'))
-    return render_template('create/success.html', title=title)
+    return render_template('create/success.html', title=session['title'])

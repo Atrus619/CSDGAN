@@ -3,6 +3,9 @@ import src.utils.constants as cs
 from src.utils.utils import safe_mkdir
 from redis import Redis
 import rq
+from flask_moment import Moment
+
+moment = Moment()
 
 
 def create_app():
@@ -11,10 +14,11 @@ def create_app():
     app.config.from_object('src.config.Config')
     app.redis = Redis.from_url(cs.REDIS_URL)
     app.task_queue = rq.Queue('CSDGAN', connection=app.redis)
+    moment.init_app(app)
 
     safe_mkdir(app.instance_path)
 
-    from . import db
+    from utils import db
     db.init_app(app)
 
     from . import auth

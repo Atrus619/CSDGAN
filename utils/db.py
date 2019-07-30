@@ -3,6 +3,8 @@ import src.utils.constants as cs
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
+import os
+import shutil
 
 
 def get_db():
@@ -26,7 +28,7 @@ def close_db(e=None):
 def init_db():
     db = get_db()
 
-    with current_app.open_resource('schema.sql') as f:
+    with current_app.open_resource('utils/schema.sql') as f:
         db.executescript(f.read().decode('utf8'))
 
 
@@ -101,35 +103,32 @@ def query_set_status(run_id, status_id):
     db.close()
 
 
-def query_run_failed(run_id):
-    """Updates status table with failure"""
+def query_delete_run(run_id):
+    """Deletes run from database."""
     db = get_db()
-    # max status is always the fail status
-    max_status = db.execute(
-        'SELECT max(id) FROM status_info'
-    ).fetchone()
     db.execute(
-        'INSERT INTO status ('
-        'run_id, status_id)'
-        'VALUES'
-        '(?, ?)',
-        (run_id, max_status[0])
+        'DELETE FROM run WHERE id = ?', (run_id, )
     )
     db.commit()
+    db.execute(
+        'DELETE FROM status WHERE run_id = ?', (run_id, )
+    )
+    db.commit()
+    db.close()
 
 
-def query_title(run_id):
-    """Retrieves the title associated with the specified run_id"""
-    title = get_db().execute(
-        'SELECT title FROM run WHERE id = ?', (run_id,)
+def query_username_title(run_id):
+    """Retrieves the username and title associated with the specified run_id"""
+    result = get_db().execute(
+        'SELECT user_id, title FROM run WHERE id = ?', (run_id,)
     ).fetchone()
-    return title[0]
+    return result[0], result[1]
 
 
 def query_all_runs(user_id):
     """Retrieves information on all runs associated with the specified user_id"""
     result = get_db().execute(
-        'SELECT run.title, run.start_time, run.format, status.update_time, status_info.descr '
+        'SELECT run.id, run.title, run.start_time, run.format, status.update_time, status_info.descr '
         'FROM run '
         'LEFT JOIN ('
         '   SELECT a.run_id, a.status_id, a.update_time FROM status as a '
@@ -140,6 +139,18 @@ def query_all_runs(user_id):
         'LEFT JOIN status_info on status.status_id = status_info.id '
         'WHERE run.user_id = ? '
         'ORDER BY status.update_time DESC',
-        (user_id,)
+        (user_id, )
     ).fetchall()
     return result
+
+
+def clean_run(run_id, delete=True):
+    """Deletes all files associated with a particular run"""
+    username, title = query_username_title(run_id=run_id)
+
+    shutil.rmtree(os.path.join(cs.RUN_FOLDER, username, title))
+
+    if delete:
+        query_delete_run(run_id=run_id)
+    else:
+        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Unavailable'])

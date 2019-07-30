@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'home/jquery_base.html' %}
 
 {% block header %}
 <h1>{% block title %}Welcome to CSDGAN!{% endblock %}</h1>
@@ -25,8 +25,9 @@
         <th>Start Time</th>
         <th>Last Updated</th>
         <th>Status</th>
-        <th>Download</th>
+        <th>Download?</th>
         <th>Want More?</th>
+        <th>Delete Run?</th>
     </tr>
     </thead>
     <tbody>
@@ -34,8 +35,8 @@
     <tr>
         <td>{{ run.title }}</td>
         <td>{{ run.format }}</td>
-        <td>{{ run.start_time }}</td>
-        <td>{{ run.update_time }}</td>
+        <td>{{ run.start_time.strftime("%b-%d %I:%M %p") }}</td>
+        <td>{{ moment(run.update_time).fromNow() }}</td>
         <td>{{ run.descr }}</td>
         {% if 'Data available' in run.descr %}
         <td>Download Data</td>
@@ -44,6 +45,7 @@
         <td>----</td>
         <td>----</td>
         {% endif %}
+        <td><a href="#" onclick="return delete_run({{ run.index }});">Delete</a></td>
     </tr>
     {% endfor %}
     </tbody>

@@ -1,4 +1,8 @@
 <!doctype html>
+<head>
+    {{ moment.include_jquery() }}
+    {{ moment.include_moment() }}
+</head>
 <title>{% block title %}{% endblock %} - CSDGAN</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <nav>

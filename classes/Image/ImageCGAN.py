@@ -10,7 +10,7 @@ import time
 from utils.utils import *
 import imageio
 import copy
-from src.db import query_set_status
+from utils.db import query_set_status
 
 
 class ImageCGAN(CGANUtils):

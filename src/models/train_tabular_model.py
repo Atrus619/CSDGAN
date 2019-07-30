@@ -1,7 +1,7 @@
 from utils.data_loading import *
 import src.utils.constants as cs
 from classes.Tabular.TabularCGAN import TabularCGAN
-from src.db import query_set_status
+from utils.db import query_set_status
 from src.utils.utils import setup_logger
 import logging
 

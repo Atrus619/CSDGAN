@@ -2,7 +2,6 @@ drop table IF EXISTS user;
 drop table IF EXISTS run;
 drop table IF EXISTS status;
 drop table IF EXISTS status_info;
-drop table IF EXISTS post;
 
 create TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,27 +32,19 @@ create TABLE status (
 );
 
 create TABLE status_info (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY,
   descr TEXT NOT NULL
 );
 
-insert into status_info (descr)
+insert into status_info
   values
-  ('Not started'),  -- 1
-  ('Preprocessing data'),  -- 2
-  ('Training in progress...0/4'),  -- 3
-  ('Training in progress...1/4'),  -- 4
-  ('Training in progress...1/2'),  -- 5
-  ('Training in progress...3/4'),  -- 6
-  ('Training complete - Generating data'),  -- 7
-  ('Complete - Data available'),  -- 8
-  ('Error - Run failed');  -- 9
-
-create TABLE post (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  author_id INTEGER NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  FOREIGN KEY (author_id) REFERENCES user (id)
-);
+  (1, 'Not started'),
+  (2, 'Preprocessing data'),
+  (3, 'Training in progress...0/4'),
+  (4, 'Training in progress...1/4'),
+  (5, 'Training in progress...1/2'),
+  (6, 'Training in progress...3/4'),
+  (7, 'Training complete - Generating data'),
+  (8, 'Complete - Data available'),
+  (99, 'Error - Run failed'),
+  (100, 'No Longer Available');

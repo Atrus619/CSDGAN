@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.3/jquery.min.js"></script>
+
+    <script>window.jQuery || document.write('<script src="{{
+  url_for('static', filename='jquery.js') }}">\x3C/script>')
+    </script>
+
+    <script type=text/javascript>
+  $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    </script>
+
+    <script type="text/javascript">
+            $(function() {
+                $('a#delete_run').bind('click', function() {
+                    $.get('/delete_run',
+                    function(data){
+                        //do nothing
+                    });
+                    return false;
+                });
+            });
+    </script>
+</head>
