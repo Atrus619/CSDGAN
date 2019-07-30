@@ -1,5 +1,5 @@
 import sqlite3
-import src.constants as cs
+import src.utils.constants as cs
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext

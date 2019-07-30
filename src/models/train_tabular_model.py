@@ -1,56 +1,76 @@
 from utils.data_loading import *
-import src.constants as cs
+import src.utils.constants as cs
 from classes.Tabular.TabularCGAN import TabularCGAN
 from src.db import query_set_status
+from src.utils.utils import setup_logger
+import logging
 
 
-def train_tabular_model(run_id, username, title, bs):
+def train_tabular_model(run_id, username, title, num_epochs, bs):
     """
     Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions
     """
-    run_id = str(run_id)
-    query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
+    setup_logger(name='train_func', username=username, title=title)
+    setup_logger(name='train_info', username=username, title=title, filename='train_log')
+    logger = logging.getLogger('train_func')
 
-    # Check for objects created by make_tabular_dataset.py
-    run_dir = os.path.join(cs.RUN_FOLDER, username, title)
-    assert os.path.exists(os.path.join(run_dir, 'dataset.pkl')), \
-        "Data set object not found"
+    try:
+        run_id = str(run_id)
+        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
 
-    # Load data set and create CGAN object
-    with open(os.path.join(run_dir, "dataset.pkl"), 'rb') as f:
-        dataset = pkl.load(f)
+        # Check for objects created by make_tabular_dataset.py
+        run_dir = os.path.join(cs.RUN_FOLDER, username, title)
+        assert os.path.exists(os.path.join(run_dir, 'dataset.pkl')), \
+            "Data set object not found"
 
-    device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+        # Load data set and create CGAN object
+        with open(os.path.join(run_dir, "dataset.pkl"), 'rb') as f:
+            dataset = pkl.load(f)
 
-    if len(pkl.dumps(dataset, -1)) < cs.TABULAR_MEM_THRESHOLD:
-        dataset.to_dev(device)
+        device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
-    data_gen = data.DataLoader(dataset, batch_size=bs, shuffle=True, num_workers=0)
+        if len(pkl.dumps(dataset, -1)) < cs.TABULAR_MEM_THRESHOLD:
+            dataset.to_dev(device)
 
-    CGAN = TabularCGAN(data_gen=data_gen,
-                       device=device,
-                       path=run_dir,
-                       seed=None,
-                       eval_param_grid=cs.TABULAR_EVAL_PARAM_GRID,
-                       eval_folds=cs.TABULAR_EVAL_FOLDS,
-                       test_ranges=[dataset.x_train.shape[0]*2**x for x in range(5)],
-                       eval_stratify=dataset.eval_stratify,
-                       nc=len(dataset.labels_list),
-                       nz=cs.TABULAR_DEFAULT_NZ,
-                       sched_netG=cs.TABULAR_DEFAULT_SCHED_NETG,
-                       netG_H=cs.TABULAR_DEFAULT_NETG_H,
-                       netD_H=cs.TABULAR_DEFAULT_NETD_H,
-                       **cs.TABULAR_CGAN_INIT_PARAMS)
+        data_gen = data.DataLoader(dataset, batch_size=bs, shuffle=True, num_workers=0)
 
-    # Train
-    CGAN.train_gan(num_epochs=cs.TABULAR_DEFAULT_NUM_EPOCHS,
-                   cadence=cs.TABULAR_DEFAULT_CADENCE,
-                   print_freq=cs.TABULAR_DEFAULT_PRINT_FREQ,
-                   eval_freq=cs.TABULAR_DEFAULT_EVAL_FREQ,
-                   run_id=run_id)
+        CGAN = TabularCGAN(data_gen=data_gen,
+                           device=device,
+                           path=run_dir,
+                           seed=None,
+                           eval_param_grid=cs.TABULAR_EVAL_PARAM_GRID,
+                           eval_folds=cs.TABULAR_EVAL_FOLDS,
+                           test_ranges=[dataset.x_train.shape[0]*2**x for x in range(5)],
+                           eval_stratify=dataset.eval_stratify,
+                           nc=len(dataset.labels_list),
+                           nz=cs.TABULAR_DEFAULT_NZ,
+                           sched_netG=cs.TABULAR_DEFAULT_SCHED_NETG,
+                           netG_H=cs.TABULAR_DEFAULT_NETG_H,
+                           netD_H=cs.TABULAR_DEFAULT_NETD_H,
+                           **cs.TABULAR_CGAN_INIT_PARAMS)
 
-    # Load best-performing GAN and pickle CGAN to main directory
-    CGAN.load_netG(best=True)
+        logger.info('Successfully instantiated CGAN object. Beginning training...')
 
-    with open(os.path.join(run_dir, 'CGAN.pkl'), 'wb') as f:
-        pkl.dump(CGAN, f)
+        # Train
+        CGAN.train_gan(num_epochs=num_epochs,
+                       cadence=cs.TABULAR_DEFAULT_CADENCE,
+                       print_freq=cs.TABULAR_DEFAULT_PRINT_FREQ,
+                       eval_freq=cs.TABULAR_DEFAULT_EVAL_FREQ,
+                       run_id=run_id,
+                       logger=logging.getLogger('train_info'))
+
+        logger = logging.getLogger('train_func')
+        logger.info('Successfully trained CGAN. Loading and saving best model...')
+
+        # Load best-performing GAN and pickle CGAN to main directory
+        CGAN.load_netG(best=True)
+
+        with open(os.path.join(run_dir, 'CGAN.pkl'), 'wb') as f:
+            pkl.dump(CGAN, f)
+
+        logger.info('Successfully completed train_tabular_model function.')
+
+    except Exception as e:
+        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
+        logger.exception('Error: %s', e)
+        raise Exception('Intentionally failing process after broadly catching an exception.')

@@ -51,7 +51,6 @@ DATABASE = 'instance/csdgan.sqlite'
 UPLOAD_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/downloads/incoming_raw_data'
 ALLOWED_EXTENSIONS = {'txt', 'csv', 'zip'}
 MAX_CONTENT_LENGTH = 1024 ** 3 * 16  # Maximum data size of 16GB
-SECRET_KEY = 'abc'
 AVAILABLE_FORMATS = ['Tabular', 'Image']
 REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
 

@@ -9,7 +9,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import src.constants as cs
+import src.utils.constants as cs
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = cs.UPLOAD_FOLDER

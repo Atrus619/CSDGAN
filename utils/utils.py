@@ -400,3 +400,10 @@ def encode_y(y):
     y = ohe.fit_transform(y)
 
     return y, le, ohe
+
+
+def train_log_print(run_id, logger, statement):
+    if run_id:
+        logger.info(statement)
+    else:
+        print(statement)

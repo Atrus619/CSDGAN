@@ -1,7 +1,8 @@
-import src.constants as cs
+import src.utils.constants as cs
 import os
 import pandas as pd
 import shutil
+import logging
 
 
 def allowed_file(filename):
@@ -59,3 +60,13 @@ def parse_image(upload_folder, username, title):
     # TODO
     pass
 
+
+def setup_logger(name, username, title, filename='run_log', level=logging.INFO):
+    log_setup = logging.getLogger(name)
+
+    fileHandler = logging.FileHandler(os.path.join(cs.RUN_FOLDER, username, title, filename + '.log'), mode='a')
+    formatter = logging.Formatter('%(levelname)s: %(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    fileHandler.setFormatter(formatter)
+
+    log_setup.setLevel(level)
+    log_setup.addHandler(fileHandler)

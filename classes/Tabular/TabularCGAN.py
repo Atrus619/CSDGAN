@@ -7,7 +7,7 @@ from classes.NetUtils import GaussianNoise
 import numpy as np
 import random
 from src.db import query_set_status
-import src.constants as cs
+import src.utils.constants as cs
 
 
 class TabularCGAN(CGANUtils):
@@ -63,7 +63,7 @@ class TabularCGAN(CGANUtils):
         self.fake_label = 0
         self.stored_acc = []
 
-    def train_gan(self, num_epochs, cadence, print_freq, eval_freq=None, run_id=None):
+    def train_gan(self, num_epochs, cadence, print_freq, eval_freq=None, run_id=None, logger=None):
         """
         Primary method for training
         :param num_epochs: Desired number of epochs to train for
@@ -71,9 +71,13 @@ class TabularCGAN(CGANUtils):
         :param print_freq: How freqently to print out training statistics (i.e., freq of 5 will result in information being printed every 5 epochs)
         :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur.
         :param run_id: If not None, will update database as it progresses through training in quarter increments.
+        :param logger: Logger to be used for logging training progress. Must exist if run_id is not None.
         """
+        assert logger if run_id else True, "Must pass a logger if run_id is passed"
+
         total_epochs = self.epoch + num_epochs
         device_check = self.data_gen.dataset.device != self.device
+
         if run_id:
             checkpoints = [int(num_epochs * i / 4) for i in range(1, 4)]
 
@@ -83,7 +87,7 @@ class TabularCGAN(CGANUtils):
         if self.discrim_noise_linear_anneal:
             self.dn_rate = self.discrim_noise / num_epochs
 
-        print("Beginning training")
+        train_log_print(run_id=run_id, logger=logger, statement="Beginning training")
         og_start_time = time.time()
         start_time = time.time()
         for epoch in range(num_epochs):
@@ -96,23 +100,24 @@ class TabularCGAN(CGANUtils):
             self.next_epoch()
 
             if self.epoch % print_freq == 0 or (self.epoch == num_epochs):
-                print("Time: %ds" % (time.time() - start_time))
+                train_log_print(run_id=run_id, logger=logger, statement="Time: %ds" % (time.time() - start_time))
                 start_time = time.time()
 
-                self.print_progress(total_epochs)
+                self.print_progress(total_epochs=total_epochs, run_id=run_id, logger=logger)
 
             if eval_freq is not None:
                 if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
                     self.stored_acc.append(self.test_model(stratify=self.eval_stratify))
-                    print("Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
+                    train_log_print(run_id=run_id, logger=logger, statement="Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
 
             if run_id:
                 if self.epoch in checkpoints:
+                    logger.info('Checkpoint reached.')
                     status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
                     query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
 
-        print("Total training time: %ds" % (time.time() - og_start_time))
-        print("Training complete")
+        train_log_print(run_id=run_id, logger=logger, statement="Total training time: %ds" % (time.time() - og_start_time))
+        train_log_print(run_id=run_id, logger=logger, statement="Training complete")
 
     def test_model(self, stratify=None):
         """

@@ -6,6 +6,7 @@ from torchviz import make_dot
 
 class CGANUtils:
     """Contains util methods to be inherited by both CGANs in this project"""
+
     def __init__(self):
         pass
 
@@ -44,10 +45,11 @@ class CGANUtils:
             gen_fake_forward_pass = self.netD(x_train_fake, y_train).view(-1)
             self.netG.train_one_step(gen_fake_forward_pass, labels)
 
-    def print_progress(self, total_epochs):
+    def print_progress(self, total_epochs, run_id=None, logger=None):
         """Print metrics of interest"""
-        print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-              % (self.epoch, total_epochs, self.netD.losses[-1], self.netG.losses[-1], self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1]))
+        statement = '[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f' % (self.epoch, total_epochs, self.netD.losses[-1], self.netG.losses[-1],
+                                                                                               self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1])
+        train_log_print(run_id=run_id, logger=logger, statement=statement)
 
     def plot_training_plots(self, show=True, save=None):
         """

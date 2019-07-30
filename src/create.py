@@ -1,13 +1,11 @@
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for, current_app, session
+    Blueprint, flash, redirect, render_template, request, url_for, session
 )
-import pandas as pd
-from werkzeug.exceptions import abort
 from werkzeug.utils import secure_filename
 
 from src.auth import login_required
 from src.db import *
-from src.utils import *
+from src.utils.utils import *
 import pickle as pkl
 
 bp = Blueprint('create', __name__, url_prefix='/create')
@@ -16,6 +14,7 @@ bp = Blueprint('create', __name__, url_prefix='/create')
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
 def create():  # TODO: Add cancel option
+    # TODO: Require title does not have funky filename adverse characters
     if request.method == 'POST':
         title = request.form['title']
 
@@ -41,9 +40,11 @@ def create():  # TODO: Add cancel option
 
             else:
                 session['format'] = request.form['format']
+                session['title'] = title
+                session['run_dir'] = new_run_mkdir(directory=cs.RUN_FOLDER, username=g.user['username'], title=title)  # Initialize directory for outputs
                 filename = secure_filename(file.filename)
                 filesize = len(pkl.dumps(file, -1))
-                run_id = query_init_run(title=title, user_id=g.user['id'], format=session['format'], filesize=filesize)
+                run_id = query_init_run(title=title, user_id=g.user['id'], format=session['format'], filesize=filesize)  # Initialize run in database
                 session['run_id'] = run_id
                 safe_mkdir(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id)))  # Raw data gets saved to a folder titled with the run_id
                 file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id), filename))
@@ -85,30 +86,26 @@ def tabular():  # TODO: Add advanced options
 @bp.route('/tabular_specify_output', methods=('GET', 'POST'))
 @login_required
 def tabular_specify_output():
-    title = query_title(session['run_id'])
-    dep_var = session['dep_var']
-    dep_choices = parse_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=dep_var)
+    dep_choices = parse_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
     if request.method == 'POST':
         gen_dict = dict(request.form)
         for key, value in gen_dict.items():
             gen_dict[key] = 0 if value == '' else int(value)
-        run_dir = new_run_mkdir(directory=cs.RUN_FOLDER, username=g.user['username'], title=title)  # Initialize directory for outputs
-        with open(os.path.join(run_dir, cs.TABULAR_GEN_DICT_NAME), 'wb') as f:
+        with open(os.path.join(session['run_dir'], cs.TABULAR_GEN_DICT_NAME), 'wb') as f:
             pkl.dump(gen_dict, f)
         return redirect(url_for('create.success'))
-    return render_template('create/tabular_specify_output.html', title=title, dep_var=dep_var,
+    return render_template('create/tabular_specify_output.html', title=session['title'], dep_var=session['dep_var'],
                            dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.TABULAR_MAX_EXAMPLE_PER_CLASS))
 
 
 @bp.route('/image', methods=('GET', 'POST'))
 @login_required
 def image():
-    title = query_title(session['run_id'])
-    cols = parse_image(upload_folder=current_app.config['UPLOAD_FOLDER'], username=g.user['username'], title=title)
+    cols = parse_image(upload_folder=current_app.config['UPLOAD_FOLDER'], username=g.user['username'], title=session['title'])
     if request.method == 'POST':
-        # TODO: Fill in here
+        # TODO: Fill in here for image
         return redirect(url_for('create.success'))
-    return render_template('create/image.html', title=title, cols=cols)
+    return render_template('create/image.html', title=session['title'], cols=cols)
 
 
 @bp.route('/success', methods=('GET', 'POST'))
@@ -122,13 +119,14 @@ def success():
                                                           args=(session['run_id'], g.user['username'], title, session['dep_var'], session['cont_inputs'],
                                                                 session['int_inputs'], cs.TABULAR_DEFAULT_TEST_SIZE))
             train_model = current_app.task_queue.enqueue('src.models.train_tabular_model.train_tabular_model',
-                                                         args=(session['run_id'], g.user['username'], title, cs.TABULAR_DEFAULT_BATCH_SIZE),
+                                                         args=(session['run_id'], g.user['username'], title, session['num_epochs'], cs.TABULAR_DEFAULT_BATCH_SIZE),
                                                          depends_on=make_dataset,
                                                          job_timeout=-1)
             generate_data = current_app.task_queue.enqueue('src.generate.generate_tabular_data.generate_tabular_data',
                                                            args=(session['run_id'], g.user['username'], title),
                                                            depends_on=train_model)
         else:
+            # TODO: Fill in here for image
             pass
         return redirect(url_for('index'))
     return render_template('create/success.html', title=title)

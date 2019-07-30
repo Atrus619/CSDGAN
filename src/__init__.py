@@ -1,7 +1,6 @@
-import os
 from flask import Flask
-import src.constants as cs
-from src.utils import safe_mkdir
+import src.utils.constants as cs
+from src.utils.utils import safe_mkdir
 from redis import Redis
 import rq
 
