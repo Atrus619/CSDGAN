@@ -241,8 +241,11 @@ class TabularCGAN(CGANUtils):
             numerics = ohe.inverse_transform(cat_arr)
             for i, le in enumerate(le_dict.items()):
                 df[le[0]] = le[1].inverse_transform(numerics[:, i].astype('int'))
-        # Inverse transform continuous variables  # TODO: Check what happens if no continuous features!
-        og_cont_arr = scaler.inverse_transform(cont_arr)
+        # Inverse transform continuous variables
+        if scaler is None:
+            og_cont_arr = cont_arr
+        else:
+            og_cont_arr = scaler.inverse_transform(cont_arr)
         df[cont_inputs] = og_cont_arr
 
         # Round integer inputs

@@ -4,10 +4,13 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
 from werkzeug.security import check_password_hash, generate_password_hash
-
 from utils.db import get_db
+from src.utils.utils import *
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+setup_daily_logger(name=__name__, path=cs.LOG_FOLDER)
+logger = logging.getLogger(__name__)
 
 
 @bp.route('/register', methods=('GET', 'POST'))
@@ -22,6 +25,8 @@ def register():
             error = 'Username is required.'
         elif not password:
             error = 'Password is required.'
+        elif username != clean_filename(username):
+            error = 'Invalid characters used for username. Please try again.'
         elif db.execute(
             'SELECT id FROM user WHERE username = ?', (username, )
         ).fetchone() is not None:
@@ -33,6 +38,7 @@ def register():
                 (username, generate_password_hash(password))
             )
             db.commit()
+            logger.info('User {} successfully registered'.format(username))
             return redirect(url_for('auth.login'))
 
         flash(error)
@@ -64,6 +70,7 @@ def login():
             session.clear()
             session['user_id'] = user['id']
             session['username'] = username
+            logger.info('User #{} ({}) successfully logged in'.format(user['id'], username))
             return redirect(url_for('index'))
 
         flash(error)
@@ -85,6 +92,7 @@ def load_logged_in_user():
 
 @bp.route('/logout')
 def logout():
+    logger.info('User #{} ({}) successfully logged out'.format(session['user_id'], session['username']))
     session.clear()
     return redirect(url_for('index'))
 

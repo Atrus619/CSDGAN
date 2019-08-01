@@ -1,7 +1,7 @@
 from utils.data_loading import *
 import src.utils.constants as cs
 from utils.db import query_set_status
-from src.utils.utils import setup_logger
+from src.utils.utils import setup_run_logger, export_tabular_to_zip
 import logging
 
 
@@ -9,7 +9,7 @@ def generate_tabular_data(run_id, username, title):
     """
     Loads a tabular CGAN created by train_tabular_model.py. Generates data based on user specifications in pre-built gen_dict.pkl.
     """
-    setup_logger(name='gen_func', username=username, title=title)
+    setup_run_logger(name='gen_func', username=username, title=title)
     logger = logging.getLogger('gen_func')
 
     try:
@@ -35,15 +35,16 @@ def generate_tabular_data(run_id, username, title):
         # Generate data
         df = pd.DataFrame(columns=CGAN.data_gen.dataset.df_cols)
         for i, (dep_class, size) in enumerate(gen_dict.items()):
-            stratify = np.eye(CGAN.nc)[i]
-            tmp_df = CGAN.gen_data(size=size, stratify=stratify)
-            tmp_df = tmp_df[df.columns.to_list()]
-            df = pd.concat((df, tmp_df), axis=0)
+            if size > 0:
+                stratify = np.eye(CGAN.nc)[i]
+                tmp_df = CGAN.gen_data(size=size, stratify=stratify)
+                tmp_df = tmp_df[df.columns.to_list()]
+                df = pd.concat((df, tmp_df), axis=0)
 
         logger.info('Successfully generated data. Saving output to file...')
 
         # Output data
-        df.to_csv(cs.TABULAR_DEFAULT_GENNED_DATA_FILENAME, index=False)
+        export_tabular_to_zip(df=df, username=username, title=title)
 
         query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Complete'])
 

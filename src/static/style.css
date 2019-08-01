@@ -23,11 +23,7 @@ nav ul li a, nav ul li span, header .action { display: block; padding: 0.5rem; }
 .content > header { border-bottom: 3px solid lightgray; display: flex; align-items: flex-end; }
 .content > header h1 { flex: auto; margin: 1rem 0 0.25rem 0; }
 .flash { margin: 1em 0; padding: 1em; background: #cae6f6; border: 1px solid #377ba8; }
-.post > header { display: flex; align-items: flex-end; font-size: 0.85em; }
-.post > header > div:first-of-type { flex: auto; }
-.post > header h1 { font-size: 1.5em; margin-bottom: 0; }
-.post .about { color: slategray; font-style: italic; }
-.post .body { white-space: pre-line; }
+
 .content:last-child { margin-bottom: 0; }
 .content form { margin: 1em 0; flex-direction: column; }
 .content label { font-weight: bold; margin-bottom: 0.5em; }
@@ -48,3 +44,32 @@ table.dataframe, .dataframe th, .dataframe td {
 tr:nth-child(odd) { background-color:#eee; }
 tr:nth-child(even) { background-color:#fff; }
 tr:hover { background-color: #ffff99; }
+
+.inline {
+  display: inline;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #377ba8;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 1em;
+}
+.link-button:focus {
+  outline: none;
+}
+.link-button:active {
+  color:red;
+}
+
+.invis-button {
+ background: none;
+ border: none;
+ padding: 0px 0px;
+}
+
+.invis-button:focus {
+  outline: none;
+}

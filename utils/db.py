@@ -48,7 +48,9 @@ def init_app(app):
 def query_check_unique_title_for_user(user_id, title):
     """Returns True if unique, False otherwise"""
     result = get_db().execute(
-        'SELECT * FROM run WHERE user_id = ? and title = ?',
+        'SELECT * '
+        'FROM run '
+        'WHERE user_id = ? and title = ? and live = 1',
         (user_id, title)
     ).fetchone()
     return result
@@ -63,7 +65,7 @@ def query_init_run(title, user_id, format, filesize):
     # run table
     db.execute(
         'INSERT INTO run ('
-        'title, user_id, format, filesize)'
+        'title, user_id, format, filesize) '
         'VALUES'
         '(?, ?, ?, ?)',
         (title, user_id, format, filesize)
@@ -76,7 +78,7 @@ def query_init_run(title, user_id, format, filesize):
     # status table
     db.execute(
         'INSERT INTO status ('
-        'run_id, status_id)'
+        'run_id, status_id) '
         'VALUES'
         '(?, ?)',
         (run_id[0], 1)
@@ -94,7 +96,7 @@ def query_set_status(run_id, status_id):
     db.row_factory = sqlite3.Row
     db.execute(
         'INSERT INTO status ('
-        'run_id, status_id)'
+        'run_id, status_id) '
         'VALUES'
         '(?, ?)',
         (run_id, status_id)
@@ -107,20 +109,20 @@ def query_delete_run(run_id):
     """Deletes run from database."""
     db = get_db()
     db.execute(
-        'DELETE FROM run WHERE id = ?', (run_id, )
+        'UPDATE run '
+        'SET live = 0 '
+        'WHERE id = ?', (run_id, )
     )
     db.commit()
-    db.execute(
-        'DELETE FROM status WHERE run_id = ?', (run_id, )
-    )
-    db.commit()
-    db.close()
 
 
 def query_username_title(run_id):
     """Retrieves the username and title associated with the specified run_id"""
     result = get_db().execute(
-        'SELECT user_id, title FROM run WHERE id = ?', (run_id,)
+        'SELECT user.username, run.title '
+        'FROM run '
+        'INNER JOIN user on run.user_id = user.id '
+        'WHERE run.id = ?', (run_id, )
     ).fetchone()
     return result[0], result[1]
 
@@ -133,22 +135,48 @@ def query_all_runs(user_id):
         'LEFT JOIN ('
         '   SELECT a.run_id, a.status_id, a.update_time FROM status as a '
         '   INNER JOIN ('
-        '       SELECT run_id, max(status_id) as status_id FROM status GROUP BY run_id'
-        '   ) as b on a.run_id = b.run_id and a.status_id = b.status_id'
+        '       SELECT run_id, max(status_id) as status_id FROM status GROUP BY run_id '
+        '   ) as b on a.run_id = b.run_id and a.status_id = b.status_id '
         ') as status on run.id = status.run_id '
         'LEFT JOIN status_info on status.status_id = status_info.id '
-        'WHERE run.user_id = ? '
+        'WHERE run.user_id = ? and run.live = 1 '
         'ORDER BY status.update_time DESC',
         (user_id, )
     ).fetchall()
     return result
 
 
+def query_check_status(run_id):
+    """Returns the current status and most recent update time of the specified run id"""
+    result = get_db().execute(
+        'SELECT c.descr, a.update_time '
+        'FROM status as a '
+        'INNER JOIN ('
+        '   SELECT run_id, max(status_id) as status_id '
+        '   FROM status '
+        '   WHERE run_id = ? '
+        '   GROUP BY run_id '
+        ') as b on a.run_id = b.run_id and a.status_id = b.status_id '
+        'INNER JOIN status_info as c on a.status_id = c.id', (run_id, )
+    ).fetchone()
+    return result[0], result[1]
+
+
 def clean_run(run_id, delete=True):
     """Deletes all files associated with a particular run"""
     username, title = query_username_title(run_id=run_id)
+    full_path = os.path.join(cs.RUN_FOLDER, username, title)
+    raw_path = os.path.join(cs.UPLOAD_FOLDER, str(run_id))
+    output_path = os.path.join(cs.OUTPUT_FOLDER, username, title)
 
-    shutil.rmtree(os.path.join(cs.RUN_FOLDER, username, title))
+    if os.path.exists(full_path):
+        shutil.rmtree(full_path)
+
+    if os.path.exists(raw_path):
+        shutil.rmtree(raw_path)
+
+    if os.path.exists(output_path):
+        os.remove(output_path)
 
     if delete:
         query_delete_run(run_id=run_id)

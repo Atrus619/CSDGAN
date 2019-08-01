@@ -2,7 +2,6 @@ from flask import (
     Blueprint, flash, redirect, render_template, request, url_for, session
 )
 from werkzeug.utils import secure_filename
-
 from src.auth import login_required
 from utils.db import *
 from src.utils.utils import *
@@ -10,11 +9,13 @@ import pickle as pkl
 
 bp = Blueprint('create', __name__, url_prefix='/create')
 
+setup_daily_logger(name=__name__, path=cs.LOG_FOLDER)
+logger = logging.getLogger(__name__)
+
 
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
 def create():  # TODO: Add cancel option
-    # TODO: Require title does not have funky filename adverse characters
     if request.method == 'POST':
         title = request.form['title']
 
@@ -24,11 +25,17 @@ def create():  # TODO: Add cancel option
         elif not title:
             error = 'Title is required.'
 
+        elif title != clean_filename(title):
+            error = 'Invalid characters used for title. Please try again.'
+
         elif query_check_unique_title_for_user(user_id=g.user['id'], title=title):
             error = 'You have already have a run with that title. Please select a different title.'
 
         elif 'file' not in request.files:
             error = 'No file part'
+
+        elif request.form['format'] == 'Image':  # TODO: Remove this when image is supported
+            error = "Image support not yet implemented. Please choose tabular."
 
         else:
             file = request.files['file']
@@ -126,5 +133,6 @@ def success():
         else:
             # TODO: Fill in here for image
             pass
+        logger.info('User #{} ({}) kicked off a {} run #{} ({})'.format(g.user['id'], g.user['username'], session['format'], session['run_id'], session['title']))
         return redirect(url_for('index'))
     return render_template('create/success.html', title=session['title'])

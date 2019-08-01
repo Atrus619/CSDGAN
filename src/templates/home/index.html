@@ -1,4 +1,4 @@
-{% extends 'home/jquery_base.html' %}
+{% extends 'base.html' %}
 
 {% block header %}
 <h1>{% block title %}Welcome to CSDGAN!{% endblock %}</h1>
@@ -17,35 +17,46 @@
 <p>It doesn't look like you have any runs yet. <a href="{{ url_for('create.create') }}">Click here</a> to get started!</p>
 {% else %}
 
-<table border="1" class="dataframe">
+<script src="{{ url_for('static', filename='index.js') }}"></script>
+<table border="1" class="dataframe" id="status_table">
     <thead>
     <tr style="text-align: right;">
         <th>Name</th>
-        <th>Data Format</th>
+        <th>Format</th>
         <th>Start Time</th>
         <th>Last Updated</th>
         <th>Status</th>
+        <th>Refresh?</th>
         <th>Download?</th>
         <th>Want More?</th>
-        <th>Delete Run?</th>
+        <th>Delete?</th>
     </tr>
     </thead>
     <tbody>
     {% for run in runs %}
-    <tr>
+    <tr id="{{ loop.index }}">
         <td>{{ run.title }}</td>
         <td>{{ run.format }}</td>
         <td>{{ run.start_time.strftime("%b-%d %I:%M %p") }}</td>
-        <td>{{ moment(run.update_time).fromNow() }}</td>
-        <td>{{ run.descr }}</td>
+        <td id="update_time{{ loop.index }}">{{ moment(run.update_time).fromNow() }}</td>
+        <td id="status{{ loop.index }}">{{ run.descr }}</td>
+        <td><a href="#" onclick="refresh_status({{ loop.index }})">Refresh</a></td>
         {% if 'Data available' in run.descr %}
-        <td>Download Data</td>
-        <td>Generate More Data</td>
+            <td id="download_button{{ loop.index }}">
+                <form method="post" action="{{ url_for('home.download_data') }}" class="inline">
+                    <button type="submit"  name="index" value="{{ loop.index }}" class="link-button">Download Data</button>
+                </form>
+            <td id="gen_more_data_button{{ loop.index }}"><a href="{{ url_for('home.gen_more_data') }}">Generate More Data</a></td>
         {% else %}
-        <td>----</td>
-        <td>----</td>
+            <td id="download_button{{ loop.index }}">
+                <form method="post" action="{{ url_for('home.download_data') }}" class="inline"><button class="invis-button"></button></form>----</td>
+            <td id="gen_more_data_button{{ loop.index }}"><a></a>----</td>
         {% endif %}
-        <td><a href="#" onclick="return delete_run({{ run.index }});">Delete</a></td>
+        {% if 'Data available' in run.descr or 'Error' in run.descr %}
+            <td id="delete_button{{ loop.index }}"><a href="#" onclick="delete_button({{ loop.index }})">Delete</a></td>
+        {% else %}
+        <td id="delete_button{{ loop.index }}"><a></a>----</td>
+        {% endif %}
     </tr>
     {% endfor %}
     </tbody>

@@ -19,6 +19,7 @@ create TABLE run (
   end_time TIMESTAMP,
   format TEXT NOT NULL,
   filesize INTEGER NOT NULL,
+  live INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (user_id) REFERENCES user (id)
 );
 

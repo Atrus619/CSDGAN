@@ -2,7 +2,7 @@ from utils.data_loading import *
 from src.utils.utils import *
 from classes.Tabular.TabularDataset import TabularDataset
 from utils.db import query_set_status
-from src.utils.utils import setup_logger
+from src.utils.utils import setup_run_logger
 import logging
 
 
@@ -11,7 +11,7 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
     Requirements of data set is that it is contained in a flat file and the continuous vs. categorical vs. integer vs. dependent
     variables are specified. It should also be specified how to deal with missing data (stretch goal).
     """
-    setup_logger(name='dataset_func', username=username, title=title)
+    setup_run_logger(name='dataset_func', username=username, title=title)
     logger = logging.getLogger('dataset_func')
 
     try:

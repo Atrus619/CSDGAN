@@ -2,7 +2,7 @@ from utils.data_loading import *
 import src.utils.constants as cs
 from classes.Tabular.TabularCGAN import TabularCGAN
 from utils.db import query_set_status
-from src.utils.utils import setup_logger
+from src.utils.utils import setup_run_logger
 import logging
 
 
@@ -10,8 +10,8 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
     """
     Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions
     """
-    setup_logger(name='train_func', username=username, title=title)
-    setup_logger(name='train_info', username=username, title=title, filename='train_log')
+    setup_run_logger(name='train_func', username=username, title=title)
+    setup_run_logger(name='train_info', username=username, title=title, filename='train_log')
     logger = logging.getLogger('train_func')
 
     try:

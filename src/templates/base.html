@@ -1,10 +1,11 @@
 <!doctype html>
 <head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {{ moment.include_jquery() }}
     {{ moment.include_moment() }}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.3/jquery.min.js"></script>
+    <title>{% block title %}{% endblock %} - CSDGAN</title>
 </head>
-<title>{% block title %}{% endblock %} - CSDGAN</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <nav>
     <h1>Conditional Synthetic Data Generative Adversarial Network</h1>
     <ul>

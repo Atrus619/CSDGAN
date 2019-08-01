@@ -3,6 +3,10 @@ import os
 import pandas as pd
 import shutil
 import logging
+import unicodedata
+import string
+import datetime as d
+from zipfile import ZipFile
 
 
 def allowed_file(filename):
@@ -61,7 +65,7 @@ def parse_image(upload_folder, username, title):
     pass
 
 
-def setup_logger(name, username, title, filename='run_log', level=logging.INFO):
+def setup_run_logger(name, username, title, filename='run_log', level=logging.INFO):
     log_setup = logging.getLogger(name)
 
     fileHandler = logging.FileHandler(os.path.join(cs.RUN_FOLDER, username, title, filename + '.log'), mode='a')
@@ -70,3 +74,46 @@ def setup_logger(name, username, title, filename='run_log', level=logging.INFO):
 
     log_setup.setLevel(level)
     log_setup.addHandler(fileHandler)
+
+
+def setup_daily_logger(name, path, level=logging.INFO):
+    log_setup = logging.getLogger(name)
+
+    filename = cs.LOG_FOLDER + "/" + str(d.datetime.today().month) + "-" + str(d.datetime.today().day) + '.log'
+    fileHandler = logging.FileHandler(os.path.join(path, filename), mode='a')
+    formatter = logging.Formatter('%(levelname)s: %(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    fileHandler.setFormatter(formatter)
+
+    log_setup.setLevel(level)
+    log_setup.addHandler(fileHandler)
+
+
+def clean_filename(filename, replace=' '):
+    whitelist = "-_.() %s%s" % (string.ascii_letters, string.digits)
+    char_limit = 255
+
+    # replace spaces
+    for r in replace:
+        filename = filename.replace(r, '_')
+
+    # keep only valid ascii chars
+    cleaned_filename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore').decode()
+
+    # keep only whitelisted chars
+    cleaned_filename = ''.join(c for c in cleaned_filename if c in whitelist)
+    if len(cleaned_filename) > char_limit:
+        print("Warning, filename truncated because it was over {}. Filenames may no longer be unique".format(char_limit))
+    return cleaned_filename[:char_limit]
+
+
+def export_tabular_to_zip(df, username, title):
+    """Exports a dataframe of generated data to an appropriate zip file"""
+    full_path = os.path.join(cs.OUTPUT_FOLDER, username)
+    safe_mkdir(full_path)
+    og_dir = os.getcwd()
+    os.chdir(full_path)
+    df.to_csv(title + '.txt', index=False)
+    with ZipFile(title + '.zip', 'w') as z:
+        z.write(title + '.txt')
+    os.remove(title + '.txt')
+    os.chdir(og_dir)

@@ -41,8 +41,11 @@ class TabularDataset(data.Dataset):
         self.preprocessed_cat_mask = create_preprocessed_cat_mask(le_dict=self.le_dict, x_train=x_train_arr)
 
         # Scale continuous inputs
-        x_train_arr, self.scaler = scale_cont_inputs(arr=x_train_arr, preprocessed_cat_mask=self.preprocessed_cat_mask)
-        x_test_arr, _ = scale_cont_inputs(arr=x_test_arr, preprocessed_cat_mask=self.preprocessed_cat_mask, scaler=self.scaler)
+        if len(self.cont_inputs) == 0:
+            self.scaler = None
+        else:
+            x_train_arr, self.scaler = scale_cont_inputs(arr=x_train_arr, preprocessed_cat_mask=self.preprocessed_cat_mask)
+            x_test_arr, _ = scale_cont_inputs(arr=x_test_arr, preprocessed_cat_mask=self.preprocessed_cat_mask, scaler=self.scaler)
 
         # Convert to tensor-friendly format
         self.x_train, self.x_test, self.y_train, self.y_test = self.preprocess_data(x_train_arr=x_train_arr, y_train_arr=y_train_arr,
