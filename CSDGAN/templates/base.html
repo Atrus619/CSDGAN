@@ -1,0 +1,31 @@
+<!doctype html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {{ moment.include_jquery() }}
+    {{ moment.include_moment() }}
+    <script CSDGAN="https://ajax.googleapis.com/ajax/libs/jquery/1.12.3/jquery.min.js"></script>
+    <title>{% block title %}{% endblock %} - CSDGAN</title>
+</head>
+<nav>
+    <h1>Conditional Synthetic Data Generative Adversarial Network</h1>
+    <ul>
+        <li><a href="{{ url_for('home.index') }}">Home</a>
+        <li><a href="{{ url_for('about.about') }}">About</a>
+            {% if g.user %}
+        <li><span>{{ g.user['username'] }}</span>
+        <li><a href="{{ url_for('auth.logout') }}">Log Out</a>
+            {% else %}
+        <li><a href="{{ url_for('auth.register') }}">Register</a>
+        <li><a href="{{ url_for('auth.login') }}">Log In</a>
+            {% endif %}
+    </ul>
+</nav>
+<section class="content">
+    <header>
+        {% block header %}{% endblock %}
+    </header>
+    {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+</section>

@@ -1,6 +1,6 @@
 import pytest
 from flask import g, session
-from src.utils.db import get_db
+from CSDGAN.utils.db import get_db
 
 
 def test_register(client, app):

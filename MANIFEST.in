@@ -1,4 +1,6 @@
-include src/utils/schema.sql
-graft src/static
-graft src/templates
-global-exclude *.pyc
+include CSDGAN/utils/schema.sql
+graft CSDGAN/static
+graft CSDGAN/templates
+graft CSDGAN/classes
+graft CSDGAN/pipeline
+global-exclude *.py[cod] __pycache__

@@ -1,4 +1,4 @@
-from src import create_app
+from CSDGAN import create_app
 
 
 def test_config():

@@ -1,7 +1,7 @@
-from classes.Image.ImageCGAN import ImageCGAN
+from CSDGAN.classes.Image.ImageCGAN import ImageCGAN
 import configs.MNIST as cfg
 from utils.data_loading import *
-from classes.Image.ImageDataset import ImageDataset
+from CSDGAN.classes.Image.ImageDataset import ImageDataset
 from torch.utils import data
 import os
 import pickle

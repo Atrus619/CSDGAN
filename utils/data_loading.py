@@ -1,6 +1,6 @@
 import kaggle
 import torchvision
-from classes.Image.ImageDataset import ImageFolderWithPaths
+from CSDGAN.classes.Image.ImageDataset import ImageFolderWithPaths
 import torchvision.transforms as t
 import os
 import pandas as pd

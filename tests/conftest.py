@@ -2,9 +2,9 @@ import os
 import tempfile
 # TODO: A LOT MORE TESTING
 import pytest
-from src import create_app
-from src.utils.db import get_db, init_db
-import src.utils.constants as cs
+from CSDGAN import create_app
+from CSDGAN.utils.db import get_db, init_db
+import CSDGAN.utils.constants as cs
 
 with open(os.path.join(os.path.dirname(__file__), 'data.sql'), 'rb') as f:
     _data_sql = f.read().decode('utf8')
