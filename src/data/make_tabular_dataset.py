@@ -1,7 +1,7 @@
 from utils.data_loading import *
 from src.utils.utils import *
 from classes.Tabular.TabularDataset import TabularDataset
-from utils.db import query_set_status
+from src.utils.db import query_set_status
 from src.utils.utils import setup_run_logger
 import logging
 

@@ -6,7 +6,7 @@ from classes.CGANUtils import CGANUtils
 from classes.NetUtils import GaussianNoise
 import numpy as np
 import random
-from utils.db import query_set_status
+from src.utils.db import query_set_status
 import src.utils.constants as cs
 
 

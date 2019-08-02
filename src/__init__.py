@@ -8,17 +8,25 @@ from flask_moment import Moment
 moment = Moment()
 
 
-def create_app():
+def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    app.config.from_object('src.config.Config')
+    if test_config is None:
+        app.config.from_object('src.config.Config')
+    else:
+        app.config.from_mapping(test_config)
+
     app.redis = Redis.from_url(cs.REDIS_URL)
     app.task_queue = rq.Queue('CSDGAN', connection=app.redis)
     moment.init_app(app)
 
     safe_mkdir(app.instance_path)
+    safe_mkdir(cs.LOG_FOLDER)
+    safe_mkdir(cs.RUN_FOLDER)
+    safe_mkdir(cs.OUTPUT_FOLDER)
+    safe_mkdir(cs.UPLOAD_FOLDER)
 
-    from utils import db
+    from src.utils import db
     db.init_app(app)
 
     from . import auth

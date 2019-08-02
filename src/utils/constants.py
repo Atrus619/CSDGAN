@@ -39,23 +39,26 @@ TABULAR_MAX_NUM_EPOCHS = 100000
 TABULAR_DEFAULT_TEST_SIZE = 0.2
 TABULAR_DEFAULT_BATCH_SIZE = 1000
 
-# App constants TODO: Make these paths relative!
-TESTING = True
+# App constants
+TESTING = False
 DEBUG = True
 DATABASE = 'instance/csdgan.sqlite'
-UPLOAD_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/downloads/incoming_raw_data'
 ALLOWED_EXTENSIONS = {'txt', 'csv', 'zip'}
 MAX_CONTENT_LENGTH = 1024 ** 3 * 16  # Maximum data size of 16GB
 AVAILABLE_FORMATS = ['Tabular', 'Image']
 REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
-LOG_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/logs'
 
 # Run constants
 GEN_DICT_NAME = 'gen_dict'
 MAX_EXAMPLE_PER_CLASS = 10000
+
+# Folders TODO: Make these paths relative!
+UPLOAD_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/downloads/incoming_raw_data'
 RUN_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/runs'
 OUTPUT_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/src/genned_data'
+LOG_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/logs'
 
+# Run statuses
 STATUS_DICT = {'Not started': 1,
                'Preprocessing data': 2,
                'Train 0/4': 3,

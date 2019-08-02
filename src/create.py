@@ -3,7 +3,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from src.auth import login_required
-from utils.db import *
+from src.utils.db import *
 from src.utils.utils import *
 import pickle as pkl
 
