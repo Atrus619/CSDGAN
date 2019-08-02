@@ -7,6 +7,7 @@ import unicodedata
 import string
 import datetime as d
 from zipfile import ZipFile
+import pickle as pkl
 
 
 def allowed_file(filename):
@@ -117,3 +118,20 @@ def export_tabular_to_zip(df, username, title):
         z.write(title + '.txt')
     os.remove(title + '.txt')
     os.chdir(og_dir)
+
+
+def create_gen_dict(request_form, directory, username, title, aug=None):
+    """Creates a dictionary with keys as dependent variable labels and values as the number of examples pertaining to that label to generate"""
+    gen_dict = dict(request_form)
+    if aug:
+        del gen_dict['download_button']
+    for key, value in gen_dict.items():
+        gen_dict[key] = 0 if value == '' else int(value)
+
+    assert os.path.exists(os.path.join(directory, username, title))
+    if aug:
+        filename = cs.GEN_DICT_NAME + ' Additional Data ' + str(aug) + '.pkl'
+    else:
+        filename = cs.GEN_DICT_NAME + '.pkl'
+    with open(os.path.join(directory, username, title, filename), 'wb') as f:
+        pkl.dump(gen_dict, f)

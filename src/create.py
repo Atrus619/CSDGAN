@@ -68,7 +68,9 @@ def create():  # TODO: Add cancel option
 
 @bp.route('/tabular', methods=('GET', 'POST'))
 @login_required
-def tabular():  # TODO: Add advanced options
+def tabular():
+    # TODO: Add advanced options
+    # TODO: Handle cleanup if user exits early
     cols = parse_tabular(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
     if request.method == 'POST':
         dep_var = request.form['dep_var']
@@ -80,6 +82,7 @@ def tabular():  # TODO: Add advanced options
         if error:
             flash(error)
         else:
+            query_add_depvar(run_id=session['run_id'], depvar=dep_var)
             session['dep_var'] = dep_var
             session['cont_inputs'] = cont_inputs
             session['int_inputs'] = int_inputs
@@ -94,14 +97,10 @@ def tabular():  # TODO: Add advanced options
 def tabular_specify_output():
     dep_choices = parse_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
     if request.method == 'POST':
-        gen_dict = dict(request.form)
-        for key, value in gen_dict.items():
-            gen_dict[key] = 0 if value == '' else int(value)
-        with open(os.path.join(session['run_dir'], cs.TABULAR_GEN_DICT_NAME), 'wb') as f:
-            pkl.dump(gen_dict, f)
+        create_gen_dict(request_form=request.form, directory=cs.RUN_FOLDER, username=g.user['username'], title=session['title'])
         return redirect(url_for('create.success'))
     return render_template('create/tabular_specify_output.html', title=session['title'], dep_var=session['dep_var'],
-                           dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.TABULAR_MAX_EXAMPLE_PER_CLASS))
+                           dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.MAX_EXAMPLE_PER_CLASS))
 
 
 @bp.route('/image', methods=('GET', 'POST'))
@@ -130,9 +129,9 @@ def success():
             generate_data = current_app.task_queue.enqueue('src.generate.generate_tabular_data.generate_tabular_data',
                                                            args=(session['run_id'], g.user['username'], session['title']),
                                                            depends_on=train_model)
-        else:
+        else:  # Image
             # TODO: Fill in here for image
             pass
-        logger.info('User #{} ({}) kicked off a {} run #{} ({})'.format(g.user['id'], g.user['username'], session['format'], session['run_id'], session['title']))
+        logger.info('User #{} ({}) kicked off a {} Run #{} ({})'.format(g.user['id'], g.user['username'], session['format'], session['run_id'], session['title']))
         return redirect(url_for('index'))
     return render_template('create/success.html', title=session['title'])

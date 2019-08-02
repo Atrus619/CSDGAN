@@ -42,11 +42,11 @@ function refresh_status(index){
         $( "#update_time" + index ).html(data['update_time']);
         $( "#status" + index ).html(data['status']);
         if (data['status'].includes('Data available') || data['status'].includes('Error') ){
-            $( "#gen_more_data_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
-            $( "#gen_more_data_button" + index + " a" ).replaceWith('<a href="/gen_more_data">Generate More Data</a>');
-
             $( "#download_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
             $( "#download_button" + index + " button").replaceWith('<button type="submit"  name="index" value="' + index + '" class="link-button">Download Data</button>');
+
+            $( "#gen_more_data_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
+            $( "#gen_more_data_button" + index + " button" ).replaceWith('<button type="submit"  name="index" value="' + index + '" class="link-button">Generate More Data</button>');
 
             $( "#delete_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
             $( "#delete_button" + index + " a" ).replaceWith('<a href="#" onclick="delete_button(' + index + ')">Delete</a>');

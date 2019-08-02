@@ -19,6 +19,8 @@ create TABLE run (
   end_time TIMESTAMP,
   format TEXT NOT NULL,
   filesize INTEGER NOT NULL,
+  depvar TEXT,
+  num_augs INTEGER NOT NULL DEFAULT 0,
   live INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (user_id) REFERENCES user (id)
 );

@@ -87,6 +87,34 @@ def query_init_run(title, user_id, format, filesize):
     return run_id[0]
 
 
+def query_add_depvar(run_id, depvar):
+    """Updates run table to include depvar"""
+    db = get_db()
+    db.execute(
+        'UPDATE run '
+        'SET depvar = ? '
+        'WHERE id = ?', (depvar, run_id)
+    )
+    db.commit()
+
+
+def query_incr_augs(run_id):
+    """Returns current aug and increments it by 1 in the database"""
+    db = get_db()
+    result = db.execute(
+        'SELECT num_augs '
+        'FROM run '
+        'WHERE id = ?', (run_id, )
+    ).fetchone()
+    db.execute(
+        'UPDATE run '
+        'SET num_augs = ? '
+        'WHERE id = ?', (result[0] + 1, run_id)
+    )
+    db.commit()
+    return result[0]
+
+
 def query_set_status(run_id, status_id):
     """Updates status table with the next status. Configured to work with functions outside of app"""
     db = sqlite3.connect(
@@ -130,7 +158,7 @@ def query_username_title(run_id):
 def query_all_runs(user_id):
     """Retrieves information on all runs associated with the specified user_id"""
     result = get_db().execute(
-        'SELECT run.id, run.title, run.start_time, run.format, status.update_time, status_info.descr '
+        'SELECT run.id, run.title, run.start_time, run.format, run.depvar, status.update_time, status_info.descr '
         'FROM run '
         'LEFT JOIN ('
         '   SELECT a.run_id, a.status_id, a.update_time FROM status as a '
@@ -140,7 +168,7 @@ def query_all_runs(user_id):
         ') as status on run.id = status.run_id '
         'LEFT JOIN status_info on status.status_id = status_info.id '
         'WHERE run.user_id = ? and run.live = 1 '
-        'ORDER BY status.update_time DESC',
+        'ORDER BY run.start_time DESC',
         (user_id, )
     ).fetchall()
     return result
@@ -167,7 +195,7 @@ def clean_run(run_id, delete=True):
     username, title = query_username_title(run_id=run_id)
     full_path = os.path.join(cs.RUN_FOLDER, username, title)
     raw_path = os.path.join(cs.UPLOAD_FOLDER, str(run_id))
-    output_path = os.path.join(cs.OUTPUT_FOLDER, username, title)
+    output_path = os.path.join(cs.OUTPUT_FOLDER, username, title + '.zip')
 
     if os.path.exists(full_path):
         shutil.rmtree(full_path)

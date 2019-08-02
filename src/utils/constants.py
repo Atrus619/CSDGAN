@@ -39,10 +39,6 @@ TABULAR_MAX_NUM_EPOCHS = 100000
 TABULAR_DEFAULT_TEST_SIZE = 0.2
 TABULAR_DEFAULT_BATCH_SIZE = 1000
 
-# Tabular output constants
-TABULAR_GEN_DICT_NAME = 'gen_dict.pkl'
-TABULAR_MAX_EXAMPLE_PER_CLASS = 10000
-
 # App constants TODO: Make these paths relative!
 TESTING = True
 DEBUG = True
@@ -55,6 +51,8 @@ REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
 LOG_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/logs'
 
 # Run constants
+GEN_DICT_NAME = 'gen_dict'
+MAX_EXAMPLE_PER_CLASS = 10000
 RUN_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/runs'
 OUTPUT_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/src/genned_data'
 
