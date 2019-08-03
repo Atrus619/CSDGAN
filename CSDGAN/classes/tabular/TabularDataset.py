@@ -1,5 +1,7 @@
 from torch.utils import data
-from utils.utils import *
+import utils.utils as uu
+import torch
+import pandas as pd
 
 
 class TabularDataset(data.Dataset):
@@ -24,28 +26,28 @@ class TabularDataset(data.Dataset):
         self.df_cols = df.columns
 
         # Reorganize data set
-        df = reorder_cols(df=df, dep_var=dep_var, cont_inputs=self.cont_inputs)
-        self.cat_inputs, self.cat_mask = define_cat_inputs(df=df, dep_var=dep_var, cont_inputs=cont_inputs)
+        df = uu.reorder_cols(df=df, dep_var=dep_var, cont_inputs=self.cont_inputs)
+        self.cat_inputs, self.cat_mask = uu.define_cat_inputs(df=df, dep_var=dep_var, cont_inputs=cont_inputs)
 
         # Split data into train/test
-        x_train_arr, x_test_arr, y_train_arr, y_test_arr = train_test_split(df.drop(columns=dep_var), df[dep_var],
-                                                                            test_size=test_size, stratify=df[dep_var],
-                                                                            random_state=seed)
+        x_train_arr, x_test_arr, y_train_arr, y_test_arr = uu.train_test_split(df.drop(columns=dep_var), df[dep_var],
+                                                                               test_size=test_size, stratify=df[dep_var],
+                                                                               random_state=seed)
 
         # Convert all categorical variables to dummies, and save two-way transformation
-        self.le_dict, self.ohe, x_train_arr, x_test_arr = encode_categoricals_custom(df=df,
-                                                                                     x_train=x_train_arr,
-                                                                                     x_test=x_test_arr,
-                                                                                     cat_inputs=self.cat_inputs,
-                                                                                     cat_mask=self.cat_mask)
-        self.preprocessed_cat_mask = create_preprocessed_cat_mask(le_dict=self.le_dict, x_train=x_train_arr)
+        self.le_dict, self.ohe, x_train_arr, x_test_arr = uu.encode_categoricals_custom(df=df,
+                                                                                        x_train=x_train_arr,
+                                                                                        x_test=x_test_arr,
+                                                                                        cat_inputs=self.cat_inputs,
+                                                                                        cat_mask=self.cat_mask)
+        self.preprocessed_cat_mask = uu.create_preprocessed_cat_mask(le_dict=self.le_dict, x_train=x_train_arr)
 
         # Scale continuous inputs
         if len(self.cont_inputs) == 0:
             self.scaler = None
         else:
-            x_train_arr, self.scaler = scale_cont_inputs(arr=x_train_arr, preprocessed_cat_mask=self.preprocessed_cat_mask)
-            x_test_arr, _ = scale_cont_inputs(arr=x_test_arr, preprocessed_cat_mask=self.preprocessed_cat_mask, scaler=self.scaler)
+            x_train_arr, self.scaler = uu.scale_cont_inputs(arr=x_train_arr, preprocessed_cat_mask=self.preprocessed_cat_mask)
+            x_test_arr, _ = uu.scale_cont_inputs(arr=x_test_arr, preprocessed_cat_mask=self.preprocessed_cat_mask, scaler=self.scaler)
 
         # Convert to tensor-friendly format
         self.x_train, self.x_test, self.y_train, self.y_test = self.preprocess_data(x_train_arr=x_train_arr, y_train_arr=y_train_arr,

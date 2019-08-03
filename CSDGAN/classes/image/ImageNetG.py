@@ -1,7 +1,11 @@
+import utils.ImageUtils as IU
 from CSDGAN.classes.NetUtils import NetUtils
+
 import torch.optim as optim
 from collections import OrderedDict
-from utils.ImageUtils import *
+import torch
+import numpy as np
+import torch.nn as nn
 
 
 # Generator class
@@ -88,13 +92,13 @@ class ImageNetG(nn.Module, NetUtils):
 
     def assemble_architecture(self, h, w):
         """Fills in an ordered dictionaries with tuples, one for the layers and one for the corresponding batch norm layers"""
-        h_best_crop, h_best_first, h_pow_2 = find_pow_2_arch(h)
-        w_best_crop, w_best_first, w_pow_2 = find_pow_2_arch(w)
+        h_best_crop, h_best_first, h_pow_2 = IU.find_pow_2_arch(h)
+        w_best_crop, w_best_first, w_pow_2 = IU.find_pow_2_arch(w)
         assert (h_best_crop, w_best_crop) == (0, 0), "Crop not working properly"
 
         num_intermediate_upsample_layers = max(h_pow_2, w_pow_2) - 1  # Not counting the final layer
-        self.arch['ct1'] = first_block(h=h_best_first, w=w_best_first, in_channels=self.nz + self.nc,
-                                       out_channels=self.nf * 2 ** num_intermediate_upsample_layers)
+        self.arch['ct1'] = IU.first_block(h=h_best_first, w=w_best_first, in_channels=self.nz + self.nc,
+                                          out_channels=self.nf * 2 ** num_intermediate_upsample_layers)
         self.add_module('ct1', self.arch['ct1'][0])
         self.add_module('ct1_bn', self.arch['ct1'][1])
 
@@ -102,16 +106,16 @@ class ImageNetG(nn.Module, NetUtils):
         h_rem, w_rem = self.x_dim[0] - h_best_crop, self.x_dim[1] - w_best_crop
         h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
         for i in range(num_intermediate_upsample_layers):
-            h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
-            self.arch['ct' + str(i + 2)] = ct2_upsample_block(h=h_curr, w=w_curr,
-                                                              in_channels=self.nf * 2 ** (num_intermediate_upsample_layers - i),
-                                                              out_channels=self.nf * 2 ** (num_intermediate_upsample_layers - (i + 1)))
+            h_rem, w_rem, h_curr, w_curr = IU.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+            self.arch['ct' + str(i + 2)] = IU.ct2_upsample_block(h=h_curr, w=w_curr,
+                                                                 in_channels=self.nf * 2 ** (num_intermediate_upsample_layers - i),
+                                                                 out_channels=self.nf * 2 ** (num_intermediate_upsample_layers - (i + 1)))
             self.add_module('ct' + str(i + 2), self.arch['ct' + str(i + 2)][0])
             self.add_module('ct' + str(i + 2) + '_bn', self.arch['ct' + str(i + 2)][1])
 
         # Final layer
-        h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
-        self.output, __ = ct2_upsample_block(h=h_curr, w=w_curr,
-                                             in_channels=self.nf,
-                                             out_channels=self.num_channels,
-                                             add_op=(h_best_crop, w_best_crop))
+        h_rem, w_rem, h_curr, w_curr = IU.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+        self.output, __ = IU.ct2_upsample_block(h=h_curr, w=w_curr,
+                                                in_channels=self.nf,
+                                                out_channels=self.num_channels,
+                                                add_op=(h_best_crop, w_best_crop))

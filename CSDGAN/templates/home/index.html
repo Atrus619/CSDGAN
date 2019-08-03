@@ -17,7 +17,7 @@
 <p>It doesn't look like you have any runs yet. <a href="{{ url_for('create.create') }}">Click here</a> to get started!</p>
 {% else %}
 
-<script CSDGAN="{{ url_for('static', filename='index.js') }}"></script>
+<script src="{{ url_for('static', filename='index.js') }}"></script>
 <table border="1" class="dataframe" id="status_table">
     <thead>
     <tr style="text-align: right;">

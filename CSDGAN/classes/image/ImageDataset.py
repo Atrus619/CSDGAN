@@ -11,12 +11,15 @@
 12. Stretch Goal: Histogram GIF with static axes
 """
 
+import utils.ImageUtils as IU
+
 from torch.utils import data
 import random
 import torchvision.transforms as t
-from utils.ImageUtils import *
 from torchvision.datasets.folder import ImageFolder
 import os
+import numpy as np
+import torch
 
 
 class ImageDataset(data.Dataset):
@@ -31,8 +34,8 @@ class ImageDataset(data.Dataset):
             x = x.view(-1, 1, og_x_dim[0], og_x_dim[1])
 
         # Crop image for advantageous dimensions
-        h_best_crop, _, _ = find_pow_2_arch(og_x_dim[0])
-        w_best_crop, _, _ = find_pow_2_arch(og_x_dim[1])
+        h_best_crop, _, _ = IU.find_pow_2_arch(og_x_dim[0])
+        w_best_crop, _, _ = IU.find_pow_2_arch(og_x_dim[1])
 
         transformer = t.Compose([
             t.ToPILImage(),

@@ -1,7 +1,10 @@
-from utils.utils import *
 import imageio
 import torch
 import torch.nn as nn
+import numpy as np
+import matplotlib.pyplot as plt
+import utils.utils as uu
+import os
 
 
 class NetUtils:
@@ -182,7 +185,7 @@ class NetUtils:
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            safe_mkdir(save + '/layer_scatters')
+            uu.safe_mkdir(save + '/layer_scatters')
             f.savefig(save + '/layer_scatters/' + self.name + '_layer_scatter.png')
 
     def plot_layer_hists(self, epoch=None, figsize=(20, 10), show=True, save=None):
@@ -207,18 +210,18 @@ class NetUtils:
             axes[i, 0].set_ylabel(self.layer_list_names[i])
 
             plt.sca(axes[i, 0])
-            convert_np_hist_to_plot(self.histogram_weight_history[layer]['weight'][epoch])
+            uu.convert_np_hist_to_plot(self.histogram_weight_history[layer]['weight'][epoch])
 
             plt.sca(axes[i, 2])
-            convert_np_hist_to_plot(self.histogram_weight_history[layer]['bias'][epoch])
+            uu.convert_np_hist_to_plot(self.histogram_weight_history[layer]['bias'][epoch])
             if epoch == 0:
                 pass
             else:
                 plt.sca(axes[i, 1])
-                convert_np_hist_to_plot(self.histogram_gradient_history[layer]['weight'][epoch])
+                uu.convert_np_hist_to_plot(self.histogram_gradient_history[layer]['weight'][epoch])
 
                 plt.sca(axes[i, 3])
-                convert_np_hist_to_plot(self.histogram_gradient_history[layer]['bias'][epoch])
+                uu.convert_np_hist_to_plot(self.histogram_gradient_history[layer]['bias'][epoch])
 
         sup = self.name + " Layer Weight and Gradient Histograms - Epoch " + str(epoch)
         st = f.suptitle(sup, fontsize='x-large')
@@ -231,7 +234,7 @@ class NetUtils:
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            safe_mkdir(save + '/layer_histograms')
+            uu.safe_mkdir(save + '/layer_histograms')
             f.savefig(save + '/layer_histograms/' + self.name + '_epoch_' + str(epoch) + '_layer_histograms.png')
 
     def build_hist_gif(self, path=None):

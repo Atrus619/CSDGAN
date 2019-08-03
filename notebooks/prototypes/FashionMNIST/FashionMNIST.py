@@ -1,7 +1,7 @@
-from CSDGAN.classes.Image.ImageCGAN import ImageCGAN
+from CSDGAN.classes.image.ImageCGAN import ImageCGAN
 import configs.FashionMNIST as cfg
 from utils.data_loading import *
-from CSDGAN.classes.Image.ImageDataset import ImageDataset
+from CSDGAN.classes.image.ImageDataset import ImageDataset
 from torch.utils import data
 import os
 import random

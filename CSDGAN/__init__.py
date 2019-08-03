@@ -1,9 +1,11 @@
-from flask import Flask
 import CSDGAN.utils.constants as cs
 from CSDGAN.utils.utils import safe_mkdir
+
+from flask import Flask
 from redis import Redis
 import rq
 from flask_moment import Moment
+import os
 
 moment = Moment()
 
@@ -11,6 +13,10 @@ moment = Moment()
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+
+    app.config.from_mapping(
+        DATABASE=os.path.join(app.instance_path, 'CSDGAN.sqlite')
+    )
     if test_config is None:
         app.config.from_object('CSDGAN.config.Config')
     else:
@@ -20,11 +26,11 @@ def create_app(test_config=None):
     app.task_queue = rq.Queue('CSDGAN', connection=app.redis)
     moment.init_app(app)
 
-    safe_mkdir(app.instance_path)
-    safe_mkdir(cs.LOG_FOLDER)
-    safe_mkdir(cs.RUN_FOLDER)
-    safe_mkdir(cs.OUTPUT_FOLDER)
-    safe_mkdir(cs.UPLOAD_FOLDER)
+    os.makedirs(app.instance_path, exist_ok=True)
+    os.makedirs(cs.LOG_FOLDER, exist_ok=True)
+    os.makedirs(cs.RUN_FOLDER, exist_ok=True)
+    os.makedirs(cs.OUTPUT_FOLDER, exist_ok=True)
+    os.makedirs(cs.UPLOAD_FOLDER, exist_ok=True)
 
     from CSDGAN.utils import db
     db.init_app(app)
@@ -43,3 +49,6 @@ def create_app(test_config=None):
     app.add_url_rule('/', endpoint='index')
 
     return app
+
+
+

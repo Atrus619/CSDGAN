@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import CSDGAN.utils.constants as cs
 from utils.data_loading import *
-
+# TODO: HEAVY revisions needed (see tabular)
 """
 Requirements of image data set is that it should be a single zip with all images with same label in a folder named with the label name
 Images should either be the same size, or a specified image size should be provided (all images will be cropped to the same size)

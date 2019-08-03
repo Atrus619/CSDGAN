@@ -1,13 +1,18 @@
-from CSDGAN.classes.Tabular.TabularNetG import TabularNetG
-from CSDGAN.classes.Tabular.TabularNetD import TabularNetD
-from utils.utils import *
-import time
+import CSDGAN.utils.constants as cs
+import utils.utils as uu
+import CSDGAN.utils.db as db
+from CSDGAN.classes.tabular.TabularNetG import TabularNetG
+from CSDGAN.classes.tabular.TabularNetD import TabularNetD
 from CSDGAN.classes.CGANUtils import CGANUtils
 from CSDGAN.classes.NetUtils import GaussianNoise
+
+import time
 import numpy as np
 import random
-from CSDGAN.utils.db import query_set_status
-import CSDGAN.utils.constants as cs
+import torch
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
 
 
 class TabularCGAN(CGANUtils):
@@ -87,7 +92,7 @@ class TabularCGAN(CGANUtils):
         if self.discrim_noise_linear_anneal:
             self.dn_rate = self.discrim_noise / num_epochs
 
-        train_log_print(run_id=run_id, logger=logger, statement="Beginning training")
+        uu.train_log_print(run_id=run_id, logger=logger, statement="Beginning training")
         og_start_time = time.time()
         start_time = time.time()
         for epoch in range(num_epochs):
@@ -100,7 +105,7 @@ class TabularCGAN(CGANUtils):
             self.next_epoch()
 
             if self.epoch % print_freq == 0 or (self.epoch == num_epochs):
-                train_log_print(run_id=run_id, logger=logger, statement="Time: %ds" % (time.time() - start_time))
+                uu.train_log_print(run_id=run_id, logger=logger, statement="Time: %ds" % (time.time() - start_time))
                 start_time = time.time()
 
                 self.print_progress(total_epochs=total_epochs, run_id=run_id, logger=logger)
@@ -108,16 +113,16 @@ class TabularCGAN(CGANUtils):
             if eval_freq is not None:
                 if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
                     self.stored_acc.append(self.test_model(stratify=self.eval_stratify))
-                    train_log_print(run_id=run_id, logger=logger, statement="Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
+                    uu.train_log_print(run_id=run_id, logger=logger, statement="Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
 
             if run_id:
                 if self.epoch in checkpoints:
                     logger.info('Checkpoint reached.')
                     status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
-                    query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
+                    db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
 
-        train_log_print(run_id=run_id, logger=logger, statement="Total training time: %ds" % (time.time() - og_start_time))
-        train_log_print(run_id=run_id, logger=logger, statement="Training complete")
+        uu.train_log_print(run_id=run_id, logger=logger, statement="Total training time: %ds" % (time.time() - og_start_time))
+        uu.train_log_print(run_id=run_id, logger=logger, statement="Training complete")
 
     def test_model(self, stratify=None):
         """
@@ -133,10 +138,10 @@ class TabularCGAN(CGANUtils):
             if self.data_gen.dataset.le_dict is not None:
                 genned_data = self.reencode(genned_data, self.data_gen.dataset.le_dict)
 
-            score_fake_tmp = train_test_logistic_reg(x_train=genned_data, y_train=genned_labels,
-                                                     x_test=self.data_gen.dataset.x_test.cpu().detach().numpy(), y_test=self.data_gen.dataset.y_test.cpu().detach().numpy(),
-                                                     param_grid=self.eval_param_grid, cv=self.eval_folds, random_state=self.seed,
-                                                     labels_list=self.labels_list, verbose=0)
+            score_fake_tmp = uu.train_test_logistic_reg(x_train=genned_data, y_train=genned_labels,
+                                                        x_test=self.data_gen.dataset.x_test.cpu().detach().numpy(), y_test=self.data_gen.dataset.y_test.cpu().detach().numpy(),
+                                                        param_grid=self.eval_param_grid, cv=self.eval_folds, random_state=self.seed,
+                                                        labels_list=self.labels_list, verbose=0)
 
             fake_scores.append(score_fake_tmp)
 

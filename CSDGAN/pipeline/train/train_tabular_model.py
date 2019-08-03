@@ -1,22 +1,26 @@
-from utils.data_loading import *
 import CSDGAN.utils.constants as cs
-from CSDGAN.classes.Tabular.TabularCGAN import TabularCGAN
-from CSDGAN.utils.db import query_set_status
-from CSDGAN.utils.utils import setup_run_logger
+import CSDGAN.utils.db as db
+import CSDGAN.utils.utils as cu
+from CSDGAN.classes.tabular.TabularCGAN import TabularCGAN
+
 import logging
+import os
+import torch
+import pickle as pkl
+from torch.utils import data
 
 
 def train_tabular_model(run_id, username, title, num_epochs, bs):
     """
     Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions
     """
-    setup_run_logger(name='train_func', username=username, title=title)
-    setup_run_logger(name='train_info', username=username, title=title, filename='train_log')
+    cu.setup_run_logger(name='train_func', username=username, title=title)
+    cu.setup_run_logger(name='train_info', username=username, title=title, filename='train_log')
     logger = logging.getLogger('train_func')
 
     try:
         run_id = str(run_id)
-        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
 
         # Check for objects created by make_tabular_dataset.py
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
@@ -71,6 +75,6 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
         logger.info('Successfully completed train_tabular_model function.')
 
     except Exception as e:
-        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
         logger.exception('Error: %s', e)
         raise Exception('Intentionally failing process after broadly catching an exception.')

@@ -1,15 +1,17 @@
-import functools
+import CSDGAN.utils.utils as cu
+import CSDGAN.utils.constants as cs
 
+import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from CSDGAN.utils.db import get_db
-from CSDGAN.utils.utils import *
+import logging
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-setup_daily_logger(name=__name__, path=cs.LOG_FOLDER)
+cu.setup_daily_logger(name=__name__, path=cs.LOG_FOLDER)
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +27,7 @@ def register():
             error = 'Username is required.'
         elif not password:
             error = 'Password is required.'
-        elif username != clean_filename(username):
+        elif username != cu.clean_filename(username):
             error = 'Invalid characters used for username. Please try again.'
         elif db.execute(
             'SELECT id FROM user WHERE username = ?', (username, )

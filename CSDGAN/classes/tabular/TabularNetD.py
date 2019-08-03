@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from classes.NetUtils import NetUtils, GaussianNoise
+from CSDGAN.classes.NetUtils import NetUtils, GaussianNoise
 import torch.optim as optim
 import numpy as np
 

@@ -1,4 +1,5 @@
 import os
+from CSDGAN.fake_create_app import fake_create_app
 
 TABULAR_MEM_THRESHOLD = 1024 ** 3 * 5  # Threshold for determining if entire tabular data set can be stored on GPU (significant speedup)
 
@@ -42,7 +43,14 @@ TABULAR_DEFAULT_BATCH_SIZE = 1000
 # App constants
 TESTING = False
 DEBUG = True
-DATABASE = 'instance/csdgan.sqlite'
+app = fake_create_app()
+# TODO: This may cause issues...
+DATABASE = os.path.join(app.instance_path, 'csdgan.sqlite')
+UPLOAD_FOLDER = os.path.join(app.root_path, 'incoming_raw_data')  #'/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/downloads/incoming_raw_data'
+RUN_FOLDER = os.path.join(app.root_path, 'runs')  #'/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/runs'
+OUTPUT_FOLDER = os.path.join(app.root_path, 'genned_data')  #'/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/CSDGAN/genned_data'
+LOG_FOLDER = os.path.join(app.root_path, 'logs')  #'/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/logs'
+
 ALLOWED_EXTENSIONS = {'txt', 'csv', 'zip'}
 MAX_CONTENT_LENGTH = 1024 ** 3 * 16  # Maximum data size of 16GB
 AVAILABLE_FORMATS = ['Tabular', 'Image']
@@ -51,12 +59,6 @@ REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
 # Run constants
 GEN_DICT_NAME = 'gen_dict'
 MAX_EXAMPLE_PER_CLASS = 10000
-
-# Folders TODO: Make these paths relative!
-UPLOAD_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/downloads/incoming_raw_data'
-RUN_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/runs'
-OUTPUT_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/CSDGAN/genned_data'
-LOG_FOLDER = '/home/aj/PycharmProjects/Synthetic_Data_GAN_Capstone/logs'
 
 # Run statuses
 STATUS_DICT = {'Not started': 1,

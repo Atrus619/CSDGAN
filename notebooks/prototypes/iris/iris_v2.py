@@ -2,8 +2,8 @@ import configs.iris as cfg
 from utils.utils import *
 from utils.data_loading import load_processed_dataset
 import os
-from CSDGAN.classes.Tabular.TabularCGAN import TabularCGAN
-from CSDGAN.classes.Tabular.TabularDataset import TabularDataset
+from CSDGAN.classes.tabular.TabularCGAN import TabularCGAN
+from CSDGAN.classes.tabular.TabularDataset import TabularDataset
 from torch.utils import data
 import pickle as pkl
 import random

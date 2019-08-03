@@ -1,16 +1,23 @@
-from CSDGAN.classes.Image.ImageDataset import OnlineGeneratedImageDataset
-from torch.utils import data
-from CSDGAN.classes.Image.ImageNetD import ImageNetD
-from CSDGAN.classes.Image.ImageNetG import ImageNetG
-from CSDGAN.classes.Image.ImageNetE import ImageNetE
+import CSDGAN.utils.db as db
+import CSDGAN.utils.constants as cs
+import utils.ImageUtils as IU
+import utils.utils as uu
+from CSDGAN.classes.image.ImageDataset import OnlineGeneratedImageDataset
+from CSDGAN.classes.image.ImageNetD import ImageNetD
+from CSDGAN.classes.image.ImageNetG import ImageNetG
+from CSDGAN.classes.image.ImageNetE import ImageNetE
 from CSDGAN.classes.NetUtils import GaussianNoise
 from CSDGAN.classes.CGANUtils import CGANUtils
-from utils.ImageUtils import *
+
 import time
-from utils.utils import *
+from torch.utils import data
 import imageio
 import copy
-from CSDGAN.utils.db import query_set_status
+import os
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 
 
 class ImageCGAN(CGANUtils):
@@ -111,7 +118,7 @@ class ImageCGAN(CGANUtils):
         if self.discrim_noise_linear_anneal:
             self.dn_rate = self.discrim_noise / num_epochs
 
-        train_log_print(run_id=run_id, logger=logger, statement="Beginning training")
+        uu.train_log_print(run_id=run_id, logger=logger, statement="Beginning training")
         og_start_time = time.time()
         start_time = time.time()
 
@@ -123,7 +130,7 @@ class ImageCGAN(CGANUtils):
             self.next_epoch()
 
             if self.epoch % print_freq == 0 or (self.epoch == num_epochs):
-                train_log_print(run_id=run_id, logger=logger, statement="Time: %ds" % (time.time() - start_time))
+                uu.train_log_print(run_id=run_id, logger=logger, statement="Time: %ds" % (time.time() - start_time))
                 start_time = time.time()
 
                 self.print_progress(total_epochs=total_epochs, run_id=run_id, logger=logger)
@@ -132,16 +139,16 @@ class ImageCGAN(CGANUtils):
                 if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
                     self.init_fake_gen()
                     self.test_model(train_gen=self.fake_train_gen, val_gen=self.fake_val_gen)
-                    train_log_print(run_id=run_id, logger=logger, statement="Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
+                    uu.train_log_print(run_id=run_id, logger=logger, statement="Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
 
             if run_id:
                 if self.epoch in checkpoints:
                     logger.info('Checkpoint reached.')
                     status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
-                    query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
+                    db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
 
-        train_log_print(run_id=run_id, logger=logger, statement="Total training time: %ds" % (time.time() - og_start_time))
-        train_log_print(run_id=run_id, logger=logger, statement="Training complete")
+        uu.train_log_print(run_id=run_id, logger=logger, statement="Total training time: %ds" % (time.time() - og_start_time))
+        uu.train_log_print(run_id=run_id, logger=logger, statement="Training complete")
 
     def test_model(self, train_gen, val_gen):
         """
@@ -268,7 +275,7 @@ class ImageCGAN(CGANUtils):
         if path is None:
             path = self.path
 
-        safe_mkdir(path + "/imgs")
+        uu.safe_mkdir(path + "/imgs")
         ims = []
         for epoch, grid in enumerate(self.fixed_imgs):
             fig = plt.figure(figsize=(8, 8))
@@ -405,7 +412,7 @@ class ImageCGAN(CGANUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            safe_mkdir(save + '/troubleshoot_plots')
+            uu.safe_mkdir(save + '/troubleshoot_plots')
             f.savefig(save + '/troubleshoot_plots/discriminator.png')
 
     def troubleshoot_evaluator(self, real_netE, show=True, save=None):
@@ -456,7 +463,7 @@ class ImageCGAN(CGANUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            safe_mkdir(save + '/troubleshoot_plots')
+            uu.safe_mkdir(save + '/troubleshoot_plots')
             f.savefig(save + '/troubleshoot_plots/evaluator.png')
 
     def build_grid1_and_grid2(self, exit_early_iters=1000):
@@ -479,7 +486,7 @@ class ImageCGAN(CGANUtils):
 
         while not (all(x == self.grid_nrow for x in grid1_counts.values()) and all(x == self.grid_nrow for x in grid2_counts.values())) and count < exit_early_iters:
             noise = torch.randn(bs, self.nz, device=self.device)
-            random_labels = convert_y_to_one_hot(y=torch.from_numpy(np.random.randint(0, self.nc, bs)), nc=self.nc).to(self.device).type(torch.float32)
+            random_labels = IU.convert_y_to_one_hot(y=torch.from_numpy(np.random.randint(0, self.nc, bs)), nc=self.nc).to(self.device).type(torch.float32)
 
             with torch.no_grad():
                 fakes = self.netG(noise, random_labels)
@@ -610,7 +617,7 @@ class ImageCGAN(CGANUtils):
             # Generate examples
             if gen == self.netG:
                 noise = torch.randn(bs, self.nz, device=self.device)
-                y = convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
+                y = IU.convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
 
                 with torch.no_grad():
                     x = self.netG(noise, y)
@@ -619,7 +626,7 @@ class ImageCGAN(CGANUtils):
                 iterator = gen.__iter__()
                 x, y = next(iterator)
                 x, y = x.to(self.device), y.type(torch.float32).to(self.device)
-                intended_y = convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
+                intended_y = IU.convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
                 boolz = torch.argmax(y, -1) == torch.argmax(intended_y, -1)
                 x, y = x[boolz], y[boolz]
 

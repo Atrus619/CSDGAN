@@ -1,14 +1,19 @@
+import utils.ImageUtils as IU
+import utils.utils as uu
 from CSDGAN.classes.NetUtils import NetUtils
+
 import torch.optim as optim
 from sklearn.metrics import confusion_matrix, classification_report
 import pandas as pd
 import seaborn as sns
 import os
-from utils.utils import safe_mkdir
 import cv2
 import matplotlib
 from collections import OrderedDict
-from utils.ImageUtils import *
+import torch
+import torch.nn as nn
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 # Evaluator class
@@ -208,7 +213,7 @@ class ImageNetE(nn.Module, NetUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            safe_mkdir(save + '/conf_heatmaps')
+            uu.safe_mkdir(save + '/conf_heatmaps')
             plt.savefig(save + '/conf_heatmaps/' + title + '_conf_heatmap.png')
 
         return cm, cr
@@ -298,8 +303,8 @@ class ImageNetE(nn.Module, NetUtils):
 
     def assemble_architecture(self, h, w):
         """Fills in an ordered dictionaries with tuples, one for the layers and one for the corresponding batch norm layers"""
-        h_best_crop, h_best_first, h_pow_2 = find_pow_2_arch(h)
-        w_best_crop, w_best_first, w_pow_2 = find_pow_2_arch(w)
+        h_best_crop, h_best_first, h_pow_2 = IU.find_pow_2_arch(h)
+        w_best_crop, w_best_first, w_pow_2 = IU.find_pow_2_arch(w)
         assert (h_best_crop, w_best_crop) == (0, 0), "Crop not working properly"
 
         # Conv Layers
@@ -308,18 +313,18 @@ class ImageNetE(nn.Module, NetUtils):
         h_rem, w_rem = self.x_dim[0] - h_best_crop, self.x_dim[1] - w_best_crop
         h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
 
-        h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
-        self.arch['cn1'] = evaluator_cn2_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
+        h_rem, w_rem, h_curr, w_curr = IU.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+        self.arch['cn1'] = IU.evaluator_cn2_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
         self.add_module('cn1', self.arch['cn1'][0])
         self.add_module('cn1_bn', self.arch['cn1'][1])
         self.add_module('cn1_mp', self.arch['cn1'][2])
 
         # For the evaluator, we will use max pooling, so we will build layers that perform no downsampling
         for i in range(num_intermediate_downsample_layers):
-            h_rem, w_rem, h_curr, w_curr = update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
-            self.arch['cn' + str(i + 2)] = evaluator_cn2_block(h=h_curr, w=w_curr,
-                                                               in_channels=self.nf * 2 ** i,
-                                                               out_channels=self.nf * 2 ** (i + 1))
+            h_rem, w_rem, h_curr, w_curr = IU.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+            self.arch['cn' + str(i + 2)] = IU.evaluator_cn2_block(h=h_curr, w=w_curr,
+                                                                  in_channels=self.nf * 2 ** i,
+                                                                  out_channels=self.nf * 2 ** (i + 1))
             self.add_module('cn' + str(i + 2), self.arch['cn' + str(i + 2)][0])
             self.add_module('cn' + str(i + 2) + '_bn', self.arch['cn' + str(i + 2)][1])
             self.add_module('cn' + str(i + 2) + '_mp', self.arch['cn' + str(i + 2)][2])

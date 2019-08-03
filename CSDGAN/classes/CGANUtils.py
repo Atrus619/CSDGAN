@@ -1,7 +1,11 @@
-from utils.utils import *
 import shutil
 import re
 from torchviz import make_dot
+import torch
+import os
+import utils.utils as uu
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class CGANUtils:
@@ -11,11 +15,11 @@ class CGANUtils:
         pass
 
     def init_paths(self):
-        safe_mkdir(self.path)
+        uu.safe_mkdir(self.path)
         stored_gen_path = os.path.join(self.path, "stored_generators")
         if os.path.exists(stored_gen_path):
             shutil.rmtree(stored_gen_path)
-        safe_mkdir(stored_gen_path)
+        uu.safe_mkdir(stored_gen_path)
 
     def train_one_step(self, x_train, y_train):
         """One full step of the CGAN training process"""
@@ -49,7 +53,7 @@ class CGANUtils:
         """Print metrics of interest"""
         statement = '[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f' % (self.epoch, total_epochs, self.netD.losses[-1], self.netG.losses[-1],
                                                                                                self.netD.Avg_D_reals[-1], self.netD.Avg_D_fakes[-1], self.netG.Avg_G_fakes[-1])
-        train_log_print(run_id=run_id, logger=logger, statement=statement)
+        uu.train_log_print(run_id=run_id, logger=logger, statement=statement)
 
     def plot_training_plots(self, show=True, save=None):
         """
@@ -149,7 +153,7 @@ class CGANUtils:
 
         title = net.name
 
-        safe_mkdir(save + "/architectures")
+        uu.safe_mkdir(save + "/architectures")
         viz.render(filename=save + "/architectures/" + title, view=show)
 
         return viz

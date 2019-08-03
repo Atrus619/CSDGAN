@@ -1,9 +1,13 @@
-from utils.data_loading import *
-from CSDGAN.utils.utils import *
-from CSDGAN.classes.Tabular.TabularDataset import TabularDataset
-from CSDGAN.utils.db import query_set_status
-from CSDGAN.utils.utils import setup_run_logger
+import CSDGAN.utils.constants as cs
+import CSDGAN.utils.db as db
+import CSDGAN.utils.utils as cu
+
+from CSDGAN.classes.tabular.TabularDataset import TabularDataset
 import logging
+import os
+from zipfile import ZipFile
+import pandas as pd
+import pickle as pkl
 
 
 def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inputs, test_size):
@@ -11,12 +15,12 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
     Requirements of data set is that it is contained in a flat file and the continuous vs. categorical vs. integer vs. dependent
     variables are specified. It should also be specified how to deal with missing data (stretch goal).
     """
-    setup_run_logger(name='dataset_func', username=username, title=title)
+    cu.setup_run_logger(name='dataset_func', username=username, title=title)
     logger = logging.getLogger('dataset_func')
 
     try:
         run_id = str(run_id)
-        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Preprocessing data'])
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Preprocessing data'])
 
         # Create directory for current run and place unzipped data set there
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
@@ -28,7 +32,7 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
         assert os.path.splitext(file)[1] in {'.txt', '.csv', '.zip'}, "Path is not zip or flat file"
         if os.path.splitext(file)[1] == '.zip':
             logger.info('Tabular file contained in zip. Unzipping...')
-            zip_ref = zipfile.ZipFile(path, 'r')
+            zip_ref = ZipFile(path, 'r')
             zip_ref.extractall(run_dir)
             zip_ref.close()
 
@@ -56,6 +60,6 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
             pkl.dump(dataset, f)
 
     except Exception as e:
-        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
         logger.exception('Error: %s', e)
         raise Exception('Intentionally failing process after broadly catching an exception.')
