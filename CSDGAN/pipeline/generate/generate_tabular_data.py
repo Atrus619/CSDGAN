@@ -58,7 +58,7 @@ def generate_tabular_data(run_id, username, title, aug=None):
             logger.info('Successfully generated data. Saving output to file...')
 
         # Output data
-        if aug:
+        if aug is not None:
             cu.export_tabular_to_zip(df=df, username=username, title=title + ' Additional Data ' + str(aug))
         else:
             cu.export_tabular_to_zip(df=df, username=username, title=title)

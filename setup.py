@@ -25,7 +25,9 @@ setup(
         'numpy',
         'redis',
         'rq',
-        'matplotlib'
+        'matplotlib',
+        'gunicorn',
+        'python-dotenv'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

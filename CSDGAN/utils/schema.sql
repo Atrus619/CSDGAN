@@ -1,28 +1,32 @@
-drop table IF EXISTS user;
-drop table IF EXISTS run;
-drop table IF EXISTS status;
-drop table IF EXISTS status_info;
+SET FOREIGN_KEY_CHECKS=0;
+drop table IF EXISTS user, run, status, status_info;
+SET FOREIGN_KEY_CHECKS=1;
 
 create TABLE user (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
+  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(20) UNIQUE NOT NULL,
+  password VARCHAR(100) NOT NULL,
   last_login TIMESTAMP NOT NULL,
   num_logins INTEGER NOT NULL
 );
 
 create TABLE run (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
+  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(20) NOT NULL,
   user_id INTEGER NOT NULL,
   start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   end_time TIMESTAMP,
-  format TEXT NOT NULL,
+  format VARCHAR(20) NOT NULL,
   filesize INTEGER NOT NULL,
-  depvar TEXT,
+  depvar VARCHAR(50),
   num_augs INTEGER NOT NULL DEFAULT 0,
-  live INTEGER NOT NULL DEFAULT 1,
+  live TINYINT(1) NOT NULL DEFAULT 1,
   FOREIGN KEY (user_id) REFERENCES user (id)
+);
+
+create TABLE status_info (
+  id INTEGER PRIMARY KEY,
+  descr VARCHAR(50) NOT NULL
 );
 
 create TABLE status (
@@ -30,13 +34,8 @@ create TABLE status (
   status_id INTEGER NOT NULL,
   update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (run_id, status_id),
-  FOREIGN KEY (run_id) REFERENCES run (id)
+  FOREIGN KEY (run_id) REFERENCES run (id),
   FOREIGN KEY (status_id) REFERENCES status_info (id)
-);
-
-create TABLE status_info (
-  id INTEGER PRIMARY KEY,
-  descr TEXT NOT NULL
 );
 
 insert into status_info

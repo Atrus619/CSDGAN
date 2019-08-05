@@ -5,8 +5,7 @@ import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
-from werkzeug.security import check_password_hash, generate_password_hash
-from CSDGAN.utils.db import get_db
+import CSDGAN.utils.db as db
 import logging
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -20,31 +19,22 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        db = get_db()
         error = None
-
         if not username:
             error = 'Username is required.'
         elif not password:
             error = 'Password is required.'
         elif username != cu.clean_filename(username):
             error = 'Invalid characters used for username. Please try again.'
-        elif db.execute(
-            'SELECT id FROM user WHERE username = ?', (username, )
-        ).fetchone() is not None:
+        elif db.query_check_username(username=username):
             error = 'User {} is already registered.'.format(username)
 
         if error is None:
-            db.execute(
-                'INSERT INTO user (username, password, last_login, num_logins) VALUES (?, ?, CURRENT_TIMESTAMP, 0)',
-                (username, generate_password_hash(password))
-            )
-            db.commit()
+            db.query_register_user(username=username, password=password)
             logger.info('User {} successfully registered'.format(username))
             return redirect(url_for('auth.login'))
 
         flash(error)
-
     return render_template('auth/register.html')
 
 
@@ -53,22 +43,16 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        db = get_db()
         error = None
-        user = db.execute(
-            'SELECT * FROM user WHERE username = ?', (username,)
-        ).fetchone()
+        user, user_ok, password_ok = db.query_login_check(username=username, password=password)
 
-        if user is None:
+        if not user_ok:
             error = 'Incorrect username.'
-        elif not check_password_hash(user['password'], password):
+        elif not password_ok:
             error = 'Incorrect password.'
 
         if error is None:
-            db.execute(
-                'UPDATE user SET last_login = CURRENT_TIMESTAMP, num_logins = num_logins + 1 WHERE username = ?', (username, )
-            )
-            db.commit()
+            db.query_login(username)
             session.clear()
             session['user_id'] = user['id']
             session['username'] = username
@@ -87,9 +71,7 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = get_db().execute(
-            'SELECT * FROM user WHERE id = ?', (user_id,)
-        ).fetchone()
+        g.user = db.query_load_logged_in_user(user_id=user_id)
 
 
 @bp.route('/logout')

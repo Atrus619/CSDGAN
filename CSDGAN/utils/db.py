@@ -1,20 +1,22 @@
 import CSDGAN.utils.constants as cs
 
-import sqlite3
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
 import os
 import shutil
+from werkzeug.security import check_password_hash, generate_password_hash
+import pymysql
+from config import Config
+import pandas as pd
 
 
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(
-            current_app.config['DATABASE'],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-        g.db.row_factory = sqlite3.Row
+        g.db = pymysql.connect(host=Config.MYSQL_DATABASE_HOST,
+                               user=Config.MYSQL_DATABASE_USER,
+                               password=Config.MYSQL_DATABASE_PASSWORD,
+                               db=Config.MYSQL_DATABASE_DB)
 
     return g.db
 
@@ -23,14 +25,18 @@ def close_db(e=None):
     db = g.pop('db', None)
 
     if db is not None:
-        db.close()
+        if not db._closed:
+            db.close()
 
 
 def init_db():
     db = get_db()
+    stmts = parse_sql(os.path.join(current_app.root_path, 'utils/schema.sql'))
 
-    with current_app.open_resource('utils/schema.sql') as f:
-        db.executescript(f.read().decode('utf8'))
+    with db.cursor() as cursor:
+        for stmt in stmts:
+            cursor.execute(stmt)
+    db.commit()
 
 
 @click.command('init-db')
@@ -48,13 +54,17 @@ def init_app(app):
 
 def query_check_unique_title_for_user(user_id, title):
     """Returns True if unique, False otherwise"""
-    result = get_db().execute(
-        'SELECT * '
-        'FROM run '
-        'WHERE user_id = ? and title = ? and live = 1',
-        (user_id, title)
-    ).fetchone()
-    return result
+    db = get_db()
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT * '
+            'FROM run '
+            'WHERE user_id = %s and title = %s and live = 1',
+            (user_id, title)
+        )
+        result = cursor.fetchone()
+
+    return result is not None
 
 
 def query_init_run(title, user_id, format, filesize):
@@ -63,73 +73,89 @@ def query_init_run(title, user_id, format, filesize):
     Returns the run id corresponding to this run
     """
     db = get_db()
+
     # run table
-    db.execute(
-        'INSERT INTO run ('
-        'title, user_id, format, filesize) '
-        'VALUES'
-        '(?, ?, ?, ?)',
-        (title, user_id, format, filesize)
-    )
+    with db.cursor() as cursor:
+        cursor.execute(
+            'INSERT INTO run ('
+            'title, user_id, format, filesize) '
+            'VALUES'
+            '(%s, %s, %s, %s)',
+            (title, user_id, format, filesize)
+        )
     db.commit()
+
     # retrieve run id
-    run_id = db.execute(
-        'SELECT max(id) FROM run'
-    ).fetchone()
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT max(id) as id FROM run'
+        )
+        run_id = cursor.fetchone()
+
     # status table
-    db.execute(
-        'INSERT INTO status ('
-        'run_id, status_id) '
-        'VALUES'
-        '(?, ?)',
-        (run_id[0], 1)
-    )
+    with db.cursor() as cursor:
+        cursor.execute(
+            'INSERT INTO status ('
+            'run_id, status_id) '
+            'VALUES'
+            '(%s, %s)',
+            (run_id['id'], 1)
+        )
     db.commit()
-    return run_id[0]
+
+    return run_id['id']
 
 
 def query_add_depvar(run_id, depvar):
     """Updates run table to include depvar"""
     db = get_db()
-    db.execute(
-        'UPDATE run '
-        'SET depvar = ? '
-        'WHERE id = ?', (depvar, run_id)
-    )
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET depvar = %s '
+            'WHERE id = %s', (depvar, run_id)
+        )
     db.commit()
 
 
 def query_incr_augs(run_id):
     """Returns current aug and increments it by 1 in the database"""
     db = get_db()
-    result = db.execute(
-        'SELECT num_augs '
-        'FROM run '
-        'WHERE id = ?', (run_id, )
-    ).fetchone()
-    db.execute(
-        'UPDATE run '
-        'SET num_augs = ? '
-        'WHERE id = ?', (result[0] + 1, run_id)
-    )
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT num_augs '
+            'FROM run '
+            'WHERE id = %s', (run_id,)
+        )
+        result = cursor.fetchone()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET num_augs = %s '
+            'WHERE id = %s', (result['num_augs'] + 1, run_id)
+        )
     db.commit()
-    return result[0]
+
+    return result['num_augs'] + 1
 
 
 def query_set_status(run_id, status_id):
     """Updates status table with the next status. Configured to work with functions outside of app"""
-    db = sqlite3.connect(
-        cs.DATABASE,
-        detect_types=sqlite3.PARSE_DECLTYPES
-    )
-    db.row_factory = sqlite3.Row
-    db.execute(
-        'INSERT INTO status ('
-        'run_id, status_id) '
-        'VALUES'
-        '(?, ?)',
-        (run_id, status_id)
-    )
+    db = pymysql.connect(host=Config.MYSQL_DATABASE_HOST,
+                         user=Config.MYSQL_DATABASE_USER,
+                         password=Config.MYSQL_DATABASE_PASSWORD,
+                         db=Config.MYSQL_DATABASE_DB)
+    with db.cursor() as cursor:
+        cursor.execute(
+            'INSERT INTO status ('
+            'run_id, status_id) '
+            'VALUES'
+            '(%s, %s)',
+            (run_id, status_id)
+        )
     db.commit()
     db.close()
 
@@ -137,58 +163,143 @@ def query_set_status(run_id, status_id):
 def query_delete_run(run_id):
     """Deletes run from database."""
     db = get_db()
-    db.execute(
-        'UPDATE run '
-        'SET live = 0 '
-        'WHERE id = ?', (run_id, )
-    )
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET live = 0 '
+            'WHERE id = %s', (run_id,)
+        )
     db.commit()
 
 
 def query_username_title(run_id):
     """Retrieves the username and title associated with the specified run_id"""
-    result = get_db().execute(
-        'SELECT user.username, run.title '
-        'FROM run '
-        'INNER JOIN user on run.user_id = user.id '
-        'WHERE run.id = ?', (run_id, )
-    ).fetchone()
-    return result[0], result[1]
+    db = get_db()
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT user.username, run.title '
+            'FROM run '
+            'INNER JOIN user on run.user_id = user.id '
+            'WHERE run.id = %s', (run_id,)
+        )
+        result = cursor.fetchone()
+
+    return result['username'], result['title']
 
 
 def query_all_runs(user_id):
     """Retrieves information on all runs associated with the specified user_id"""
-    result = get_db().execute(
-        'SELECT run.id, run.title, run.start_time, run.format, run.depvar, status.update_time, status_info.descr '
-        'FROM run '
-        'LEFT JOIN ('
-        '   SELECT a.run_id, a.status_id, a.update_time FROM status as a '
-        '   INNER JOIN ('
-        '       SELECT run_id, max(status_id) as status_id FROM status GROUP BY run_id '
-        '   ) as b on a.run_id = b.run_id and a.status_id = b.status_id '
-        ') as status on run.id = status.run_id '
-        'LEFT JOIN status_info on status.status_id = status_info.id '
-        'WHERE run.user_id = ? and run.live = 1 '
-        'ORDER BY run.start_time DESC',
-        (user_id, )
-    ).fetchall()
+    db = get_db()
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT run.id, run.title, run.start_time, run.format, run.depvar, status.update_time, status_info.descr '
+            'FROM run '
+            'LEFT JOIN ('
+            '   SELECT a.run_id, a.status_id, a.update_time FROM status as a '
+            '   INNER JOIN ('
+            '       SELECT run_id, max(status_id) as status_id FROM status GROUP BY run_id '
+            '   ) as b on a.run_id = b.run_id and a.status_id = b.status_id '
+            ') as status on run.id = status.run_id '
+            'LEFT JOIN status_info on status.status_id = status_info.id '
+            'WHERE run.user_id = %s and run.live = 1 '
+            'ORDER BY run.start_time DESC',
+            (user_id, )
+        )
+        result = cursor.fetchall()
+
     return result
 
 
 def query_check_status(run_id):
     """Returns the current status and most recent update time of the specified run id"""
-    result = get_db().execute(
-        'SELECT c.descr, a.update_time '
-        'FROM status as a '
-        'INNER JOIN ('
-        '   SELECT run_id, max(status_id) as status_id '
-        '   FROM status '
-        '   WHERE run_id = ? '
-        '   GROUP BY run_id '
-        ') as b on a.run_id = b.run_id and a.status_id = b.status_id '
-        'INNER JOIN status_info as c on a.status_id = c.id', (run_id, )
-    ).fetchone()
-    return result[0], result[1]
+    db = get_db()
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT c.descr, a.update_time '
+            'FROM status as a '
+            'INNER JOIN ('
+            '   SELECT run_id, max(status_id) as status_id '
+            '   FROM status '
+            '   WHERE run_id = %s '
+            '   GROUP BY run_id '
+            ') as b on a.run_id = b.run_id and a.status_id = b.status_id '
+            'INNER JOIN status_info as c on a.status_id = c.id',
+            (run_id,)
+        )
+        result = cursor.fetchone()
+
+    return result['descr'], result['update_time']
+
+
+def query_check_username(username):
+    """Checks database to determine if username has been used already."""
+    db = get_db()
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT id FROM user WHERE username = %s',
+            (username, )
+        )
+    result = cursor.fetchone()
+
+    return result is not None
+
+
+def query_register_user(username, password):
+    """Inserts new user into the database"""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'INSERT INTO user (username, password, last_login, num_logins) VALUES (%s, %s, CURRENT_TIMESTAMP, 0)',
+            (username, generate_password_hash(password))
+        )
+    db.commit()
+
+
+def query_login_check(username, password):
+    """Checks to see if the username/password combination is valid"""
+    db = get_db()
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT * FROM user WHERE username = %s',
+            (username,)
+        )
+        result = cursor.fetchone()
+    user_ok = result is not None
+    password_ok = check_password_hash(result['password'], password) if user_ok else False
+
+    return result, user_ok, password_ok
+
+
+def query_login(username):
+    """Logs in a user and logs relevant information"""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE user SET last_login = CURRENT_TIMESTAMP, num_logins = num_logins + 1 WHERE username = %s',
+            (username,)
+        )
+    db.commit()
+
+
+def query_load_logged_in_user(user_id):
+    """Returns information pertaining to user_id in user table to ensure user is logged in"""
+    db = get_db()
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT * FROM user WHERE id = %s',
+            (user_id,)
+        )
+        result = cursor.fetchone()
+
+    return result
 
 
 def clean_run(run_id, delete=True):
@@ -211,3 +322,42 @@ def clean_run(run_id, delete=True):
         query_delete_run(run_id=run_id)
     else:
         query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Unavailable'])
+
+
+def parse_sql(filename):
+    """
+    Separates statements in .sql file for sequential execution.
+    Slightly modified from adamlamers at http://adamlamers.com/post/GRBJUKCDMPOA
+    :param filename: Path to .sql file
+    :return: List of sql commands
+    """
+    data = open(filename, 'r').readlines()
+    stmts = []
+    DELIMITER = ';'
+    stmt = ''
+
+    for lineno, line in enumerate(data):
+        if not line.strip():
+            continue
+
+        if line.startswith('--'):
+            continue
+
+        if 'DELIMITER' in line:
+            DELIMITER = line.split()[1]
+            continue
+
+        if (DELIMITER not in line):
+            stmt += line.replace(DELIMITER, ';')
+            continue
+
+        if stmt:
+            stmt += line
+            stmts.append(stmt.strip())
+            stmt = ''
+        else:
+            stmts.append(line.strip())
+
+        stmts = [stmt.replace('\n', '') for stmt in stmts]
+
+    return stmts

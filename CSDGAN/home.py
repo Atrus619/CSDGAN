@@ -36,7 +36,7 @@ def delete_run():
     runs = db.query_all_runs(user_id=session['user_id'])
     run_id = int(runs[int(request.form['index']) - 1]['id'])
     db.query_delete_run(run_id=run_id)
-    cu.clean_run(run_id=run_id)
+    db.clean_run(run_id=run_id)
     username, title = db.query_username_title(run_id=run_id)
     logger.info('User #{} ({}) deleted Run #{} ({})'.format(session['user_id'], username, run_id, title))
     return ''

@@ -1,6 +1,6 @@
 import CSDGAN.utils.constants as cs
 from CSDGAN.utils.utils import safe_mkdir
-
+from config import Config
 from flask import Flask
 from redis import Redis
 import rq
@@ -10,19 +10,14 @@ import os
 moment = Moment()
 
 
-def create_app(test_config=None):
+def create_app(config_class=Config):
+    # TODO: Convert to MySQL instead of SQLite?
+    # TODO: Migration/upgrade - https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-iv-database
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    app.config.from_object(config_class)
 
-    app.config.from_mapping(
-        DATABASE=os.path.join(app.instance_path, 'CSDGAN.sqlite')
-    )
-    if test_config is None:
-        app.config.from_object('CSDGAN.config.Config')
-    else:
-        app.config.from_mapping(test_config)
-
-    app.redis = Redis.from_url(cs.REDIS_URL)
+    app.redis = Redis.from_url(app.config['REDIS_URL'])
     app.task_queue = rq.Queue('CSDGAN', connection=app.redis)
     moment.init_app(app)
 
