@@ -8,7 +8,7 @@ COPY requirements.txt requirements.txt
 RUN python3 -m venv venv
 RUN venv/bin/pip install --upgrade pip setuptools wheel
 RUN venv/bin/pip install -r requirements.txt
-RUN venv/bin/pip install gunicorn
+RUN venv/bin/pip install gunicorn pymysql
 
 COPY CSDGAN CSDGAN
 COPY utils utils

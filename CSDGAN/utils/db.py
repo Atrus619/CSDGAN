@@ -8,7 +8,6 @@ import shutil
 from werkzeug.security import check_password_hash, generate_password_hash
 import pymysql
 from config import Config
-import pandas as pd
 
 
 def get_db():
@@ -47,9 +46,26 @@ def init_db_command():
     click.echo('Initialized the database.')
 
 
+@click.command('clear-runs')
+@with_appcontext
+def clear_runs_command():
+    """Delete all stored run files. Does not remove runs from database. Does not delete daily logs."""
+    shutil.rmtree(cs.UPLOAD_FOLDER)
+    os.makedirs(cs.UPLOAD_FOLDER)
+
+    shutil.rmtree(cs.RUN_FOLDER)
+    os.makedirs(cs.RUN_FOLDER)
+
+    shutil.rmtree(cs.OUTPUT_FOLDER)
+    os.makedirs(cs.OUTPUT_FOLDER)
+
+    click.echo('Cleared runs.')
+
+
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+    app.cli.add_command(clear_runs_command)
 
 
 def query_check_unique_title_for_user(user_id, title):

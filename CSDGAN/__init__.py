@@ -11,8 +11,6 @@ moment = Moment()
 
 
 def create_app(config_class=Config):
-    # TODO: Convert to MySQL instead of SQLite?
-    # TODO: Migration/upgrade - https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-iv-database
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)

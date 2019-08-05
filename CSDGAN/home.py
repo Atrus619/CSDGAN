@@ -57,7 +57,7 @@ def download_data():
     runs = db.query_all_runs(user_id=session['user_id'])
     run_id = int(runs[int(request.form['index']) - 1]['id'])
     username, title = db.query_username_title(run_id=run_id)
-    file = os.path.join(current_app.root_path, os.path.basename(cs.OUTPUT_FOLDER), username, title + '.zip')
+    file = os.path.join(cs.OUTPUT_FOLDER, username, title + '.zip')
     logger.info('User #{} ({}) downloaded the originally generated data from Run #{} ({})'.format(session['user_id'], username, run_id, title))
     return send_file(file, mimetype='zip', as_attachment=True)
 
@@ -85,7 +85,7 @@ def gen_more_data():
         logger.info('User #{} ({}) downloaded additionally generated data ({}) from Run #{} ({})'.format(session['user_id'], username, str(aug), session['run_id'], title))
         if session['format'] == 'Tabular':
             generate_tabular_data(run_id=session['run_id'], username=username, title=title, aug=aug)
-            file = os.path.join(current_app.root_path, os.path.basename(cs.OUTPUT_FOLDER), username, title + ' Additional Data ' + str(aug) + '.zip')
+            file = os.path.join(cs.OUTPUT_FOLDER, username, title + ' Additional Data ' + str(aug) + '.zip')
             return send_file(file, mimetype='zip', as_attachment=True)
         else:  # Image
             pass

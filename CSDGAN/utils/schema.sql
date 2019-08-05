@@ -15,7 +15,7 @@ create TABLE run (
   title VARCHAR(20) NOT NULL,
   user_id INTEGER NOT NULL,
   start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  end_time TIMESTAMP,
+  end_time TIMESTAMP NULL DEFAULT NULL,
   format VARCHAR(20) NOT NULL,
   filesize INTEGER NOT NULL,
   depvar VARCHAR(50),
