@@ -1,0 +1,59 @@
+version: '3'
+services:
+  redis:
+    container_name: redis
+    ports:
+      - '6380:6379'
+    image: redis:alpine
+
+  csdgan:
+    container_name: csdgan
+    ports:
+      - '8000:5000'
+    environment:
+      - SECRET_KEY=secrets
+      - REDIS_URL=redis://redis-server:6379/0
+      - DB_PW=csdgan!LOL1
+      - DB_HOST=thisismysql
+    links:
+      - redis:redis-server
+      - mysql:dbserver
+    volumes:
+      - MyDataVolume:/MyDataVolume
+    image: csdgan:latest
+    depends_on:
+      - redis
+      - mysql
+
+  rq-worker:
+    container_name: rq-worker
+    environment:
+      - SECRET_KEY=secrets
+      - REDIS_URL=redis://redis-server:6379/0
+      - DB_PW=csdgan!LOL1
+      - DB_HOST=thisismysql
+    links:
+      - redis:redis-server
+      - mysql:dbserver
+    volumes:
+      - MyDataVolume:/MyDataVolume
+    entrypoint:
+      - venv/bin/rq
+    image: csdgan:latest
+    depends_on:
+      - redis
+      - mysql
+    command: worker -u redis://redis-server:6379/0 CSDGAN
+
+  mysql:
+    container_name: mysql
+    hostname: thisismysql
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_DATABASE=csdgan
+      - MYSQL_USER=csdgan
+      - MYSQL_PASSWORD=csdgan!LOL1
+    image: mysql/mysql-server:5.7
+
+volumes:
+  MyDataVolume:
