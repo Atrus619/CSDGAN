@@ -9,12 +9,12 @@ services:
   csdgan:
     container_name: csdgan
     ports:
-      - '8000:5000'
+      - '80:5000'
     environment:
       - SECRET_KEY=secrets
       - REDIS_URL=redis://redis-server:6379/0
       - DB_PW=csdgan!LOL1
-      - DB_HOST=thisismysql
+      - DB_HOST=mysql
     links:
       - redis:redis-server
       - mysql:dbserver
@@ -31,7 +31,7 @@ services:
       - SECRET_KEY=secrets
       - REDIS_URL=redis://redis-server:6379/0
       - DB_PW=csdgan!LOL1
-      - DB_HOST=thisismysql
+      - DB_HOST=mysql
     links:
       - redis:redis-server
       - mysql:dbserver
@@ -47,7 +47,7 @@ services:
 
   mysql:
     container_name: mysql
-    hostname: thisismysql
+    hostname: mysql
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
       - MYSQL_DATABASE=csdgan
