@@ -3,56 +3,56 @@ services:
   redis:
     container_name: redis
     ports:
-      - '6380:6379'
+      - '${REDIS_BIND_PORT}:${REDIS_MAP_PORT}'
     image: redis:alpine
 
   csdgan:
-    container_name: csdgan
+    container_name: ${APP_NAME}
     ports:
-      - '80:5000'
+      - '${APP_BIND_PORT}:${APP_MAP_PORT}'
     environment:
-      - SECRET_KEY=secrets
-      - REDIS_URL=redis://redis-server:6379/0
-      - DB_PW=csdgan!LOL1
-      - DB_HOST=mysql
+      - SECRET_KEY=${SECRET_KEY}
+      - REDIS_URL=redis://redis-server:${REDIS_MAP_PORT}/0
+      - DB_PW=${DB_PW}
+      - DB_HOST=${DB_NAME}
     links:
       - redis:redis-server
       - mysql:dbserver
     volumes:
       - MyDataVolume:/MyDataVolume
-    image: csdgan:latest
+    image: atrus619/${APP_NAME}:latest
     depends_on:
       - redis
-      - mysql
+      - ${DB_NAME}
 
   rq-worker:
     container_name: rq-worker
     environment:
-      - SECRET_KEY=secrets
-      - REDIS_URL=redis://redis-server:6379/0
-      - DB_PW=csdgan!LOL1
-      - DB_HOST=mysql
+      - SECRET_KEY=${SECRET_KEY}
+      - REDIS_URL=redis://redis-server:${REDIS_MAP_PORT}/0
+      - DB_PW=${DB_PW}
+      - DB_HOST=${DB_NAME}
     links:
       - redis:redis-server
-      - mysql:dbserver
+      - ${DB_NAME}:dbserver
     volumes:
       - MyDataVolume:/MyDataVolume
     entrypoint:
       - venv/bin/rq
-    image: csdgan:latest
+    image: atrus619/${APP_NAME}:latest
     depends_on:
       - redis
-      - mysql
-    command: worker -u redis://redis-server:6379/0 CSDGAN
+      - ${DB_NAME}
+    command: worker -u redis://redis-server:${REDIS_MAP_PORT}/0 CSDGAN
 
   mysql:
-    container_name: mysql
-    hostname: mysql
+    container_name: ${DB_NAME}
+    hostname: ${DB_NAME}
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
-      - MYSQL_DATABASE=csdgan
-      - MYSQL_USER=csdgan
-      - MYSQL_PASSWORD=csdgan!LOL1
+      - MYSQL_DATABASE=${APP_NAME}
+      - MYSQL_USER=${APP_NAME}
+      - MYSQL_PASSWORD=${DB_PW}
     image: mysql/mysql-server:5.7
 
 volumes:
