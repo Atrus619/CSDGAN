@@ -15,7 +15,8 @@ up: ## Build the container
 	sudo docker-compose up -d
 
 serve: ## Serve the container on ngrok
-	./ngrok http $(APP_BIND_PORT)
+	sudo snap install ngrok
+	sudo ngrok http $(APP_BIND_PORT)
 
 reset_nginx: ## Kills nginx process if port is in use
 	sudo nginx -s stop
