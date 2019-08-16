@@ -15,7 +15,6 @@ up: ## Build the container
 	sudo docker-compose up -d
 
 serve: ## Serve the container on ngrok
-	sudo snap install ngrok
 	sudo ngrok http $(APP_BIND_PORT)
 
 reset_nginx: ## Kills nginx process if port is in use
@@ -29,3 +28,14 @@ stop:  ## Stops container
 	sudo docker rm redis
 	sudo docker rm mysql
 	sudo docker rm rq-worker
+
+install_ngrok:  ## Installs ngrok
+	sudo snap install ngrok
+
+# HELP
+.PHONY: help
+
+help: ## This help.
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+.DEFAULT_GOAL := help
