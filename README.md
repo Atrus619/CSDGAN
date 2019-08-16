@@ -43,7 +43,7 @@ While all of the code is yours to explore, I recommend starting out by checking 
 I would love to hear from users who were able to modify the architectures or training hyperparameters to produce better performing models. Additionally, proposing new data sets and even uploading implementations that are successful would be a great contribution!
 
 ## Credits
-I would like to give credits to the countless open source researchers and bloggers who made this work possible by selflessly sharing their work so that I could learn from their experiences.
+I would like to give credit to the countless open source researchers and bloggers who made this work possible by selflessly sharing their work so that I could learn from their experiences.
 
 ## License
 MIT License
