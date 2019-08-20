@@ -1,4 +1,4 @@
-import utils.ImageUtils as IU
+import utils.image_utils as IU
 import utils.utils as uu
 from CSDGAN.classes.NetUtils import NetUtils
 

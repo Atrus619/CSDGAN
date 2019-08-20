@@ -5,7 +5,7 @@ from CSDGAN.classes.image.ImageDataset import ImageDataset
 from torch.utils import data
 import os
 import random
-from utils.ImageUtils import img_dataset_preprocesser
+from utils.image_utils import img_dataset_preprocesser
 
 
 # Set random seem for reproducibility

@@ -1,6 +1,6 @@
 import CSDGAN.utils.db as db
 import CSDGAN.utils.constants as cs
-import utils.ImageUtils as IU
+import utils.image_utils as IU
 import utils.utils as uu
 from CSDGAN.classes.image.ImageDataset import OnlineGeneratedImageDataset
 from CSDGAN.classes.image.ImageNetD import ImageNetD

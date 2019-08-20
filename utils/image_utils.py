@@ -1,4 +1,5 @@
-from utils.utils import train_val_test_split, encode_y
+import utils.utils as uu
+
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,11 +8,11 @@ import torch.nn as nn
 
 
 def img_dataset_preprocesser(x, y, splits, seed=None):
-    y, le, ohe = encode_y(y)
+    y, le, ohe = uu.encode_y(y)
 
     x = x.astype('float32')
 
-    x_train, y_train, x_val, y_val, x_test, y_test = train_val_test_split(x, y, splits=splits, random_state=seed)
+    x_train, y_train, x_val, y_val, x_test, y_test = uu.train_val_test_split(x, y, splits=splits, random_state=seed)
 
     train_max = x_train.max()
     train_min = x_train.min()

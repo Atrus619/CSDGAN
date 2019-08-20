@@ -1,4 +1,4 @@
-import utils.ImageUtils as IU
+import utils.image_utils as IU
 from CSDGAN.classes.NetUtils import NetUtils
 
 import torch.optim as optim

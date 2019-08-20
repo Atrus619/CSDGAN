@@ -11,7 +11,7 @@
 12. Stretch Goal: Histogram GIF with static axes
 """
 
-import utils.ImageUtils as IU
+import utils.image_utils as IU
 
 from torch.utils import data
 import random
