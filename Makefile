@@ -32,6 +32,13 @@ stop:  ## Stops container
 install_ngrok:  ## Installs ngrok
 	sudo snap install ngrok
 
+# local dev
+dev_down: ## shut down app for local development, along with dependencies
+	redis-cli shutdown
+
+worker_up: ## start worker for app for local development
+	rq worker CSDGAN
+
 # HELP
 .PHONY: help
 
@@ -39,3 +46,4 @@ help: ## This help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .DEFAULT_GOAL := help
+
