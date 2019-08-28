@@ -121,6 +121,12 @@ def image():
 @login_required
 def success():
     if request.method == 'POST':
+        cmd = 'redis-cli ping'  # Check to make sure redis server is up
+        if os.system(cmd) != 0:
+            db.query_set_status(run_id=session['run_id'], status_id=cs.STATUS_DICT['Error'])
+            e = 'Redis server is not set up to handle requests.'
+            logger.exception('Error: %s', e)
+            raise NameError('Error: ' + e)
         if session['format'] == 'Tabular':
             # Commence tabular run
             make_dataset = current_app.task_queue.enqueue('CSDGAN.pipeline.data.make_tabular_dataset.make_tabular_dataset',

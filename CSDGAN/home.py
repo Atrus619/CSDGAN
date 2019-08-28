@@ -65,9 +65,6 @@ def download_data():
 @bp.route('/gen_more_data', methods=['POST'])
 @login_required
 def gen_more_data():
-    # TODO: Fill in get request inputs
-    # TODO: Add more logging
-    # TODO: Finish gen more data code
     if 'index' in request.form.keys():  # Entering page for the first time
         runs = db.query_all_runs(session['user_id'])
         session['run_id'] = int(runs[int(request.form['index']) - 1]['id'])

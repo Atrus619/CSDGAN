@@ -43,9 +43,8 @@ TABULAR_DEFAULT_BATCH_SIZE = 1000
 
 # App constants
 app = fake_create_app()
-DOCKERIZED = True
+DOCKERIZED = False
 VOLUME = '/MyDataVolume' if DOCKERIZED else app.root_path
-# TODO: This may cause issues...
 UPLOAD_FOLDER = os.path.join(VOLUME, 'incoming_raw_data')
 RUN_FOLDER = os.path.join(VOLUME, 'runs')
 OUTPUT_FOLDER = os.path.join(VOLUME, 'genned_data')

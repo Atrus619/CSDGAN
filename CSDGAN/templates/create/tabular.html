@@ -14,7 +14,7 @@
         {% endfor %}
     </select>
     <hr>
-    <h2>Continuous Features</h2>
+    <h2>Numeric Features</h2>
     <p><i>You can select multiple by holding ctrl/cmd.</i></p>
     <select name="cont_inputs" multiple size="5">
         {% for col in cols %}
@@ -23,7 +23,7 @@
     </select>
     <hr>
     <h2>Integer Features</h2>
-    <p><i>This should be a subset of your continuous features. Again, you can select multiple by holding ctrl/cmd.</i></p>
+    <p><i>This should be a subset of your numeric features. Again, you can select multiple by holding ctrl/cmd.</i></p>
     <select name="int_inputs" multiple size="5">
         {% for col in cols %}
         <option value="{{ col }}">{{ col }}</option>

@@ -20,10 +20,14 @@ def create_app(config_class=Config):
     moment.init_app(app)
 
     os.makedirs(app.instance_path, exist_ok=True)
-    os.makedirs(cs.LOG_FOLDER, exist_ok=True)
-    os.makedirs(cs.RUN_FOLDER, exist_ok=True)
-    os.makedirs(cs.OUTPUT_FOLDER, exist_ok=True)
-    os.makedirs(cs.UPLOAD_FOLDER, exist_ok=True)
+
+    try:
+        os.makedirs(cs.LOG_FOLDER, exist_ok=True)
+        os.makedirs(cs.RUN_FOLDER, exist_ok=True)
+        os.makedirs(cs.OUTPUT_FOLDER, exist_ok=True)
+        os.makedirs(cs.UPLOAD_FOLDER, exist_ok=True)
+    except PermissionError:
+        raise NameError('Please change DOCKERIZED to False in CSDGAN.utils.constants.py')
 
     from CSDGAN.utils import db
     db.init_app(app)
