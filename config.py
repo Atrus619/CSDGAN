@@ -1,9 +1,14 @@
 import CSDGAN.utils.constants as cs
 import os
-from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(basedir, '.env'))
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(basedir, '.env'))
+
+except ModuleNotFoundError:
+    pass
 
 
 class Config:
@@ -22,3 +27,5 @@ class Config:
 
     UPLOAD_FOLDER = cs.UPLOAD_FOLDER
     MAX_CONTENT_LENGTH = cs.MAX_CONTENT_LENGTH
+
+

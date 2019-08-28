@@ -1,12 +1,13 @@
 from CSDGAN.classes.image.ImageCGAN import ImageCGAN
 import configs.MNIST as cfg
 from utils.data_loading import *
-from CSDGAN.classes.image.ImageDataset import ImageDataset
+from CSDGAN.classes.image.ImageDataset import ImageDataset, GeneratedImageDataset
 from torch.utils import data
 import os
 import pickle
 import random
-from utils.image_utils import img_dataset_preprocesser
+import numpy as np
+from utils.image_utils import img_dataset_preprocessor, show_real_grid, augment
 
 
 # Set random seem for reproducibility
@@ -20,7 +21,7 @@ exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
 # Import data and split
 mnist = load_processed_dataset('MNIST')
 x_comb, y_comb = torch.cat((mnist[0][0], mnist[1][0]), 0).numpy(), torch.cat((mnist[0][1], mnist[1][1]), 0).numpy()
-x_train, y_train, x_val, y_val, x_test, y_test, le, ohe = img_dataset_preprocesser(x=x_comb, y=y_comb, splits=cfg.SPLITS, seed=cfg.MANUAL_SEED)
+x_train, y_train, x_val, y_val, x_test, y_test, le, ohe = img_dataset_preprocessor(x=x_comb, y=y_comb, splits=cfg.SPLITS, seed=cfg.MANUAL_SEED)
 
 # Automatically determine these parameters
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")  # GPU if exists, else CPU
@@ -66,11 +67,10 @@ except RuntimeError:
     CGAN.train_gan(num_epochs=cfg.NUM_EPOCHS, print_freq=cfg.PRINT_FREQ, eval_freq=cfg.EVAL_FREQ)
 
 # Display final grid
-# CGAN.show_grid(-1)
-# show_real_grid(x_train, y_train) NEEDS FIXING
+show_real_grid(x_train=x_train, y_train=np.argmax(y_train, 1), nc=10, num_channels=1, grid_rows=10, x_dim=(28, 28))
 
 # Generate sample images
-# CGAN.show_img(0)
+CGAN.show_img(0)
 
 # Diagnostics
 CGAN.run_all_diagnostics(real_netE=real_netE, benchmark_acc=benchmark_acc, save=exp_path, show=True)
@@ -84,18 +84,22 @@ with open(exp_path + "/CGAN.pkl", 'rb') as f:
     CGAN = pickle.load(f)
 
 # Test Grad CAM
-x, y = CGAN.test_gen.__iter__().__next__()
-CGAN.netD.draw_cam(img=x[0], label=3, real=True, path=exp_path + "/plswork.jpg")
+num = 9
 
-CGAN.netE.draw_cam(img=x[2], real=True, path=exp_path + "/plswork2.jpg")
+CGAN.draw_cam(gen=CGAN.data_gen, net=CGAN.netE, label=num, mistake=False, path=exp_path + "/plswork.jpg", show=True)
+CGAN.draw_cam(gen=CGAN.data_gen, net=CGAN.netE, label=num, mistake=True, path=exp_path + "/plswork.jpg", show=True)
 
-x = CGAN.find_particular_img(CGAN.train_gen, CGAN.netD, 3, True)
-CGAN.netD.draw_cam(img=x, label=3, path=exp_path + "/plswork.jpg")
-
-CGAN.draw_cam(gen=CGAN.train_gen, net="E", label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
+CGAN.draw_cam(gen=CGAN.data_gen, net=CGAN.netD, label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
+CGAN.draw_cam(gen=CGAN.netG, net=CGAN.netE, label=3, mistake=False, path=exp_path + "/plswork.jpg", show=True)
+CGAN.draw_cam(gen=CGAN.netG, net=CGAN.netE, label=3, mistake=True, path=exp_path + "/plswork.jpg", show=True)
 
 # Test drawing architectures
 CGAN.draw_architecture(net=CGAN.netG, show=True, save="test")
 CGAN.draw_architecture(net=CGAN.netD, show=True, save="test")
 CGAN.draw_architecture(net=CGAN.netE, show=True, save="test")
 
+# Data augmentation
+augment(train_dataset, 10000)
+
+generator_augmented_training_set = GeneratedImageDataset(CGAN.netG, CGAN.fake_data_set_size, CGAN.nz, CGAN.nc, CGAN.num_channels, CGAN.fake_bs, CGAN.ohe, CGAN.device, CGAN.x_dim)
+augment(generator_augmented_training_set, 10000)

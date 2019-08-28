@@ -139,7 +139,7 @@ class CGANUtils:
         if save is None:
             save = self.path
 
-        iterator = iter(self.train_gen)
+        iterator = iter(self.data_gen)
         x, y = next(iterator)
         x, y = x.to(self.device), y.to(self.device).type(torch.float32)
 

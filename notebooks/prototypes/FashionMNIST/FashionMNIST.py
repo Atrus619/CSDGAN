@@ -5,7 +5,7 @@ from CSDGAN.classes.image.ImageDataset import ImageDataset
 from torch.utils import data
 import os
 import random
-from utils.image_utils import img_dataset_preprocesser
+from utils.image_utils import img_dataset_preprocessor
 
 
 # Set random seem for reproducibility
@@ -19,7 +19,7 @@ exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
 # Import data and split
 fmnist = load_processed_dataset('FashionMNIST')
 x_comb, y_comb = torch.cat((fmnist[0][0], fmnist[1][0]), 0).numpy(), torch.cat((fmnist[0][1], fmnist[1][1]), 0).numpy()
-x_train, y_train, x_val, y_val, x_test, y_test, le, ohe = img_dataset_preprocesser(x=x_comb, y=y_comb, splits=cfg.SPLITS, seed=cfg.MANUAL_SEED)
+x_train, y_train, x_val, y_val, x_test, y_test, le, ohe = img_dataset_preprocessor(x=x_comb, y=y_comb, splits=cfg.SPLITS, seed=cfg.MANUAL_SEED)
 
 # Automatically determine these parameters
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")  # GPU if exists, else CPU

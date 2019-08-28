@@ -46,19 +46,26 @@ def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, 
     :param verbose: Verbosity for whether to print all information (True = print, False = don't print)
     :return: Best fitted score
     """
+    if len(y_train.shape) > 1:  # Convert to single column
+        y_train = np.argmax(y_train, 1)
+        y_train = np.array([labels_list[x] for x in y_train])
+
     if len(y_test.shape) > 1:  # Convert to single column
         y_test = np.argmax(y_test, 1)
+        y_test = np.array([labels_list[x] for x in y_test])
 
     lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
     lr_cv = GridSearchCV(lr, param_grid=param_grid, n_jobs=-1, cv=cv, iid=True)
     lr_cv.fit(x_train, y_train)
+
     best_score = lr_cv.score(x_test, y_test)
     predictions = lr_cv.predict(x_test)
     if verbose:
         print("Best Accuracy: {0:.2%}".format(best_score))
         print("Best Parameters:", lr_cv.best_params_)
-        print(classification_report(y_test, predictions, labels=labels_list))
-        print(confusion_matrix(np.array(y_test), predictions, labels=labels_list))
+        labels_list = [str(x) for x in labels_list]  # Convert labels_list to list of strings
+        print(classification_report(y_test, predictions, target_names=labels_list))
+        print(confusion_matrix(np.array(y_test), predictions))
     return best_score
 
 

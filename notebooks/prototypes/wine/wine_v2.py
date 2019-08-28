@@ -48,10 +48,10 @@ CGAN = TabularCGAN(data_gen=data_gen,
                    **cfg.CGAN_INIT_PARAMS)
 
 # Eval on real data
-score_real = train_test_logistic_reg(x_train=dataset.x_train_arr,
-                                     y_train=dataset.y_train_arr,
-                                     x_test=dataset.x_test_arr,
-                                     y_test=dataset.y_test_arr,
+score_real = train_test_logistic_reg(x_train=CGAN.data_gen.dataset.x_train.cpu().detach().numpy(),
+                                     y_train=CGAN.data_gen.dataset.y_train.cpu().detach().numpy(),
+                                     x_test=CGAN.data_gen.dataset.x_test.cpu().detach().numpy(),
+                                     y_test=CGAN.data_gen.dataset.y_test.cpu().detach().numpy(),
                                      param_grid=cfg.EVAL_PARAM_GRID,
                                      cv=cfg.EVAL_FOLDS,
                                      random_state=cfg.MANUAL_SEED,
@@ -74,17 +74,17 @@ with open(os.path.join(exp_path, "CGAN.pkl"), 'wb') as f:
 # Visualizations
 CGAN.plot_progress(benchmark_acc=score_real, show=True, save=exp_path)
 CGAN.plot_training_plots(show=True, save=exp_path)
-CGAN.netG.plot_layer_scatters(title="Generator", show=True, save=exp_path)
-CGAN.netD.plot_layer_scatters(title="Discriminator", show=True, save=exp_path)
-CGAN.netG.plot_layer_hists(title="Generator", show=True, save=exp_path)
-CGAN.netD.plot_layer_hists(title="Discriminator", show=True, save=exp_path)
+CGAN.netG.plot_layer_scatters(show=True, save=exp_path)
+CGAN.netD.plot_layer_scatters(show=True, save=exp_path)
+CGAN.netG.plot_layer_hists(show=True, save=exp_path)
+CGAN.netD.plot_layer_hists(show=True, save=exp_path)
 
 genned_df = CGAN.gen_data(size=cfg.TEST_RANGES[3], stratify=eval_stratify)
 plot_scatter_matrix(df=genned_df, cont_inputs=cfg.CONT_INPUTS[0:3], title="Fake Data", scaler=None, show=True, save=exp_path)
 plot_scatter_matrix(df=wine, cont_inputs=cfg.CONT_INPUTS[0:3], title="Real Data", scaler=None, show=True, save=exp_path)
 
-plot_conditional_scatter(col1='sepal_len',
-                         col2='sepal_wid',
+plot_conditional_scatter(col1='alcohol',
+                         col2='malic_acid',
                          real_df=wine,
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,
@@ -95,7 +95,7 @@ plot_conditional_scatter(col1='sepal_len',
                          show=True,
                          save=exp_path)
 
-plot_conditional_density(col='petal_len',
+plot_conditional_density(col='alcohol',
                          real_df=wine,
                          fake_df=genned_df,
                          dep_var=cfg.DEP_VAR,

@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torchvision.utils as vutils
 import torch.nn as nn
+from sklearn.model_selection import train_test_split
+import torchvision.transforms as t
 
 
-def img_dataset_preprocesser(x, y, splits, seed=None):
+def img_dataset_preprocessor(x, y, splits, seed=None):
     y, le, ohe = uu.encode_y(y)
 
     x = x.astype('float32')
@@ -119,3 +121,40 @@ def evaluator_cn2_block(h, w, in_channels, out_channels):
     cn2_mp = nn.MaxPool2d(kernel_size=(h, w), stride=(h, w))
 
     return cn2, cn2_bn, cn2_mp
+
+
+def augment(dataset, n):
+    """
+    Increases the data set by augmenting a stratified sample of size n through the transfm_batch method.
+    Intended to be used with the MNIST data set.
+    Modifies data set in place.
+    """
+    x_aug, _, y_aug, _, y_aug_raw, _ = train_test_split(dataset.x.numpy(), dataset.y.numpy(), np.argmax(dataset.y.numpy(), 1),
+                                                        test_size=dataset.x.shape[0]-n, stratify=np.argmax(dataset.y.numpy(), 1))
+
+    x_aug, y_aug = torch.from_numpy(x_aug), torch.from_numpy(y_aug)
+    x_aug = trnsfm_batch(x_aug, y_aug_raw)
+    dataset.x, dataset.y = torch.cat((dataset.x, x_aug), dim=0), torch.cat((dataset.y, y_aug), dim=0)
+
+
+def trnsfm_batch(img, labels):
+    """Performs various transformations in order to augment the data set. Intended to be used with the MNIST data set."""
+    PIL = t.ToPILImage()
+    TNSR = t.ToTensor()
+    crop_trnsfm = t.RandomResizedCrop(28, scale=(0.75, 1.0), ratio=(0.75, 1.3333))
+    affine_trnsfm = t.RandomAffine((-15, 15))
+    vert_trnsfm = t.RandomVerticalFlip(p=0.5)
+    hor_trnsfm = t.RandomHorizontalFlip(p=0.5)
+    final_trnsfm = t.Compose([crop_trnsfm, affine_trnsfm])
+    spcl_trnsfm = t.Compose([vert_trnsfm, hor_trnsfm])
+    spcl_list = [1, 8]
+    out = torch.empty_like(img)
+    for i in range(img.shape[0]):
+        tmp = img[i].view(28, 28)
+        tmp = PIL(tmp)
+        tmp = final_trnsfm(tmp)
+        if labels[i] in spcl_list:
+            tmp = spcl_trnsfm(tmp)
+        tmp = TNSR(tmp)
+        out[i] = tmp
+    return out

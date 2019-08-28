@@ -1,16 +1,3 @@
-# TODO:
-"""
-2. Adjust prototypes/reports
-3. Test again
-4. FashionMNIST
-6. Begin productionizing
-8. Table of results for README
-9. Stretch Goal: Add Dropout?!?
-10. Fix hard-coded values throughout
-11. Stretch Goal: Add automatic augmentation to help ImageCGAN
-12. Stretch Goal: Histogram GIF with static axes
-"""
-
 import utils.image_utils as IU
 
 from torch.utils import data
@@ -23,7 +10,7 @@ import torch
 
 
 class ImageDataset(data.Dataset):
-    """Accepts input from img_dataset_preprocesser method. Assumes data set in (batch, channel, height, width) format."""
+    """Accepts input from img_dataset_preprocessor method. Assumes data set in (batch, channel, height, width) format."""
 
     def __init__(self, x, y):
 
@@ -57,12 +44,13 @@ class ImageDataset(data.Dataset):
 
 
 class GeneratedImageDataset(data.Dataset):
-    def __init__(self, netG, size, nz, nc, bs, ohe, device, x_dim, stratify=None):
+    def __init__(self, netG, size, nz, nc, num_channels, bs, ohe, device, x_dim, stratify=None):
         self.netG = netG
 
         self.size = size
         self.nz = nz
         self.nc = nc
+        self.num_channels = num_channels
         self.bs = bs
         self.x_dim = x_dim
 
@@ -101,7 +89,7 @@ class GeneratedImageDataset(data.Dataset):
     def gen_data(self, stratify=None):
         """Generate fake training data examples for netE. Requires prior run of gen_labels"""
         y = self.gen_labels(stratify=stratify)
-        x = torch.empty((self.size, self.nc, self.x_dim[0], self.x_dim[1]), dtype=torch.float32, device='cpu')
+        x = torch.empty((self.size, self.num_channels, self.x_dim[0], self.x_dim[1]), dtype=torch.float32, device='cpu')
         self.netG.eval()
         num_batches = self.size // self.bs
 

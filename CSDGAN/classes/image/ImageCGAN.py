@@ -37,6 +37,7 @@ class ImageCGAN(CGANUtils):
 
         # Data generator
         self.train_gen = train_gen
+        self.data_gen = self.train_gen  # For drawing architectures only
         self.val_gen = val_gen
         self.test_gen = test_gen
 
@@ -229,11 +230,11 @@ class ImageCGAN(CGANUtils):
     def show_img(self, label):
         """Generate an image based on the desired class label index (integer 0-9)"""
         assert label in self.le.classes_, "Make sure label is a valid class"
-        label = self.le.transform([label])
+        label = self.le.transform([label])[0]
+        label = torch.full((1, 1), label, dtype=torch.int64)
 
         noise = torch.randn(1, self.nz, device=self.device)
         processed_label = torch.zeros([1, self.nc], dtype=torch.uint8, device='cpu')
-        label = torch.full((1, 1), label, dtype=torch.int64)
         processed_label = processed_label.scatter(1, label, 1).float().to(self.device)
 
         self.netG.eval()
@@ -593,13 +594,14 @@ class ImageCGAN(CGANUtils):
 
         return grid1, grid2
 
-    def find_particular_img(self, gen, net, label, mistake):
+    def find_particular_img(self, gen, net, label, mistake, escape=999):
         """
         Searches through the generator to find a single image of interest based on search parameters
         :param gen: Generator to use. netG is a valid generator to use for fake data.
         :param net: Network to use. Either netD or netE.
         :param label: Label to return (0-9)
         :param mistake: Whether the example should be a mistake (True or False)
+        :param escape: Error out if loop hits this number
         :return: torch tensor of image (x_dim[0] x x_dim[1])
         """
         assert gen in {self.train_gen, self.val_gen, self.test_gen, self.netG}, "Please use a valid generator (train/val/test/generator)"
@@ -613,7 +615,11 @@ class ImageCGAN(CGANUtils):
 
         net.eval()
 
+        escape_counter = 0
+
         while True:  # Search until a match is found
+            escape_counter += 1
+
             # Generate examples
             if gen == self.netG:
                 noise = torch.randn(bs, self.nz, device=self.device)
@@ -661,29 +667,35 @@ class ImageCGAN(CGANUtils):
             if len(contenders) > 0:
                 return contenders[0]
 
-    def draw_cam(self, gen, net, label, mistake, show, path, scale=None):
+            if escape_counter == escape:
+                return None
+
+    def draw_cam(self, gen, net, label, mistake, show, path, scale=None, escape=999):
         """
         Wrapper function for find_particular_img and draw_cam
-        :param gen: Generator to use. netG is a valid generator to use for fake data.
-        :param net: Network to use. Either "D" or "E".
+        :param gen: Generator to use. netG is a valid generator to use for fake data (otherwise data_gen).
+        :param net: Network to use. Either netD or netE.
         :param label: Label to return
         :param mistake: Whether the example should be a mistake (True or False)
         :param show: Whether to show the image
         :param path: Path to create image file. Needs full file name. Should end in .jpg
         :param scale: Multiplier to scale image back to original values
+        :param escape: Error out if loop hits this number
         """
         assert path.split(".")[-1] == "jpg", "Please make sure path ends in '.jpg'"
         assert label in self.le.classes_, "Make sure label is a valid class"
 
         if scale is None:
-            scale = 1 if self.nc > 1 else 255
+            scale = 1 if self.num_channels > 1 else 255
 
-        img = self.find_particular_img(gen=gen, net=net, label=label, mistake=mistake)
+        img = self.find_particular_img(gen=gen, net=net, label=label, mistake=mistake, escape=escape)
+
+        assert img is not None, "Unable to find an image within the specified timeframe"
 
         real = gen != self.netG
 
-        if net == "D":
-            label = self.le.transform([label])
+        if net == self.netD:
+            label = self.le.transform([label])[0]
             self.netD.draw_cam(img=img, label=label, path=path, scale=scale, show=show, real=real)
         else:
             self.netE.draw_cam(img=img, path=path, scale=scale, show=show, real=real)
