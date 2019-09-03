@@ -77,4 +77,5 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
     except Exception as e:
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
         logger.exception('Error: %s', e)
-        raise Exception('Intentionally failing process after broadly catching an exception.')
+        raise Exception('Intentionally failing process after broadly catching an exception. '
+                        'Logs describing this error can be found in the run\'s specific logs file.')

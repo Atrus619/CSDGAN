@@ -32,17 +32,24 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
         assert os.path.splitext(file)[1] in {'.txt', '.csv', '.zip'}, "Path is not zip or flat file"
         if os.path.splitext(file)[1] == '.zip':
             logger.info('Tabular file contained in zip. Unzipping...')
-            zip_ref = ZipFile(path, 'r')
+            zip_ref = ZipFile(os.path.join(path, file), 'r')
             zip_ref.extractall(run_dir)
             zip_ref.close()
 
             unzipped_path = os.path.join(run_dir, os.path.splitext(file)[0])
-            assert os.path.exists(unzipped_path), \
-                "Flat file in zip not named the same as zip file"
-            unzipped_file = os.listdir(unzipped_path)[0]
-            assert os.path.splitext(unzipped_file)[1] in {'.txt', '.csv'}, \
-                "Flat file in zip should be .txt or .csv"
-            data = pd.read_csv(os.path.join(run_dir, unzipped_file), header=0)
+
+            if os.path.isdir(unzipped_path):
+                assert os.path.exists(unzipped_path), \
+                    "Flat file in zip not named the same as zip file"
+                unzipped_file = os.listdir(unzipped_path)[0]
+                assert os.path.splitext(unzipped_file)[1] in {'.txt', '.csv'}, \
+                    "Flat file in zip should be .txt or .csv"
+                data = pd.read_csv(os.path.join(unzipped_path, unzipped_file), header=0)
+            else:
+                unzipped_file = [file for file in os.listdir(run_dir) if file not in ['gen_dict.pkl', 'run_log.log']][0]  # Expected entries
+                assert os.path.splitext(unzipped_file)[1] in {'.txt', '.csv'}, \
+                    "Flat file in zip should be .txt or .csv"
+                data = pd.read_csv(os.path.join(run_dir, unzipped_file), header=0)
         else:
             logger.info('Tabular file not contained in zip.')
             data = pd.read_csv(os.path.join(path, file), header=0)

@@ -54,6 +54,10 @@ def train_test_logistic_reg(x_train, y_train, x_test, y_test, param_grid, cv=5, 
         y_test = np.argmax(y_test, 1)
         y_test = np.array([labels_list[x] for x in y_test])
 
+    # Adjust cv (number of folds) if data set is painfully small
+    if len(np.unique(y_train)) * cv > x_train.shape[0]:
+        cv = x_train.shape[0] // len(np.unique(y_train))
+
     lr = LogisticRegression(penalty='elasticnet', multi_class='multinomial', solver='saga', random_state=random_state, max_iter=10000)
     lr_cv = GridSearchCV(lr, param_grid=param_grid, n_jobs=-1, cv=cv, iid=True)
     lr_cv.fit(x_train, y_train)
