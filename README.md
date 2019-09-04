@@ -7,7 +7,7 @@ I have selected a variety of data sets with the intention of learning how to ove
 
 The goal is to be able to train generative models with a deep enough understanding of the underlying data distribution so that a model trained on only fake data can outperform models trained on the original real data. This goal has been achieved, and there are lots of ways for a user to interact with the models contained within this repository in order to learn about GANs and generate better models.
 
-2. Build a containerized web app that can employ these flexible GANs to generate data to a user from any data set.
+2. Build a containerized web app that can employ these flexible GANs to generate data for a user from any data set.
 
 So far the web app is only capable of handling tabular data sets, but functionality for image data sets is coming soon, and a stretch goal is to incorporate NLP functionality.
 
@@ -57,6 +57,10 @@ If you wish to expose the web app to the internet, you will need to install ngro
 With ngrok installed, to run the app in a single line of code:
 
 `./deploy.sh`
+
+To run the app locally in a dev environment (not containerized), you can run (you may want to change DOCKERIZED in CSDGAN/utils/constants.py to FALSE to do this):
+
+`./dev_deploy.sh`
 
 Feel free to check out the Makefile for other relevant commands:
 
