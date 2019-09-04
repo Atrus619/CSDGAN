@@ -19,9 +19,9 @@ class Config:
 
     DATABASE_URL = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'instance', 'csdgan.sqlite')
     MYSQL_DATABASE_HOST = os.environ.get('DB_HOST') or 'localhost'
-    MYSQL_DATABASE_USER = 'csdgan'
+    MYSQL_DATABASE_USER = os.environ.get('DB_USER')
     MYSQL_DATABASE_PASSWORD = os.environ.get('DB_PW') or 'you-might-guess-this-time'
-    MYSQL_DATABASE_DB = 'csdgan'
+    MYSQL_DATABASE_DB = os.environ.get('APP_NAME')
 
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
 

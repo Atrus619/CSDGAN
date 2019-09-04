@@ -244,7 +244,7 @@ def query_check_status(run_id):
             '   GROUP BY run_id '
             ') as b on a.run_id = b.run_id and a.status_id = b.status_id '
             'INNER JOIN status_info as c on a.status_id = c.id',
-            (run_id,)
+            (run_id, )
         )
         result = cursor.fetchone()
 
