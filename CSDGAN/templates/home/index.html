@@ -37,8 +37,8 @@
     <tr id="{{ loop.index }}">
         <td>{{ run.title }}</td>
         <td>{{ run.format }}</td>
-        <td>{{ run.start_time.strftime("%b-%d %I:%M %p") }}</td>
-        <td id="update_time{{ loop.index }}">{{ moment(run.update_time).fromNow() }}</td>
+        <td>{{ moment(timestamp=run.start_time, local=True).calendar() }}</td>
+        <td id="update_time{{ loop.index }}">{{ moment(timestamp=run.update_time, local=True).fromNow() }}</td>
         <td id="status{{ loop.index }}">{{ run.descr }}</td>
         <td><a href="#" onclick="refresh_status({{ loop.index }})">Refresh</a></td>
         {% if 'Data available' in run.descr %}
