@@ -17,7 +17,7 @@ wine.head()
 x_train, x_test, y_train, y_test = train_test_split(wine.drop(columns='class'), wine['class'], test_size=88, stratify=wine['class'], random_state=manualSeed)
 
 # Parameters
-nz = 64  # Size of generator noise input  # TODO: May need to mess around with this later
+nz = 64  # Size of generator noise input
 H = 32  # Size of hidden network layer
 out_dim = x_train.shape[1]  # Size of output
 bs = x_train.shape[0]  # Full data set

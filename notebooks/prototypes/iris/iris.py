@@ -16,7 +16,7 @@ iris.head()
 x_train, x_test, y_train, y_test = train_test_split(iris.drop(columns='species'), iris.species, test_size=0.5, stratify=iris.species, random_state=manualSeed)
 
 # Parameters
-nz = 32  # Size of generator noise input  # TODO: May need to mess around with this later
+nz = 32  # Size of generator noise input
 H = 16  # Size of hidden network layer
 out_dim = x_train.shape[1]  # Size of output
 bs = x_train.shape[0]  # Full data set

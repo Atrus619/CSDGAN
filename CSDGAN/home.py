@@ -71,7 +71,7 @@ def gen_more_data():
         session['title'] = runs[int(request.form['index']) - 1]['title']
         session['dep_var'] = runs[int(request.form['index']) - 1]['depvar']
         session['format'] = runs[int(request.form['index']) - 1]['format']
-        dep_choices = cu.parse_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
+        dep_choices = cu.parse_tabular_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
         return render_template('home/gen_more_data.html', title=session['title'], dep_var=session['dep_var'],
                                dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.MAX_EXAMPLE_PER_CLASS))
 

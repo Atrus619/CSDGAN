@@ -1,4 +1,5 @@
 from CSDGAN.classes.image.ImageDataset import ImageFolderWithPaths
+import CSDGAN.utils.utils as cu
 import utils.image_utils as iu
 import utils.utils as uu
 
@@ -115,7 +116,7 @@ def scan_image_dataset(path):
     :param path: Path to image data set
     :return: Tuple of table with one row per image, with file name and label as features, and a vector of labels
     """
-    labels = sorted(os.listdir(path))
+    labels = cu.parse_image_dep(path)
 
     dict = {'id': [], 'label': []}
     for label in labels:

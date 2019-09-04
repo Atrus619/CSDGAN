@@ -43,7 +43,7 @@ y_test_dummies = pd.get_dummies(y_test)
 x_test, _ = scale_cont_inputs(x_test, preprocessed_cat_mask, scaler=scaler)
 
 # Parameters
-nz = 64  # Size of generator noise input  # TODO: May need to mess around with this later
+nz = 64  # Size of generator noise input
 H = 32  # Size of hidden network layer
 out_dim = x_train.shape[1]  # Size of output
 bs = x_train.shape[0]  # Full data set

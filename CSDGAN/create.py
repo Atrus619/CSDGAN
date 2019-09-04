@@ -75,7 +75,7 @@ def create():  # TODO: Add cancel option
 def tabular():
     # TODO: Add advanced options
     # TODO: Handle cleanup if user exits early
-    cols = cu.parse_tabular(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
+    cols = cu.parse_tabular_cols(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
     if request.method == 'POST':
         dep_var = request.form['dep_var']
         cont_inputs = request.form.getlist('cont_inputs')
@@ -99,7 +99,7 @@ def tabular():
 @bp.route('/tabular_specify_output', methods=('GET', 'POST'))
 @login_required
 def tabular_specify_output():
-    dep_choices = cu.parse_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
+    dep_choices = cu.parse_tabular_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
     if request.method == 'POST':
         cu.create_gen_dict(request_form=request.form, directory=cs.RUN_FOLDER, username=g.user['username'], title=session['title'])
         return redirect(url_for('create.success'))

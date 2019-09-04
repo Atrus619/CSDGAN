@@ -35,7 +35,7 @@ def new_run_mkdir(directory, username, title):
     return os.path.join(directory, username, title)
 
 
-def parse_tabular(directory, run_id):
+def parse_tabular_cols(directory, run_id):
     """Parses an uploaded tabular data set and returns a list of columns"""
     run_id = str(run_id)
     filename = os.listdir(os.path.join(directory, run_id))[0]
@@ -43,7 +43,7 @@ def parse_tabular(directory, run_id):
     return data.columns
 
 
-def parse_dep(directory, run_id, dep_var):
+def parse_tabular_dep(directory, run_id, dep_var):
     """Parses an uploaded tabular data set and returns a list of unique values for the dependent variable"""
     run_id = str(run_id)
     filename = os.listdir(os.path.join(directory, run_id))[0]
@@ -62,9 +62,9 @@ def validate_tabular_choices(dep_var, cont_inputs, int_inputs):
     return None
 
 
-def parse_image(upload_folder, username, title):
-    # TODO
-    pass
+def parse_image_dep(directory):
+    """Parses an uploaded image data set and returns a list of classes based on the folder names"""
+    return sorted(os.listdir(directory))
 
 
 def setup_run_logger(name, username, title, filename='run_log', level=logging.INFO):

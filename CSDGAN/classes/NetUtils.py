@@ -140,7 +140,7 @@ class NetUtils:
         for layer_name in self._modules:
             m = self._modules[layer_name]
             classname = m.__class__.__name__
-            if classname.find('Linear') != -1:  # TODO: May need to mess around with this later
+            if classname.find('Linear') != -1:
                 nn.init.normal_(m.weight.data, 0.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
             elif classname.find('Conv') != -1:
