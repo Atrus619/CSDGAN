@@ -19,8 +19,11 @@ logger = logging.getLogger(__name__)
 
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
-def create():  # TODO: Add cancel option
+def create():
     if request.method == 'POST':
+        if 'cancel' in request.form:
+            return redirect(url_for('index'))
+
         title = request.form['title']
 
         if 'format' not in request.form:
@@ -74,9 +77,12 @@ def create():  # TODO: Add cancel option
 @login_required
 def tabular():
     # TODO: Add advanced options
-    # TODO: Handle cleanup if user exits early
     cols = cu.parse_tabular_cols(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
     if request.method == 'POST':
+        if 'cancel' in request.form:
+            db.clean_run(run_id=session['run_id'])
+            return redirect(url_for('index'))
+
         dep_var = request.form['dep_var']
         cont_inputs = request.form.getlist('cont_inputs')
         int_inputs = request.form.getlist('int_inputs')
@@ -101,6 +107,10 @@ def tabular():
 def tabular_specify_output():
     dep_choices = cu.parse_tabular_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
     if request.method == 'POST':
+        if 'cancel' in request.form:
+            db.clean_run(run_id=session['run_id'])
+            return redirect(url_for('index'))
+
         cu.create_gen_dict(request_form=request.form, directory=cs.RUN_FOLDER, username=g.user['username'], title=session['title'])
         return redirect(url_for('create.success'))
     return render_template('create/tabular_specify_output.html', title=session['title'], dep_var=session['dep_var'],
@@ -110,7 +120,7 @@ def tabular_specify_output():
 @bp.route('/image', methods=('GET', 'POST'))
 @login_required
 def image():
-    cols = cu.parse_image(upload_folder=current_app.config['UPLOAD_FOLDER'], username=g.user['username'], title=session['title'])
+    cols = cu.parse_image_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
     if request.method == 'POST':
         # TODO: Fill in here for image
         return redirect(url_for('create.success'))
@@ -121,12 +131,17 @@ def image():
 @login_required
 def success():
     if request.method == 'POST':
+        if 'cancel' in request.form:
+            db.clean_run(run_id=session['run_id'])
+            return redirect(url_for('index'))
+
         cmd = 'redis-cli ping'  # Check to make sure redis server is up
         if os.system(cmd) != 0:
             db.query_set_status(run_id=session['run_id'], status_id=cs.STATUS_DICT['Error'])
             e = 'Redis server is not set up to handle requests.'
             logger.exception('Error: %s', e)
             raise NameError('Error: ' + e)
+        db.query_set_status(run_id=session['run_id'], status_id=cs.STATUS_DICT['Kicked off'])
         if session['format'] == 'Tabular':
             # Commence tabular run
             make_dataset = current_app.task_queue.enqueue('CSDGAN.pipeline.data.make_tabular_dataset.make_tabular_dataset',

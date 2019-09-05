@@ -58,14 +58,15 @@ AVAILABLE_FORMATS = ['Tabular', 'Image']
 GEN_DICT_NAME = 'gen_dict'
 MAX_EXAMPLE_PER_CLASS = 10000
 
-# Run statuses
+# Run statuses - Make sure to check schema.sql as well if changes are made
 STATUS_DICT = {'Not started': 1,
-               'Preprocessing data': 2,
-               'Train 0/4': 3,
-               'Train 1/4': 4,
-               'Train 2/4': 5,
-               'Train 3/4': 6,
-               'Generating data': 7,
-               'Complete': 8,
+               'Kicked off': 2,
+               'Preprocessing data': 3,
+               'Train 0/4': 4,
+               'Train 1/4': 5,
+               'Train 2/4': 6,
+               'Train 3/4': 7,
+               'Generating data': 8,
+               'Complete': 9,
                'Error': 99,
                'Unavailable': 100}

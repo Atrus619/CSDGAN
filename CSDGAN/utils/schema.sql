@@ -38,15 +38,17 @@ create TABLE status (
   FOREIGN KEY (status_id) REFERENCES status_info (id)
 );
 
+-- Make sure to check constants.py as well if changes are made
 insert into status_info
   values
   (1, 'Not started'),
-  (2, 'Preprocessing data'),
-  (3, 'Training in progress...0/4'),
-  (4, 'Training in progress...1/4'),
-  (5, 'Training in progress...1/2'),
-  (6, 'Training in progress...3/4'),
-  (7, 'Training complete - Generating data'),
-  (8, 'Complete - Data available'),
+  (2, 'Kicked off'),
+  (3, 'Preprocessing data'),
+  (4, 'Training in progress...0/4'),
+  (5, 'Training in progress...1/4'),
+  (6, 'Training in progress...1/2'),
+  (7, 'Training in progress...3/4'),
+  (8, 'Training complete - Generating data'),
+  (9, 'Complete - Data available'),
   (99, 'Error - Run failed'),
   (100, 'No Longer Available');

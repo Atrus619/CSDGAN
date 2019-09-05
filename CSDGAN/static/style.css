@@ -26,6 +26,7 @@ nav ul li a, nav ul li span, header .action { display: block; padding: 0.5rem; }
 
 .content:last-child { margin-bottom: 0; }
 .content form { margin: 1em 0; flex-direction: column; }
+form { display: inline; }
 .content label { font-weight: bold; margin-bottom: 0.5em; }
 .content input, .content textarea { margin-bottom: 1em; }
 .content textarea { min-height: 12em; resize: vertical; }

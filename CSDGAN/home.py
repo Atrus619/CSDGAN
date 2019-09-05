@@ -23,6 +23,9 @@ def index():
     if g.user:
         runs = db.query_all_runs(session['user_id'])
         if len(runs) > 0:
+            for run in runs:
+                if run['descr'] == 'Not started':
+                    db.clean_run(run_id=run['id'])
             return render_template('home/index.html', runs=runs, logged_in=True)
         else:
             return render_template('home/index.html', logged_in=True)
@@ -35,7 +38,6 @@ def index():
 def delete_run():
     runs = db.query_all_runs(user_id=session['user_id'])
     run_id = int(runs[int(request.form['index']) - 1]['id'])
-    db.query_delete_run(run_id=run_id)
     db.clean_run(run_id=run_id)
     username, title = db.query_username_title(run_id=run_id)
     logger.info('User #{} ({}) deleted Run #{} ({})'.format(session['user_id'], username, run_id, title))

@@ -62,9 +62,11 @@ def validate_tabular_choices(dep_var, cont_inputs, int_inputs):
     return None
 
 
-def parse_image_dep(directory):
+def parse_image_dep(directory, run_id):
     """Parses an uploaded image data set and returns a list of classes based on the folder names"""
-    return sorted(os.listdir(directory))
+    run_id = str(run_id)
+    path = os.listdir(os.path.join(directory, run_id))[0]
+    return sorted(os.listdir(path))
 
 
 def setup_run_logger(name, username, title, filename='run_log', level=logging.INFO):

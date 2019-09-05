@@ -116,7 +116,7 @@ def scan_image_dataset(path):
     :param path: Path to image data set
     :return: Tuple of table with one row per image, with file name and label as features, and a vector of labels
     """
-    labels = cu.parse_image_dep(path)
+    labels = sorted(os.listdir(path))
 
     dict = {'id': [], 'label': []}
     for label in labels:
