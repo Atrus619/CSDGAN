@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 @bp.route('/')
 def index():
-    # TODO: Handle deleting while training is in progress
     if g.user:
         runs = db.query_all_runs(session['user_id'])
         if len(runs) > 0:
