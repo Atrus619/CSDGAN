@@ -68,5 +68,6 @@ STATUS_DICT = {'Not started': 1,
                'Train 3/4': 7,
                'Generating data': 8,
                'Complete': 9,
+               'Early Exit': 98,
                'Error': 99,
                'Unavailable': 100}

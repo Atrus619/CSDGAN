@@ -15,11 +15,13 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
     Requirements of data set is that it is contained in a flat file and the continuous vs. categorical vs. integer vs. dependent
     variables are specified. It should also be specified how to deal with missing data (stretch goal).
     """
+    run_id = str(run_id)
+    db.query_verify_live_run(run_id=run_id)
+
     cu.setup_run_logger(name='dataset_func', username=username, title=title)
     logger = logging.getLogger('dataset_func')
 
     try:
-        run_id = str(run_id)
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Preprocessing data'])
 
         # Create directory for current run and place unzipped data set there

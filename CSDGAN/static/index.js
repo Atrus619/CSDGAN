@@ -41,10 +41,6 @@ function refresh_status(index){
     function(data){
         $( "#update_time" + index ).html(data['update_time']);
         $( "#status" + index ).html(data['status']);
-        if (data['status'].includes('Data available') || data['status'].includes('Error') ){
-            $( "#delete_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
-            $( "#delete_button" + index + " a" ).replaceWith('<a href="#" onclick="delete_button(' + index + ')">Delete</a>');
-        }
         if (data['status'].includes('Data available')){
         	$( "#download_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
             $( "#download_button" + index + " button").replaceWith('<button type="submit"  name="index" value="' + index + '" class="link-button">Download Data</button>');

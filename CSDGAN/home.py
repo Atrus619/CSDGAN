@@ -9,6 +9,7 @@ from flask import (
 )
 import logging
 import os
+from rq import cancel_job
 
 
 bp = Blueprint('home', __name__)
@@ -38,6 +39,14 @@ def index():
 def delete_run():
     runs = db.query_all_runs(user_id=session['user_id'])
     run_id = int(runs[int(request.form['index']) - 1]['id'])
+
+    # Will cancel runs if they are currently in queue
+    ids = db.query_get_job_ids(run_id)
+    for id in ids:
+        if id in current_app.task_queue.jobs:
+            cancel_job(job_id=id, connection=current_app.redis)
+
+    # Deletes all files associated with run and sets live = 0 in database (which will cancel run if it is currently in process and checkpoint is reached)
     db.clean_run(run_id=run_id)
     username, title = db.query_username_title(run_id=run_id)
     logger.info('User #{} ({}) deleted Run #{} ({})'.format(session['user_id'], username, run_id, title))

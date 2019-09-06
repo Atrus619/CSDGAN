@@ -14,12 +14,14 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
     """
     Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions
     """
+    run_id = str(run_id)
+    db.query_verify_live_run(run_id=run_id)
+
     cu.setup_run_logger(name='train_func', username=username, title=title)
     cu.setup_run_logger(name='train_info', username=username, title=title, filename='train_log')
     logger = logging.getLogger('train_func')
 
     try:
-        run_id = str(run_id)
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
 
         # Check for objects created by make_tabular_dataset.py

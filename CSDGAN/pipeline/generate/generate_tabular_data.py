@@ -15,12 +15,13 @@ def generate_tabular_data(run_id, username, title, aug=None):
     :param aug: Whether this is part of the standard run or generating additional data
     """
     if aug is None:
+        run_id = str(run_id)
+        db.query_verify_live_run(run_id=run_id)
+
         cu.setup_run_logger(name='gen_func', username=username, title=title)
         logger = logging.getLogger('gen_func')
 
     try:
-        run_id = str(run_id)
-
         if aug is None:
             db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Generating data'])
 

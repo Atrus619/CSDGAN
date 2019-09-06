@@ -112,11 +112,12 @@ class TabularCGAN(CGANUtils):
 
             if eval_freq is not None:
                 if self.epoch % eval_freq == 0 or (self.epoch == num_epochs):
-                    self.stored_acc.append(self.test_model(stratify=self.eval_stratify))
+                    self.stored_acc.append(self.test_model(stratify=self.eval_stratify, run_id=run_id))
                     uu.train_log_print(run_id=run_id, logger=logger, statement="Epoch: %d\tEvaluator Score: %.4f" % (self.epoch, np.max(self.stored_acc[-1])))
 
             if run_id:
                 if self.epoch in checkpoints:
+                    db.query_verify_live_run(run_id=run_id)
                     logger.info('Checkpoint reached.')
                     status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
                     db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
@@ -124,10 +125,11 @@ class TabularCGAN(CGANUtils):
         uu.train_log_print(run_id=run_id, logger=logger, statement="Total training time: %ds" % (time.time() - og_start_time))
         uu.train_log_print(run_id=run_id, logger=logger, statement="Training complete")
 
-    def test_model(self, stratify=None):
+    def test_model(self, stratify=None, run_id=None):
         """
         Train a model on fake data and evaluate on test data in order to evaluate network as it trains
         :param stratify: How to proportion out the labels. If None, a straight average is used.
+        :param run_id: Only included if being run as part of the csdgan app
         :return: Tuple of list of classes trained and the scores each achieved
         """
         fake_scores = []
@@ -144,6 +146,9 @@ class TabularCGAN(CGANUtils):
                                                         labels_list=self.labels_list, verbose=0)
 
             fake_scores.append(score_fake_tmp)
+
+            if run_id:
+                db.query_verify_live_run(run_id=run_id)
 
             torch.save(self.netG.state_dict(), os.path.join(self.path, "stored_generators", "Epoch_" + str(self.epoch) + "_Generator.pt"))
 

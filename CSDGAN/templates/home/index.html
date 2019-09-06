@@ -56,11 +56,7 @@
             <td id="gen_more_data_button{{ loop.index }}">
                 <form method="post" action="{{ url_for('home.gen_more_data') }}" class="inline"><button class="invis-button"></button></form>----</td>
         {% endif %}
-        {% if 'Data available' in run.descr or 'Error' in run.descr %}
-            <td id="delete_button{{ loop.index }}"><a href="#" onclick="delete_button({{ loop.index }})">Delete</a></td>
-        {% else %}
-        <td id="delete_button{{ loop.index }}"><a></a>----</td>
-        {% endif %}
+        <td id="delete_button{{ loop.index }}"><a href="#" onclick="delete_button({{ loop.index }})">Delete</a></td>
     </tr>
     {% endfor %}
     </tbody>

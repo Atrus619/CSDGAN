@@ -135,6 +135,34 @@ def query_add_depvar(run_id, depvar):
     db.commit()
 
 
+def query_add_job_ids(run_id, data_id, train_id, generate_id):
+    """Updates run table to include the job ids for the data, train, and generate jobs"""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET data_job_id = %s, train_job_id = %s, generate_job_id = %s '
+            'WHERE id = %s', (data_id, train_id, generate_id, run_id)
+        )
+    db.commit()
+
+
+def query_get_job_ids(run_id):
+    """Retrieves data, train, and generate job ids based on run_id"""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'SELECT data_job_id, train_job_id, generate_job_id '
+            'FROM run '
+            'WHERE id = %s', (run_id, )
+        )
+        result = cursor.fetchone()
+
+    return result
+
+
 def query_incr_augs(run_id):
     """Returns current aug and increments it by 1 in the database"""
     db = get_db()
@@ -184,9 +212,39 @@ def query_delete_run(run_id):
         cursor.execute(
             'UPDATE run '
             'SET live = 0 '
-            'WHERE id = %s', (run_id,)
+            'WHERE id = %s', (run_id, )
         )
     db.commit()
+
+
+def query_verify_live_run(run_id):
+    """
+    Checks to see if run is still live (aka should be continued by worker).
+    Updates logger, status, and kills worker process if not live.
+    Used for exiting early if requested.
+    Configured to work with functions outside of app.
+
+    Errors may be thrown in the app when runs are deleted early.
+    This is caused by all of the related files being deleted and should not
+    affect the app negatively.
+    """
+    db = pymysql.connect(host=Config.MYSQL_DATABASE_HOST,
+                         user=Config.MYSQL_DATABASE_USER,
+                         password=Config.MYSQL_DATABASE_PASSWORD,
+                         db=Config.MYSQL_DATABASE_DB)
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'SELECT live '
+            'FROM run '
+            'WHERE id = %s', (run_id, )
+        )
+        result = cursor.fetchone()
+    db.close()
+
+    if result[0] == 0:
+        query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Early Exit'])
+        import sys; sys.exit()
 
 
 def query_username_title(run_id):
@@ -198,7 +256,7 @@ def query_username_title(run_id):
             'SELECT user.username, run.title '
             'FROM run '
             'INNER JOIN user on run.user_id = user.id '
-            'WHERE run.id = %s', (run_id,)
+            'WHERE run.id = %s', (str(run_id), )
         )
         result = cursor.fetchone()
 

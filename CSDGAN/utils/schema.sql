@@ -21,6 +21,9 @@ create TABLE run (
   depvar VARCHAR(50),
   num_augs INTEGER NOT NULL DEFAULT 0,
   live TINYINT(1) NOT NULL DEFAULT 1,
+  data_job_id VARCHAR(36) DEFAULT NULL,
+  train_job_id VARCHAR(36) DEFAULT NULL,
+  generate_job_id VARCHAR(36) DEFAULT NULL,
   FOREIGN KEY (user_id) REFERENCES user (id)
 );
 
@@ -50,5 +53,6 @@ insert into status_info
   (7, 'Training in progress...3/4'),
   (8, 'Training complete - Generating data'),
   (9, 'Complete - Data available'),
+  (98, 'Forcefully exited early by user'),
   (99, 'Error - Run failed'),
   (100, 'No Longer Available');

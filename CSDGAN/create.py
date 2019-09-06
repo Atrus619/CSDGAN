@@ -154,6 +154,10 @@ def success():
             generate_data = current_app.task_queue.enqueue('CSDGAN.pipeline.generate.generate_tabular_data.generate_tabular_data',
                                                            args=(session['run_id'], g.user['username'], session['title']),
                                                            depends_on=train_model)
+            db.query_add_job_ids(run_id=session['run_id'],
+                                 data_id=make_dataset.get_id(),
+                                 train_id=train_model.get_id(),
+                                 generate_id=generate_data.get_id())
         else:  # Image
             # TODO: Fill in here for image
             pass
