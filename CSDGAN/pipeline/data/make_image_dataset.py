@@ -68,9 +68,6 @@ def make_image_dataset(run_id, username, title, bs, x_dim=None, splits=None):  #
         with open(os.path.join(run_dir, "ohe.pkl"), "wb") as f:
             pkl.dump(ohe, f)
 
-        with open(os.path.join(run_dir, "x_dim.pkl"), "wb") as f:
-            pkl.dump(x_dim, f)
-
         with open(os.path.join(run_dir, "train_gen.pkl"), "wb") as f:
             pkl.dump(train_gen, f)
 
@@ -83,4 +80,5 @@ def make_image_dataset(run_id, username, title, bs, x_dim=None, splits=None):  #
     except Exception as e:
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
         logger.exception('Error: %s', e)
-        raise Exception('Intentionally failing process after broadly catching an exception.')
+        raise Exception("Intentionally failing process after broadly catching an exception. "
+                        "Logs describing this error can be found in the run's specific logs file.")

@@ -72,4 +72,5 @@ def generate_tabular_data(run_id, username, title, aug=None):
         if aug is None:
             db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
             logger.exception('Error: %s', e)
-        raise Exception('Intentionally failing process after broadly catching an exception.')
+        raise Exception("Intentionally failing process after broadly catching an exception. "
+                        "Logs describing this error can be found in the run's specific logs file.")

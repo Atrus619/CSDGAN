@@ -704,3 +704,8 @@ class ImageCGAN(CGANUtils):
         iterator = iter(self.train_gen)
         x, __ = next(iterator)
         return x.shape[-2], x.shape[-1]
+
+    def gen_data(self, size, path, stratify=None):
+        """Generates a data set formatted like the original data and saves to specified path in batches"""
+        # TODO: Complete this function
+        pass

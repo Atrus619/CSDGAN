@@ -12,7 +12,7 @@ from torch.utils import data
 
 def train_tabular_model(run_id, username, title, num_epochs, bs):
     """
-    Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions
+    Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions.
     """
     run_id = str(run_id)
     db.query_verify_live_run(run_id=run_id)
@@ -29,7 +29,7 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
         assert os.path.exists(os.path.join(run_dir, 'dataset.pkl')), \
             "Data set object not found"
 
-        # Load data set and create CGAN object
+        # Load data set and instantiate CGAN object
         with open(os.path.join(run_dir, "dataset.pkl"), 'rb') as f:
             dataset = pkl.load(f)
 
@@ -49,10 +49,6 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
                            test_ranges=[dataset.x_train.shape[0]*2**x for x in range(5)],
                            eval_stratify=dataset.eval_stratify,
                            nc=len(dataset.labels_list),
-                           nz=cs.TABULAR_DEFAULT_NZ,
-                           sched_netG=cs.TABULAR_DEFAULT_SCHED_NETG,
-                           netG_H=cs.TABULAR_DEFAULT_NETG_H,
-                           netD_H=cs.TABULAR_DEFAULT_NETD_H,
                            **cs.TABULAR_CGAN_INIT_PARAMS)
 
         logger.info('Successfully instantiated CGAN object. Beginning training...')
@@ -79,5 +75,5 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
     except Exception as e:
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
         logger.exception('Error: %s', e)
-        raise Exception('Intentionally failing process after broadly catching an exception. '
-                        'Logs describing this error can be found in the run\'s specific logs file.')
+        raise Exception("Intentionally failing process after broadly catching an exception. "
+                        "Logs describing this error can be found in the run's specific logs file.")
