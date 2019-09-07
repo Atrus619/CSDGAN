@@ -1,89 +1,86 @@
-import argparse
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import CSDGAN.utils.constants as cs
-from utils.data_loading import *
-# TODO: HEAVY revisions needed (see tabular)
-"""
-Requirements of image data set is that it should be a single zip with all images with same label in a folder named with the label name
-Images should either be the same size, or a specified image size should be provided (all images will be cropped to the same size)
-This file accomplishes the following:
-    1. Accepts path to a zip file, a desired image size (optional, else first image dim will be used), batch size, and train/val/test splits
-    2. Checks to ensure file is a zip, and that unzipped file is structured properly
-    3. Unzips files
-    4. Splits data into train/val/test splits via stratified sampling and moves into corresponding folders
-    5. Deletes original unzipped images
-    6. Pickles label encoder, one hot encoder, resulting image size, and all three generators
-"""
+import CSDGAN.utils.db as db
+import CSDGAN.utils.utils as cu
+import CSDGAN.utils.img_data_loading as cuidl
 
-# Intake arguments
-parser = argparse.ArgumentParser('Process an image data set')
+import logging
+from zipfile import ZipFile
+import os
+import pickle as pkl
 
-parser.add_argument('-id', type=str, help='enter identifier for current run', nargs=1, dest='id')
-parser.add_argument('-p', type=str, help='enter path to image zip', nargs=1, dest='path')
-parser.add_argument('-bs', type=int, help='enter batch size for loading', nargs=1, dest='bs')
-parser.add_argument('--x_dim', type=tuple, help="enter desired image size, otherwise first image's size will be used", nargs=1, dest='x_dim')
-parser.add_argument('--splits', type=tuple, help="enter desired train/val/test splits", nargs=1, dest='splits')
 
-args = parser.parse_args()
+def make_image_dataset(run_id, username, title, bs, x_dim=None, splits=None):  # TODO: Set default for splits/bs/x_dim
+    """
+    Requirements of image data set is that it should be a single zip with all images with same label in a folder named with the label name
+    Images should either be the same size, or a specified image size should be provided (all images will be cropped to the same size)
+    This file accomplishes the following:
+        1. Accepts path to a zip file, a desired image size (optional, else first image dim will be used), batch size, and train/val/test splits
+        2. Checks to ensure file is a zip, and that unzipped file is structured properly
+        3. Unzips files
+        4. Splits data into train/val/test splits via stratified sampling and moves into corresponding folders
+        5. Deletes original unzipped images
+        6. Pickles label encoder, one hot encoder, resulting image size, and all three generators
+    """
+    run_id = str(run_id)
+    db.query_verify_live_run(run_id=run_id)
 
-run_id = args.id[0]
-path = args.path[0]
-bs = args.bs[0]
-x_dim = args.x_dim[0] if args.x_dim is not None else None
-splits = args.splits if args.splits is not None else None
+    cu.setup_run_logger(name='dataset_func', username=username, title=title)
+    logger = logging.getLogger('dataset_func')
 
-# img_zip = os.path.join("downloads", "fruits.zip")
-# bs = 128
-# x_dim = None
+    try:
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Preprocessing data'])
 
-assert os.path.splitext(path)[1] == '.zip', "Image file path passed is not zip"
+        # Check existence of run directory
+        run_dir = os.path.join(cs.RUN_FOLDER, username, title)
+        assert os.path.exists(run_dir), "Run directory does not exist"
 
-# Create directory for downloads
-run_dir = os.path.join(cs.RUN_DIR, run_id)
-safe_mkdir(run_dir)
+        # Perform various checks and unzip data
+        path = os.path.join(cs.UPLOAD_FOLDER, run_id)
+        file = os.listdir(path)[0]
+        assert os.path.splitext(file)[1] == '.zip', "Image file path passed is not zip"
 
-# Unzip folders
-zip_ref = zipfile.ZipFile(path, 'r')
-zip_ref.extractall(run_dir)
-zip_ref.close()
+        logger.info('Unzipping image file')
+        zip_ref = ZipFile(os.path.join(path, file), 'r')
+        zip_ref.extractall(run_dir)
+        zip_ref.close()
 
-# Preprocess data
-unprocessed_img_path = os.path.join(run_dir, os.path.splitext(os.path.basename(path))[0])
-assert os.path.exists(unprocessed_img_path), \
-    "Image folder not named the same as zip file"
-assert all([os.path.isdir(os.path.join(unprocessed_img_path, x)) for x in os.listdir(unprocessed_img_path)]), \
-    "Not all files in main folder are folders"
+        unzipped_path = os.path.join(run_dir, os.path.splitext(file)[0])
+        assert os.path.exists(unzipped_path), \
+            "Image folder not named the same as zip file"
+        assert all([os.path.isdir(os.path.join(unzipped_path, x)) for x in os.listdir(unzipped_path)]), \
+            "Not all files in main folder are folders"
 
-import_gen = import_dataset(path=unprocessed_img_path, bs=bs, shuffle=False)
+        # Load and preprocess data
+        import_gen = cuidl.import_dataset(path=unzipped_path, bs=bs, shuffle=False)
 
-le, ohe, x_dim = preprocess_imported_dataset(path=unprocessed_img_path, import_gen=import_gen,
-                                             splits=splits, x_dim=x_dim)
+        le, ohe, x_dim = cuidl.preprocess_imported_dataset(path=unzipped_path, import_gen=import_gen,
+                                                           splits=splits, x_dim=x_dim)
 
-# Create data loader for each component of data set
-train_gen = import_dataset(os.path.join(unprocessed_img_path, 'train'), bs=bs, shuffle=True)
-val_gen = import_dataset(os.path.join(unprocessed_img_path, 'val'), bs=bs, shuffle=False)
-test_gen = import_dataset(os.path.join(unprocessed_img_path, 'test'), bs=bs, shuffle=False)
+        # Create data loader for each component of data set
+        train_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'train'), bs=bs, shuffle=True)
+        val_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'val'), bs=bs, shuffle=False)
+        test_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'test'), bs=bs, shuffle=False)
 
-# Pickle relevant objects
-model_objects_path = os.path.join(run_dir, cs.MODEL_OBJECTS)
-safe_mkdir(model_objects_path)
+        # Pickle relevant objects
+        with open(os.path.join(run_dir, "le.pkl"), "wb") as f:
+            pkl.dump(le, f)
 
-with open(os.path.join(model_objects_path, "le.pkl"), "wb") as f:
-    pkl.dump(le, f)
+        with open(os.path.join(run_dir, "ohe.pkl"), "wb") as f:
+            pkl.dump(ohe, f)
 
-with open(os.path.join(model_objects_path, "ohe.pkl"), "wb") as f:
-    pkl.dump(le, ohe)
+        with open(os.path.join(run_dir, "x_dim.pkl"), "wb") as f:
+            pkl.dump(x_dim, f)
 
-with open(os.path.join(model_objects_path, "x_dim.pkl"), "wb") as f:
-    pkl.dump(le, x_dim)
+        with open(os.path.join(run_dir, "train_gen.pkl"), "wb") as f:
+            pkl.dump(train_gen, f)
 
-with open(os.path.join(model_objects_path, "train_gen.pkl"), "wb") as f:
-    pkl.dump(le, train_gen)
+        with open(os.path.join(run_dir, "val_gen.pkl"), "wb") as f:
+            pkl.dump(val_gen, f)
 
-with open(os.path.join(model_objects_path, "val_gen.pkl"), "wb") as f:
-    pkl.dump(le, val_gen)
+        with open(os.path.join(run_dir, "test_gen.pkl"), "wb") as f:
+            pkl.dump(test_gen, f)
 
-with open(os.path.join(model_objects_path, "test_gen.pkl"), "wb") as f:
-    pkl.dump(le, test_gen)
+    except Exception as e:
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Error'])
+        logger.exception('Error: %s', e)
+        raise Exception('Intentionally failing process after broadly catching an exception.')

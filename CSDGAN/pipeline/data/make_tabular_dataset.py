@@ -24,9 +24,9 @@ def make_tabular_dataset(run_id, username, title, dep_var, cont_inputs, int_inpu
     try:
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Preprocessing data'])
 
-        # Create directory for current run and place unzipped data set there
+        # Check existence of run directory
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
-        assert os.path.exists(run_dir)
+        assert os.path.exists(run_dir), "Run directory does not exist"
 
         # Perform various checks and load in data
         path = os.path.join(cs.UPLOAD_FOLDER, run_id)
