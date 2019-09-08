@@ -144,6 +144,7 @@ class ImageCGAN(CGANUtils):
 
             if run_id:
                 if self.epoch in checkpoints:
+                    db.query_verify_live_run(run_id=run_id)
                     logger.info('Checkpoint reached.')
                     status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
                     db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
@@ -705,7 +706,20 @@ class ImageCGAN(CGANUtils):
         x, __ = next(iterator)
         return x.shape[-2], x.shape[-1]
 
-    def gen_data(self, size, path, stratify=None):
+    def gen_data(self, size, path, stratify=None, label=None):
         """Generates a data set formatted like the original data and saves to specified path in batches"""
-        # TODO: Complete this function
-        pass
+        assert os.path.exists(path), "Output directory exists"
+
+        dataset = OnlineGeneratedImageDataset(netG=self.netG, size=size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
+                                              ohe=self.ohe, device=self.device, x_dim=self.x_dim, stratify=stratify)
+        gen = data.DataLoader(dataset, batch_size=self.fake_bs,
+                              shuffle=False, num_workers=self.fake_num_workers)
+
+        label = 'genned_img' if label is None else label
+
+        gen.dataset.next_epoch()
+        with torch.no_grad():
+            for i in range(gen.dataset.batches_per_epoch):
+                batch, labels = gen.dataset.next_batch()
+                for j, img in enumerate(batch):
+                    vutils.save_image(img, os.path.join(path, label + '_' + str(i + j) + '.png'))
