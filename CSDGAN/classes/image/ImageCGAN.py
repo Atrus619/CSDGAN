@@ -707,12 +707,14 @@ class ImageCGAN(CGANUtils):
         return x.shape[-2], x.shape[-1]
 
     def gen_data(self, size, path, stratify=None, label=None):
-        """Generates a data set formatted like the original data and saves to specified path in batches"""
+        """Generates a data set formatted like the original data and saves to specified path"""
         assert os.path.exists(path), "Output directory exists"
 
-        dataset = OnlineGeneratedImageDataset(netG=self.netG, size=size, nz=self.nz, nc=self.nc, bs=self.fake_bs,
+        bs = min(self.fake_bs, size)
+
+        dataset = OnlineGeneratedImageDataset(netG=self.netG, size=size, nz=self.nz, nc=self.nc, bs=bs,
                                               ohe=self.ohe, device=self.device, x_dim=self.x_dim, stratify=stratify)
-        gen = data.DataLoader(dataset, batch_size=self.fake_bs,
+        gen = data.DataLoader(dataset, batch_size=bs,
                               shuffle=False, num_workers=self.fake_num_workers)
 
         label = 'genned_img' if label is None else label

@@ -147,7 +147,7 @@ class OnlineGeneratedImageDataset(data.Dataset):
         self.internal_counter = 0
         self.x, self.y = None, None
 
-        self.batches_per_epoch = self.size // self.bs + 1
+        self.batches_per_epoch = int(np.ceil(self.size / self.bs))
 
     def gen_labels(self, stratify=None):
         """

@@ -1,6 +1,7 @@
 import CSDGAN.utils.constants as cs
 import CSDGAN.utils.db as db
 import CSDGAN.utils.utils as cu
+import utils.utils as uu
 
 import logging
 import os
@@ -46,12 +47,16 @@ def generate_image_data(run_id, username, title, aug=None):
             logger.info('Successfully loaded in CGAN. Generating data...')
 
         # Generate and output data
+        folder_name = title + '' if aug is None else ' Additional Data ' + str(aug)
+        output_path = os.path.join(cs.OUTPUT_FOLDER, username, folder_name)
+        uu.safe_mkdir(output_path)
+
         for i, (dep_class, size) in enumerate(gen_dict.items()):
             if size > 0:
-                # TODO: Set up folder and name it. Don't forget naming scheme for if it is aug or not.
-                path = None
+                class_path = os.path.join(output_path, dep_class)
+                uu.safe_mkdir(class_path)
                 stratify = np.eye(CGAN.nc)[i]
-                CGAN.gen_data(size=size, path=path, stratify=stratify)
+                CGAN.gen_data(size=size, path=class_path, stratify=stratify, label=dep_class)
 
         if aug is None:
             db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Complete'])

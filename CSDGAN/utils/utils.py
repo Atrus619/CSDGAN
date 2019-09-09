@@ -9,6 +9,7 @@ import string
 import datetime as d
 from zipfile import ZipFile
 import pickle as pkl
+from collections import OrderedDict
 
 
 def allowed_file(filename):
@@ -128,7 +129,7 @@ def export_tabular_to_zip(df, username, title):
 
 def create_gen_dict(request_form, directory, username, title, aug=None):
     """Creates a dictionary with keys as dependent variable labels and values as the number of examples pertaining to that label to generate"""
-    gen_dict = dict(request_form)
+    gen_dict = OrderedDict(request_form)  # TODO: Make sure this isn't causing any issues (changed from dict --> OrderedDict)
     if aug is not None:
         del gen_dict['download_button']
     for key, value in gen_dict.items():
