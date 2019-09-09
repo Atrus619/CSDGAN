@@ -77,7 +77,7 @@ def create():
 @login_required
 def tabular():
     # TODO: Add advanced options
-    cols = cu.parse_tabular_cols(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
+    cols = cu.parse_tabular_cols(run_id=session['run_id'])
     if request.method == 'POST':
         if 'cancel' in request.form:
             db.clean_run(run_id=session['run_id'])
@@ -105,7 +105,7 @@ def tabular():
 @bp.route('/tabular_specify_output', methods=('GET', 'POST'))
 @login_required
 def tabular_specify_output():
-    dep_choices = cu.parse_tabular_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'], dep_var=session['dep_var'])
+    dep_choices = cu.parse_tabular_dep(run_id=session['run_id'], dep_var=session['dep_var'])
     if request.method == 'POST':
         if 'cancel' in request.form:
             db.clean_run(run_id=session['run_id'])
@@ -120,11 +120,13 @@ def tabular_specify_output():
 @bp.route('/image', methods=('GET', 'POST'))
 @login_required
 def image():
-    cols = cu.parse_image_dep(directory=current_app.config['UPLOAD_FOLDER'], run_id=session['run_id'])
+    validation_success, msg = cu.unzip_and_validate_img_zip(run_id=session['run_id'], username=g.user['username'], title=session['title'])
+    if not validation_success:
+        return render_template('create/image_upload_issue.html', title=session['title'], msg=msg)
+    x_dim, summarized_df = cu.parse_image_folder(username=g.user['username'], title=session['title'], file=msg)
     if request.method == 'POST':
-        # TODO: Fill in here for image
         return redirect(url_for('create.success'))
-    return render_template('create/image.html', title=session['title'], cols=cols)
+    return render_template('create/image.html', title=session['title'], x_dim=x_dim, summarized_df=summarized_df)
 
 
 @bp.route('/success', methods=('GET', 'POST'))

@@ -1,5 +1,4 @@
 from CSDGAN.classes.image.ImageDataset import ImageFolderWithPaths
-import CSDGAN.utils.utils as cu
 import utils.image_utils as iu
 import utils.utils as uu
 
@@ -80,9 +79,7 @@ def preprocess_imported_dataset(path, import_gen, splits=None, x_dim=None):
 
     # Determine crop size if not given
     if x_dim is None:
-        for x, _, _ in import_gen:
-            x_dim = x[0].shape[-2], x[0].shape[-1]
-            break
+        x_dim = find_first_img_dim(import_gen=import_gen)
 
     # Determine ideal crop size based on architecture
     h_best_crop, _, _ = iu.find_pow_2_arch(x_dim[0])
@@ -133,3 +130,14 @@ def scan_image_dataset(path):
 def find_img_folder_name(data_dir):
     """Loops through contents of unzipped data folder and returns the first folder it finds"""
     return [name for name in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, name))][0]
+
+
+def find_first_img_dim(import_gen):
+    """
+    Loads in the first image in a provided data set and returns its dimensions
+    Intentionally returns on first iteration of the loop
+    :param import_gen: PyTorch DataLoader utilizing ImageFolderWithPaths for its dataset
+    :return: dimensions of image
+    """
+    for x, _, _ in import_gen:
+        return x[0].shape[-2], x[0].shape[-1]

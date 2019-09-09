@@ -1,4 +1,5 @@
 import CSDGAN.utils.constants as cs
+import CSDGAN.utils.img_data_loading as cuidl
 
 import os
 import pandas as pd
@@ -36,19 +37,19 @@ def new_run_mkdir(directory, username, title):
     return os.path.join(directory, username, title)
 
 
-def parse_tabular_cols(directory, run_id):
+def parse_tabular_cols(run_id):
     """Parses an uploaded tabular data set and returns a list of columns"""
     run_id = str(run_id)
-    filename = os.listdir(os.path.join(directory, run_id))[0]
-    data = pd.read_csv(os.path.join(directory, run_id, filename), nrows=0)
+    filename = os.listdir(os.path.join(cs.UPLOAD_FOLDER, run_id))[0]
+    data = pd.read_csv(os.path.join(cs.UPLOAD_FOLDER, run_id, filename), nrows=0)
     return data.columns
 
 
-def parse_tabular_dep(directory, run_id, dep_var):
+def parse_tabular_dep(run_id, dep_var):
     """Parses an uploaded tabular data set and returns a list of unique values for the dependent variable"""
     run_id = str(run_id)
-    filename = os.listdir(os.path.join(directory, run_id))[0]
-    data = pd.read_csv(os.path.join(directory, run_id, filename), usecols=[dep_var])
+    filename = os.listdir(os.path.join(cs.UPLOAD_FOLDER, run_id))[0]
+    data = pd.read_csv(os.path.join(cs.UPLOAD_FOLDER, run_id, filename), usecols=[dep_var])
     return sorted(data[dep_var].unique())
 
 
@@ -63,11 +64,52 @@ def validate_tabular_choices(dep_var, cont_inputs, int_inputs):
     return None
 
 
-def parse_image_dep(directory, run_id):
-    """Parses an uploaded image data set and returns a list of classes based on the folder names"""
-    run_id = str(run_id)
-    path = os.listdir(os.path.join(directory, run_id))[0]
-    return sorted(os.listdir(path))
+def unzip_and_validate_img_zip(run_id, username, title):
+    """
+    Validates user submitted data set to ensure that data submitted is a zip file,
+    with all images with same label in a folder named with the label name.
+    Images should either be the same size, or a specified image size should be provided (all images will be cropped to the same size)
+    :param run_id: Run ID associated with this run
+    :return: True if validation successful, False otherwise. Also returns a message associated with the failure if failure, and name of file if successful.
+    """
+    # Check existence of run directory
+    run_dir = os.path.join(cs.RUN_FOLDER, username, title)
+    if not os.path.exists(run_dir):
+        return False, "Run directory does not exist"
+
+    # Perform various checks and unzip data
+    path = os.path.join(cs.UPLOAD_FOLDER, run_id)
+    file = os.listdir(path)[0]
+    if not os.path.splitext(file)[1] == '.zip':
+        return False, "Image file path passed is not zip"
+
+    zip_ref = ZipFile(os.path.join(path, file), 'r')
+    zip_ref.extractall(run_dir)
+    zip_ref.close()
+
+    unzipped_path = os.path.join(run_dir, os.path.splitext(file)[0])
+    if not os.path.exists(unzipped_path):
+        return False, "Image folder not named the same as zip file"
+    if not all([os.path.isdir(os.path.join(unzipped_path, x)) for x in os.listdir(unzipped_path)]):
+        return False, "Not all files in main folder are folders"
+    return True, file
+
+
+def parse_image_folder(username, title, file):
+    """
+    Parses an uploaded image data set and returns various information about its contents
+    Returns:
+        1. Dimensions of first image found
+        2. Table with rows of each label per row, and number of instances of that label in the second column
+    """
+    path = os.path.join(cs.RUN_FOLDER, username, title, file)
+    import_gen = cuidl.import_dataset(path=path, bs=cs.IMAGE_DEFAULT_BATCH_SIZE, shuffle=False)
+    x_dim = cuidl.find_first_img_dim(import_gen=import_gen)
+
+    df, _ = cuidl.scan_image_dataset(path=path)
+    summarized_df = df.groupby(by='label').size()
+
+    return x_dim, summarized_df
 
 
 def setup_run_logger(name, username, title, filename='run_log', level=logging.INFO):

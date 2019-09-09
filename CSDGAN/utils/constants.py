@@ -72,6 +72,7 @@ IMAGE_CGAN_INIT_PARAMS = {'netG_lr': 2e-4,  # Learning rate for adam optimizer
                           }
 
 # Image training parameters
+IMAGE_DEFAULT_BATCH_SIZE = 128
 IMAGE_DEFAULT_PRINT_FREQ = 5
 IMAGE_DEFAULT_EVAL_FREQ = 50
 
