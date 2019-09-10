@@ -7,6 +7,7 @@ from flask import (
     Blueprint, flash, redirect, render_template, request, url_for, session, current_app, g
 )
 from werkzeug.utils import secure_filename
+from zipfile import ZipFile
 import pickle as pkl
 import logging
 import os
@@ -41,8 +42,8 @@ def create():
         elif 'file' not in request.files:
             error = 'No file part'
 
-        elif request.form['format'] == 'Image':  # TODO: Remove this when image is supported
-            error = "Image support not yet implemented. Please choose tabular."
+        # elif request.form['format'] == 'Image':  # TODO: Remove this when image is supported
+        #     error = "Image support not yet implemented. Please choose tabular."
 
         else:
             file = request.files['file']
@@ -57,9 +58,18 @@ def create():
                 session['title'] = title
                 session['run_dir'] = cu.new_run_mkdir(directory=cs.RUN_FOLDER, username=g.user['username'], title=title)  # Initialize directory for outputs
                 filename = secure_filename(file.filename)
-                filesize = len(pkl.dumps(file, -1))
+
+                # Update with data about run
+                if os.path.splitext(filename)[1] == '.zip':
+                    zip_ref = ZipFile(file)
+                    filesize = sum([zinfo.file_size for zinfo in zip_ref.filelist])
+                    zip_ref.close()
+                else:
+                    filesize = len(pkl.dumps(file, -1))
                 run_id = db.query_init_run(title=title, user_id=g.user['id'], format=session['format'], filesize=filesize)  # Initialize run in database
                 session['run_id'] = run_id
+
+                # Save files TODO: Something with the zip is causing issues with the file
                 cu.safe_mkdir(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id)))  # Raw data gets saved to a folder titled with the run_id
                 file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id), filename))
 
@@ -112,25 +122,28 @@ def image():
         if 'cancel' in request.form:
             db.clean_run(run_id=session['run_id'])
             return redirect(url_for('index'))
-        x_dim = x_dim if request.form['x_dim'] == '' else int(request.form['x_dim_width']), int(request.form['x_dim_length'])  # TODO: May need to revisit
         dep_var = cs.IMAGE_DEFAULT_CLASS_NAME if request.form['dep_var'] == '' else request.form['dep_var']
+        x_dim = x_dim if request.form['x_dim'] == '' else int(request.form['x_dim_width']), int(request.form['x_dim_length'])  # TODO: May need to revisit
         bs = cs.IMAGE_DEFAULT_BATCH_SIZE if request.form['bs'] == '' else int(request.form['bs'])
-        splits = cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS if request.form['splits'] == '' else request.form.getlist['splits']
+        if all((request.form['splits_0'] == '', request.form['splits_1'] == '', request.form['splits_2'] == '')):
+            splits = cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS
+        else:
+            splits = request.form['splits_0'], request.form['splits_1'], request.form['splits_2']
         num_epochs = cs.IMAGE_DEFAULT_NUM_EPOCHS if request.form['num_epochs'] == '' else int(request.form['num_epochs'])
         error = None  # TODO: Add function that checks for errors of inputs
         if error:
             flash(error)
         else:
             db.query_add_depvar(run_id=session['run_id'], depvar=dep_var)
-            session['x_dim'] = x_dim
             session['dep_var'] = dep_var
+            session['x_dim'] = x_dim
             session['bs'] = bs
             session['splits'] = splits
             session['num_epochs'] = num_epochs
             return redirect(url_for('create.success'))
     return render_template('create/image.html', title=session['title'], default_x_dim=x_dim, max_x_dim=cs.IMAGE_MAX_X_DIM, summarized_df=summarized_df,
-                           default_dep_var=cs.IMAGE_DEFAULT_CLASS_NAME, default_bs=cs.IMAGE_DEFAULT_BATCH_SIZE,
-                           default_splits=cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS, default_num_epochs=cs.IMAGE_DEFAULT_NUM_EPOCHS)
+                           default_dep_var=cs.IMAGE_DEFAULT_CLASS_NAME, default_bs=cs.IMAGE_DEFAULT_BATCH_SIZE, max_bs=cs.IMAGE_MAX_BS,
+                           default_splits=cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS, default_num_epochs=cs.IMAGE_DEFAULT_NUM_EPOCHS, max_num_epochs=cs.IMAGE_MAX_NUM_EPOCHS)
 
 
 @bp.route('/specify_output', methods=('GET', 'POST'))

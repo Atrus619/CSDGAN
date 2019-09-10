@@ -78,7 +78,7 @@ def unzip_and_validate_img_zip(run_id, username, title):
         return False, "Run directory does not exist"
 
     # Perform various checks and unzip data
-    path = os.path.join(cs.UPLOAD_FOLDER, run_id)
+    path = os.path.join(cs.UPLOAD_FOLDER, str(run_id))
     file = os.listdir(path)[0]
     if not os.path.splitext(file)[1] == '.zip':
         return False, "Image file path passed is not zip"
