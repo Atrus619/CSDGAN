@@ -72,9 +72,13 @@ IMAGE_CGAN_INIT_PARAMS = {'netG_lr': 2e-4,  # Learning rate for adam optimizer
                           }
 
 # Image training parameters
+IMAGE_MAX_X_DIM = 1080
+IMAGE_DEFAULT_NUM_EPOCHS = 400
+IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS = [0.80, 0.10, 0.10]
 IMAGE_DEFAULT_BATCH_SIZE = 128
 IMAGE_DEFAULT_PRINT_FREQ = 5
 IMAGE_DEFAULT_EVAL_FREQ = 50
+IMAGE_DEFAULT_CLASS_NAME = 'Image Class'
 
 # App constants
 app = fake_create_app()

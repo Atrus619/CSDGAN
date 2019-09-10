@@ -1,6 +1,7 @@
 from CSDGAN.classes.image.ImageDataset import ImageFolderWithPaths
 import utils.image_utils as iu
 import utils.utils as uu
+import CSDGAN.utils.constants as cs
 
 from torch.utils import data
 import torchvision
@@ -50,7 +51,7 @@ def preprocess_imported_dataset(path, import_gen, splits=None, x_dim=None):
     :return: Tuple of label encoder, one hot encoder, and image dimensions
     """
     if splits is None:
-        splits = [0.80, 0.10, 0.10]  # Default
+        splits = cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS  # Default
 
     assert round(sum(splits), 5) == 1.0
     assert len(splits) == 3

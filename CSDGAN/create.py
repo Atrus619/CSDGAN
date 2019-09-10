@@ -86,8 +86,7 @@ def tabular():
         dep_var = request.form['dep_var']
         cont_inputs = request.form.getlist('cont_inputs')
         int_inputs = request.form.getlist('int_inputs')
-        num_epochs = cs.TABULAR_DEFAULT_NUM_EPOCHS if request.form['num_epochs'] == '' else request.form['num_epochs']
-        num_epochs = int(num_epochs)
+        num_epochs = cs.TABULAR_DEFAULT_NUM_EPOCHS if request.form['num_epochs'] == '' else int(request.form['num_epochs'])
         error = cu.validate_tabular_choices(dep_var=dep_var, cont_inputs=cont_inputs, int_inputs=int_inputs)
         if error:
             flash(error)
@@ -97,24 +96,9 @@ def tabular():
             session['cont_inputs'] = cont_inputs
             session['int_inputs'] = int_inputs
             session['num_epochs'] = num_epochs
-            return redirect(url_for('create.tabular_specify_output'))
+            return redirect(url_for('create.specify_output'))
     return render_template('create/tabular.html', title=session['title'], cols=cols, default_num_epochs='{:,d}'.format(cs.TABULAR_DEFAULT_NUM_EPOCHS),
                            max_num_epochs=cs.TABULAR_MAX_NUM_EPOCHS)
-
-
-@bp.route('/tabular_specify_output', methods=('GET', 'POST'))
-@login_required
-def tabular_specify_output():
-    dep_choices = cu.parse_tabular_dep(run_id=session['run_id'], dep_var=session['dep_var'])
-    if request.method == 'POST':
-        if 'cancel' in request.form:
-            db.clean_run(run_id=session['run_id'])
-            return redirect(url_for('index'))
-
-        cu.create_gen_dict(request_form=request.form, directory=cs.RUN_FOLDER, username=g.user['username'], title=session['title'])
-        return redirect(url_for('create.success'))
-    return render_template('create/tabular_specify_output.html', title=session['title'], dep_var=session['dep_var'],
-                           dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.MAX_EXAMPLE_PER_CLASS))
 
 
 @bp.route('/image', methods=('GET', 'POST'))
@@ -125,8 +109,47 @@ def image():
         return render_template('create/image_upload_issue.html', title=session['title'], msg=msg)
     x_dim, summarized_df = cu.parse_image_folder(username=g.user['username'], title=session['title'], file=msg)
     if request.method == 'POST':
+        if 'cancel' in request.form:
+            db.clean_run(run_id=session['run_id'])
+            return redirect(url_for('index'))
+        x_dim = x_dim if request.form['x_dim'] == '' else int(request.form['x_dim_width']), int(request.form['x_dim_length'])  # TODO: May need to revisit
+        dep_var = cs.IMAGE_DEFAULT_CLASS_NAME if request.form['dep_var'] == '' else request.form['dep_var']
+        bs = cs.IMAGE_DEFAULT_BATCH_SIZE if request.form['bs'] == '' else int(request.form['bs'])
+        splits = cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS if request.form['splits'] == '' else request.form.getlist['splits']
+        num_epochs = cs.IMAGE_DEFAULT_NUM_EPOCHS if request.form['num_epochs'] == '' else int(request.form['num_epochs'])
+        error = None  # TODO: Add function that checks for errors of inputs
+        if error:
+            flash(error)
+        else:
+            db.query_add_depvar(run_id=session['run_id'], depvar=dep_var)
+            session['x_dim'] = x_dim
+            session['dep_var'] = dep_var
+            session['bs'] = bs
+            session['splits'] = splits
+            session['num_epochs'] = num_epochs
+            return redirect(url_for('create.success'))
+    return render_template('create/image.html', title=session['title'], default_x_dim=x_dim, max_x_dim=cs.IMAGE_MAX_X_DIM, summarized_df=summarized_df,
+                           default_dep_var=cs.IMAGE_DEFAULT_CLASS_NAME, default_bs=cs.IMAGE_DEFAULT_BATCH_SIZE,
+                           default_splits=cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS, default_num_epochs=cs.IMAGE_DEFAULT_NUM_EPOCHS)
+
+
+@bp.route('/specify_output', methods=('GET', 'POST'))
+@login_required
+def specify_output():
+    if session['format'] == 'tabular':
+        dep_choices = cu.parse_tabular_dep(run_id=session['run_id'], dep_var=session['dep_var'])
+    else:  # Image
+        dep_choices = list(session['summarized_df'].index)
+        session['nc'] = len(dep_choices)
+    if request.method == 'POST':
+        if 'cancel' in request.form:
+            db.clean_run(run_id=session['run_id'])
+            return redirect(url_for('index'))
+
+        cu.create_gen_dict(request_form=request.form, directory=cs.RUN_FOLDER, username=g.user['username'], title=session['title'])
         return redirect(url_for('create.success'))
-    return render_template('create/image.html', title=session['title'], x_dim=x_dim, summarized_df=summarized_df)
+    return render_template('create/specify_output.html', title=session['title'], dep_var=session['dep_var'],
+                           dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.MAX_EXAMPLE_PER_CLASS))
 
 
 @bp.route('/success', methods=('GET', 'POST'))
@@ -162,6 +185,7 @@ def success():
                                  generate_id=generate_data.get_id())
         else:  # Image
             # TODO: Fill in here for image
+            # TODO: Extract num_channels from data set, probably where we extract the dimensions of the image...
             pass
         logger.info('User #{} ({}) kicked off a {} Run #{} ({})'.format(g.user['id'], g.user['username'], session['format'], session['run_id'], session['title']))
         return redirect(url_for('index'))

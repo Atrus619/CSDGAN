@@ -6,23 +6,20 @@
 
 {% block content %}
 <form method=post>
-    <h2>Dependent Variable</h2>
-    <p><i>This should be a categorical variable.</i></p>
-    <select name="dep_var">
-        {% for col in cols %}
-        <option value="{{ col }}">{{ col }}</option>
-        {% endfor %}
-    </select>
+    <h2>Dependent Variable Title</h2>
+    <p><i>If you would like to override the default dependent variable title of {{ default_dep_var }}, please enter in a title below.</i></p>
+    <input name="dep_var" id="dep_var" value="" required>
     <hr>
-    <h2>Numeric Features</h2>
-    <p><i>You can select multiple by holding ctrl/cmd.</i></p>
-    <select name="cont_inputs" multiple size="5">
-        {% for col in cols %}
-        <option value="{{ col }}">{{ col }}</option>
-        {% endfor %}
-    </select>
+    <h2>Image Dimensions</h2>
+    <p><i>
+        Please specify the width and height of the desired output images.
+        We have gone ahead and parsed the dimensions of the first image found in the dataset and found it to be
+        {{ default_x_dim[0] }} by {{ default_x_dim[1] }}. If left blank, this default value will be used.
+    </i></p>
+    <input name="x_dim_width" type="number" min="1" max="{{ max_num_epochs }}" id="x_dim_width" value="">
+    <input name="x_dim_length" type="number" min="1" max="{{ max_num_epochs }}" id="x_dim_length" value="">
     <hr>
-    <h2>Integer Features</h2>
+    <h2>CONTINUE HERE!!!</h2>
     <p><i>This should be a subset of your numeric features. Again, you can select multiple by holding ctrl/cmd.</i></p>
     <select name="int_inputs" multiple size="5">
         {% for col in cols %}
