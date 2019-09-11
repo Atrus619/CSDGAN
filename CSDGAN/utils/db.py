@@ -83,7 +83,7 @@ def query_check_unique_title_for_user(user_id, title):
     return result is not None
 
 
-def query_init_run(title, user_id, format, filesize):
+def query_init_run(title, user_id, format):
     """
     Insert rows into db for a run and the initial status
     Returns the run id corresponding to this run
@@ -94,10 +94,10 @@ def query_init_run(title, user_id, format, filesize):
     with db.cursor() as cursor:
         cursor.execute(
             'INSERT INTO run ('
-            'title, user_id, format, filesize) '
+            'title, user_id, format) '
             'VALUES'
-            '(%s, %s, %s, %s)',
-            (title, user_id, format, filesize)
+            '(%s, %s, %s)',
+            (title, user_id, format)
         )
     db.commit()
 
@@ -131,6 +131,19 @@ def query_add_depvar(run_id, depvar):
             'UPDATE run '
             'SET depvar = %s '
             'WHERE id = %s', (depvar, run_id)
+        )
+    db.commit()
+
+
+def query_add_filesize(run_id, filesize):
+    """Updates run table to include filesize"""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET filesize = %s '
+            'WHERE id = %s', (filesize, run_id)
         )
     db.commit()
 

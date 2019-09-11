@@ -95,4 +95,4 @@ def gen_more_data():
             file = os.path.join(cs.OUTPUT_FOLDER, username, title + ' Additional Data ' + str(aug) + '.zip')
             return send_file(file, mimetype='zip', as_attachment=True)
         else:  # Image
-            pass
+            pass  # TODO:

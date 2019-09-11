@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}New Run - {{ title }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+
+<h2>Problem with Upload</h2>
+<p><i>{{ msg }}</i></p>
+<br>
+
+<form method=get action="{{ url_for('create.create') }}"><input type="submit" value="Back"></form>
+<form method=get action="{{ url_for('home.index') }}"><input type="submit" name="cancel" value="Cancel"></form>
+{% endblock %}

@@ -92,7 +92,7 @@ def unzip_and_validate_img_zip(run_id, username, title):
         return False, "Image folder not named the same as zip file"
     if not all([os.path.isdir(os.path.join(unzipped_path, x)) for x in os.listdir(unzipped_path)]):
         return False, "Not all files in main folder are folders"
-    return True, file
+    return True, os.path.splitext(file)[0]
 
 
 def parse_image_folder(username, title, file):

@@ -42,9 +42,6 @@ def create():
         elif 'file' not in request.files:
             error = 'No file part'
 
-        # elif request.form['format'] == 'Image':  # TODO: Remove this when image is supported
-        #     error = "Image support not yet implemented. Please choose tabular."
-
         else:
             file = request.files['file']
             if file.filename == '':
@@ -59,6 +56,13 @@ def create():
                 session['run_dir'] = cu.new_run_mkdir(directory=cs.RUN_FOLDER, username=g.user['username'], title=title)  # Initialize directory for outputs
                 filename = secure_filename(file.filename)
 
+                run_id = db.query_init_run(title=title, user_id=g.user['id'], format=session['format'])  # Initialize run in database
+                session['run_id'] = run_id
+
+                # Save files
+                cu.safe_mkdir(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id)))  # Raw data gets saved to a folder titled with the run_id
+                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id), filename))
+
                 # Update with data about run
                 if os.path.splitext(filename)[1] == '.zip':
                     zip_ref = ZipFile(file)
@@ -66,16 +70,16 @@ def create():
                     zip_ref.close()
                 else:
                     filesize = len(pkl.dumps(file, -1))
-                run_id = db.query_init_run(title=title, user_id=g.user['id'], format=session['format'], filesize=filesize)  # Initialize run in database
-                session['run_id'] = run_id
 
-                # Save files TODO: Something with the zip is causing issues with the file
-                cu.safe_mkdir(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id)))  # Raw data gets saved to a folder titled with the run_id
-                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id), filename))
+                db.query_add_filesize(run_id=run_id, filesize=filesize)
 
                 if session['format'] == 'Tabular':
                     return redirect(url_for('create.tabular'))
                 else:  # Image
+                    validation_success, msg = cu.unzip_and_validate_img_zip(run_id=session['run_id'], username=g.user['username'], title=session['title'])
+                    if not validation_success:
+                        return render_template('create/image_upload_issue.html', title=session['title'], msg=msg)  # TODO: Build this out
+                    session['msg'] = msg
                     return redirect(url_for('create.image'))
         if error:
             flash(error)
@@ -111,19 +115,26 @@ def tabular():
                            max_num_epochs=cs.TABULAR_MAX_NUM_EPOCHS)
 
 
+# @bp.route('/image', methods=['GET'])
+# @login_required
+# def image_upload_issue():
+#     db.clean_run(run_id=session['run_id'])
+#     if 'cancel' in request.form:
+#         return redirect(url_for('index'))
+#     if 'Back' in request.form:
+#         return redirect(url_for('create'))
+
+
 @bp.route('/image', methods=('GET', 'POST'))
 @login_required
 def image():
-    validation_success, msg = cu.unzip_and_validate_img_zip(run_id=session['run_id'], username=g.user['username'], title=session['title'])
-    if not validation_success:
-        return render_template('create/image_upload_issue.html', title=session['title'], msg=msg)
-    x_dim, summarized_df = cu.parse_image_folder(username=g.user['username'], title=session['title'], file=msg)
+    x_dim, summarized_df = cu.parse_image_folder(username=g.user['username'], title=session['title'], file=session['msg'])
     if request.method == 'POST':
         if 'cancel' in request.form:
             db.clean_run(run_id=session['run_id'])
             return redirect(url_for('index'))
         dep_var = cs.IMAGE_DEFAULT_CLASS_NAME if request.form['dep_var'] == '' else request.form['dep_var']
-        x_dim = x_dim if request.form['x_dim'] == '' else int(request.form['x_dim_width']), int(request.form['x_dim_length'])  # TODO: May need to revisit
+        x_dim = x_dim if request.form['x_dim_width'] == '' or request.form['x_dim_length'] == '' else (int(request.form['x_dim_width']), int(request.form['x_dim_length']))
         bs = cs.IMAGE_DEFAULT_BATCH_SIZE if request.form['bs'] == '' else int(request.form['bs'])
         if all((request.form['splits_0'] == '', request.form['splits_1'] == '', request.form['splits_2'] == '')):
             splits = cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS

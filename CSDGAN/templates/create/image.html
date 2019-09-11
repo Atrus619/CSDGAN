@@ -8,7 +8,7 @@
 <form method=post>
     <h2>Dependent Variable Title</h2>
     <p><i>If you would like to override the default dependent variable title of {{ default_dep_var }}, please enter in a title below.</i></p>
-    <input name="dep_var" id="dep_var" value="{{ request.form['dep_var'] }}" required>
+    <input name="dep_var" id="dep_var" value="{{ request.form['dep_var'] }}">
     <hr>
     <h2>Image Dimensions</h2>
     <p><i>
@@ -34,9 +34,9 @@
         the default split of {{ default_splits[0] }} for training, {{ default_splits[1] }} for validation, and
         {{ default_splits[2] }} for testing will be used.
     </i></p>
-    <input name="splits_0" type="number" min="0" max="1" id="splits_0" value="{{ request.form['splits_0'] }}">
-    <input name="splits_1" type="number" min="0" max="1" id="splits_1" value="{{ request.form['splits_1'] }}">
-    <input name="splits_2" type="number" min="0" max="1" id="splits_2" value="{{ request.form['splits_2'] }}">
+    <input name="splits_0" type="number" min="0" max="1" step="0.05" id="splits_0" value="{{ request.form['splits_0'] }}">
+    <input name="splits_1" type="number" min="0" max="1" step="0.05" id="splits_1" value="{{ request.form['splits_1'] }}">
+    <input name="splits_2" type="number" min="0" max="1" step="0.05" id="splits_2" value="{{ request.form['splits_2'] }}">
     <hr>
     <h2>Number of Epochs</h2>
     <p><i>This represents the number of times to iterate over the data set when training. Higher values mean training will take longer, but could yield better results.
