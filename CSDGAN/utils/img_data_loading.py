@@ -142,3 +142,14 @@ def find_first_img_dim(import_gen):
     """
     for x, _, _ in import_gen:
         return x[0].shape[-2], x[0].shape[-1]
+
+
+def find_first_img_num_channels(import_gen):  # TODO: Make sure this works as intended
+    """
+        Loads in the first image in a provided data set and returns its number of channels
+        Intentionally returns on first iteration of the loop
+        :param import_gen: PyTorch DataLoader utilizing ImageFolderWithPaths for its dataset
+        :return: dimensions of image
+        """
+    for x, _, _ in import_gen:
+        return x[0].shape[0]

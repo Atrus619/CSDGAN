@@ -74,3 +74,5 @@ tr:hover { background-color: #ffff99; }
 .invis-button:focus {
   outline: none;
 }
+
+span.nobr { white-space: nowrap; }

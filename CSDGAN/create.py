@@ -78,8 +78,8 @@ def create():
                 else:  # Image
                     validation_success, msg = cu.unzip_and_validate_img_zip(run_id=session['run_id'], username=g.user['username'], title=session['title'])
                     if not validation_success:
-                        return render_template('create/image_upload_issue.html', title=session['title'], msg=msg)  # TODO: Build this out
-                    session['msg'] = msg
+                        return render_template('create/image_upload_issue.html', title=session['title'], msg=msg)
+                    session['folder'] = msg
                     return redirect(url_for('create.image'))
         if error:
             flash(error)
@@ -115,20 +115,11 @@ def tabular():
                            max_num_epochs=cs.TABULAR_MAX_NUM_EPOCHS)
 
 
-# @bp.route('/image', methods=['GET'])
-# @login_required
-# def image_upload_issue():
-#     db.clean_run(run_id=session['run_id'])
-#     if 'cancel' in request.form:
-#         return redirect(url_for('index'))
-#     if 'Back' in request.form:
-#         return redirect(url_for('create'))
-
-
 @bp.route('/image', methods=('GET', 'POST'))
 @login_required
 def image():
-    x_dim, summarized_df = cu.parse_image_folder(username=g.user['username'], title=session['title'], file=session['msg'])
+    # TODO: Add advanced options??
+    x_dim, num_channels, summarized_df = cu.parse_image_folder(username=g.user['username'], title=session['title'], file=session['folder'])
     if request.method == 'POST':
         if 'cancel' in request.form:
             db.clean_run(run_id=session['run_id'])
@@ -141,7 +132,7 @@ def image():
         else:
             splits = request.form['splits_0'], request.form['splits_1'], request.form['splits_2']
         num_epochs = cs.IMAGE_DEFAULT_NUM_EPOCHS if request.form['num_epochs'] == '' else int(request.form['num_epochs'])
-        error = None  # TODO: Add function that checks for errors of inputs
+        error = cu.validate_image_choices(dep_var=dep_var, x_dim=x_dim, bs=bs, splits=splits, num_epochs=num_epochs, num_channels=num_channels)
         if error:
             flash(error)
         else:
@@ -151,6 +142,7 @@ def image():
             session['bs'] = bs
             session['splits'] = splits
             session['num_epochs'] = num_epochs
+            session['num_channels'] = num_channels
             return redirect(url_for('create.success'))
     return render_template('create/image.html', title=session['title'], default_x_dim=x_dim, max_x_dim=cs.IMAGE_MAX_X_DIM, summarized_df=summarized_df,
                            default_dep_var=cs.IMAGE_DEFAULT_CLASS_NAME, default_bs=cs.IMAGE_DEFAULT_BATCH_SIZE, max_bs=cs.IMAGE_MAX_BS,
@@ -203,14 +195,22 @@ def success():
             generate_data = current_app.task_queue.enqueue('CSDGAN.pipeline.generate.generate_tabular_data.generate_tabular_data',
                                                            args=(session['run_id'], g.user['username'], session['title']),
                                                            depends_on=train_model)
-            db.query_add_job_ids(run_id=session['run_id'],
-                                 data_id=make_dataset.get_id(),
-                                 train_id=train_model.get_id(),
-                                 generate_id=generate_data.get_id())
         else:  # Image
-            # TODO: Fill in here for image
-            # TODO: Extract num_channels from data set, probably where we extract the dimensions of the image...
-            pass
+            make_dataset = current_app.task_queue.enqueue('CSDGAN.pipeline.data.make_image_dataset.make_image_dataset',
+                                                          args=(session['run_id'], g.user['username'], session['title'], session['folder'],
+                                                                session['bs'], session['x_dim'], session['splits']))
+            train_model = current_app.task_queue.enqueue('CSDGAN.pipeline.train.train_image_model.train_image_model',
+                                                         args=(session['run_id'], g.user['username'], session['title'], session['num_epochs'],
+                                                               session['bs'], session['nc'], session['num_channels']),
+                                                         depends_on=make_dataset,
+                                                         job_timeout=-1)
+            generate_data = current_app.task_queue.enqueue('CSDGAN.pipeline.generate.generate_image_data.generate_image_data',
+                                                           args=(session['run_id'], g.user['username'], session['title']),
+                                                           depends_on=train_model)
+        db.query_add_job_ids(run_id=session['run_id'],
+                             data_id=make_dataset.get_id(),
+                             train_id=train_model.get_id(),
+                             generate_id=generate_data.get_id())
         logger.info('User #{} ({}) kicked off a {} Run #{} ({})'.format(g.user['id'], g.user['username'], session['format'], session['run_id'], session['title']))
         return redirect(url_for('index'))
     return render_template('create/success.html', title=session['title'])

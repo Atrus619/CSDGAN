@@ -54,13 +54,28 @@ def parse_tabular_dep(run_id, dep_var):
 
 
 def validate_tabular_choices(dep_var, cont_inputs, int_inputs):
-    """Checks to see if user choices are consistent with expectations"""
+    """
+    Checks to see if user choices are consistent with expectations
+    Returns failure message if it fails, None otherwise.
+    """
     if dep_var in cont_inputs:
         return 'Dependent variable should not be continuous'
     if dep_var in int_inputs:
         return 'Dependent variable should not be integer'
     if any([int_input not in cont_inputs for int_input in int_inputs]):
         return 'Selected integer features should be a subset of selected continuous features'
+    return None
+
+
+def validate_image_choices(dep_var, x_dim, bs, splits, num_epochs, num_channels):
+    """
+    Checks to see if user choices are consistent with expectations
+    Returns failure message if it fails, None otherwise.
+    """
+    if sum(splits) != 1:
+        return 'Splits must add up to 1 (Currently adding up to ' + str(sum(splits)) + ')'
+    if num_channels not in [1, 3]:
+        return 'Number of channels in image (' + str(num_channels) + ' found) should be 1 or 3'
     return None
 
 
@@ -100,16 +115,17 @@ def parse_image_folder(username, title, file):
     Parses an uploaded image data set and returns various information about its contents
     Returns:
         1. Dimensions of first image found
-        2. Table with rows of each label per row, and number of instances of that label in the second column
+        2. Number of channels in image
+        3. Table with rows of each label per row, and number of instances of that label in the second column
     """
     path = os.path.join(cs.RUN_FOLDER, username, title, file)
     import_gen = cuidl.import_dataset(path=path, bs=cs.IMAGE_DEFAULT_BATCH_SIZE, shuffle=False)
     x_dim = cuidl.find_first_img_dim(import_gen=import_gen)
-
+    nc = cuidl.find_first_img_nc(import_gen=import_gen)
     df, _ = cuidl.scan_image_dataset(path=path)
     summarized_df = df.groupby(by='label').size()
 
-    return x_dim, summarized_df
+    return x_dim, nc, summarized_df
 
 
 def setup_run_logger(name, username, title, filename='run_log', level=logging.INFO):

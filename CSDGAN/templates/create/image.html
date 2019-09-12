@@ -16,8 +16,10 @@
         We have gone ahead and parsed the dimensions of the first image found in the dataset and found it to be
         {{ default_x_dim[0] }} by {{ default_x_dim[1] }}. If left blank, this default value will be used.
     </i></p>
-    <input name="x_dim_width" type="number" min="1" max="{{ max_x_dim }}" id="x_dim_width" value="{{ request.form['x_dim_width'] }}">
-    <input name="x_dim_length" type="number" min="1" max="{{ max_x_dim }}" id="x_dim_length" value="{{ request.form['x_dim_length'] }}">
+    <span class="nobr">Width: </span>
+    <input name="x_dim_width" type="number" min="1" max="{{ max_x_dim }}" step="1" id="x_dim_width" value="{{ request.form['x_dim_width'] }}">
+    <span class="nobr">Height: </span>
+    <input name="x_dim_length" type="number" min="1" max="{{ max_x_dim }}" step="1" id="x_dim_length" value="{{ request.form['x_dim_length'] }}">
     <hr>
     <h2>Batch Size</h2>
     <p><i>
@@ -34,8 +36,11 @@
         the default split of {{ default_splits[0] }} for training, {{ default_splits[1] }} for validation, and
         {{ default_splits[2] }} for testing will be used.
     </i></p>
+    <span class="nobr">Train: </span>
     <input name="splits_0" type="number" min="0" max="1" step="0.05" id="splits_0" value="{{ request.form['splits_0'] }}">
+    <span class="nobr">Validate: </span>
     <input name="splits_1" type="number" min="0" max="1" step="0.05" id="splits_1" value="{{ request.form['splits_1'] }}">
+    <span class="nobr">Test: </span>
     <input name="splits_2" type="number" min="0" max="1" step="0.05" id="splits_2" value="{{ request.form['splits_2'] }}">
     <hr>
     <h2>Number of Epochs</h2>
