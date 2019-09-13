@@ -125,6 +125,7 @@ class ImageCGAN(CGANUtils):
 
         for epoch in range(num_epochs):
             for x, y in self.train_gen:
+                y = torch.eye(self.nc)[y] if len(y.shape) == 1 else y
                 x, y = x.to(self.device), y.to(self.device)
                 self.train_one_step(x, y)
 
@@ -703,7 +704,7 @@ class ImageCGAN(CGANUtils):
 
     def extract_x_dim(self):
         iterator = iter(self.train_gen)
-        x, __ = next(iterator)
+        x, _, = next(iterator)
         return x.shape[-2], x.shape[-1]
 
     def gen_data(self, size, path, stratify=None, label=None):

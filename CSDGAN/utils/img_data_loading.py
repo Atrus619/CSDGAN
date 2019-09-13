@@ -1,4 +1,4 @@
-from CSDGAN.classes.image.ImageDataset import ImageFolderWithPaths
+from CSDGAN.classes.image.ImageDataset import ImageFolderWithPaths, ImageFolder
 import utils.image_utils as iu
 import utils.utils as uu
 import CSDGAN.utils.constants as cs
@@ -12,18 +12,25 @@ import pandas as pd
 import os
 
 
-def import_dataset(path, bs, shuffle):
+def import_dataset(path, bs, shuffle, incl_paths):
     """
     Image generator for a directory containing folders as label names (and images of that label within each of these label-named folders)
     :param path: Path to parent directory
     :param bs: Batch size
     :param shuffle: Whether to shuffle the data order
+    :param incl_paths: Whether to use ImageFolderWithPaths or simply ImageFolder (the former returns the path to each image as a third item in the iterator).
     :return: PyTorch DataLoader
     """
-    dataset = ImageFolderWithPaths(
-        root=path,
-        transform=torchvision.transforms.ToTensor()
-    )
+    if incl_paths:
+        dataset = ImageFolderWithPaths(
+            root=path,
+            transform=torchvision.transforms.ToTensor()
+        )
+    else:
+        dataset = ImageFolder(
+            root=path,
+            transform=torchvision.transforms.ToTensor()
+        )
     loader = data.DataLoader(
         dataset,
         batch_size=bs,

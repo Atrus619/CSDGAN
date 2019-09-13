@@ -119,13 +119,13 @@ def parse_image_folder(username, title, file):
         3. Table with rows of each label per row, and number of instances of that label in the second column
     """
     path = os.path.join(cs.RUN_FOLDER, username, title, file)
-    import_gen = cuidl.import_dataset(path=path, bs=cs.IMAGE_DEFAULT_BATCH_SIZE, shuffle=False)
+    import_gen = cuidl.import_dataset(path=path, bs=cs.IMAGE_DEFAULT_BATCH_SIZE, shuffle=False, incl_paths=True)
     x_dim = cuidl.find_first_img_dim(import_gen=import_gen)
-    nc = cuidl.find_first_img_nc(import_gen=import_gen)
+    num_channels = cuidl.find_first_img_num_channels(import_gen=import_gen)
     df, _ = cuidl.scan_image_dataset(path=path)
     summarized_df = df.groupby(by='label').size()
 
-    return x_dim, nc, summarized_df
+    return x_dim, num_channels, summarized_df
 
 
 def setup_run_logger(name, username, title, filename='run_log', level=logging.INFO):

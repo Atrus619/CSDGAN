@@ -36,15 +36,15 @@ def make_image_dataset(run_id, username, title, folder, bs, x_dim=None, splits=N
         assert os.path.exists(unzipped_path), "Unzipped path does not exist"
 
         # Load and preprocess data
-        import_gen = cuidl.import_dataset(path=unzipped_path, bs=bs, shuffle=False)
+        import_gen = cuidl.import_dataset(path=unzipped_path, bs=bs, shuffle=False, incl_paths=True)
 
         le, ohe, x_dim = cuidl.preprocess_imported_dataset(path=unzipped_path, import_gen=import_gen,
                                                            splits=splits, x_dim=x_dim)
 
         # Create data loader for each component of data set
-        train_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'train'), bs=bs, shuffle=True)
-        val_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'val'), bs=bs, shuffle=False)
-        test_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'test'), bs=bs, shuffle=False)
+        train_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'train'), bs=bs, shuffle=True, incl_paths=False)
+        val_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'val'), bs=bs, shuffle=False, incl_paths=False)
+        test_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'test'), bs=bs, shuffle=False, incl_paths=False)
 
         # Pickle relevant objects
         with open(os.path.join(run_dir, "le.pkl"), "wb") as f:

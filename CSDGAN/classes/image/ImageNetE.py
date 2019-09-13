@@ -97,6 +97,7 @@ class ImageNetE(nn.Module, NetUtils):
         train_loss = 0
         running_count = 0
         for batch, labels in self.train_gen:
+            labels = torch.eye(self.nc)[labels] if len(labels.shape) == 1 else labels
             self.train_step(batch=batch, labels=labels)
             # Update running totals
             train_loss += self.loss
@@ -110,6 +111,7 @@ class ImageNetE(nn.Module, NetUtils):
         self.train_gen.dataset.next_epoch()
         for i in range(self.train_gen.dataset.batches_per_epoch):
             batch, labels = self.train_gen.dataset.next_batch()
+            labels = torch.eye(self.nc)[labels] if len(labels.shape) == 1 else labels
             self.train_step(batch=batch, labels=labels)
             # Update running totals
             train_loss += self.loss
@@ -135,6 +137,7 @@ class ImageNetE(nn.Module, NetUtils):
         with torch.no_grad():
             for batch, labels in gen:
                 # Forward pass
+                labels = torch.eye(self.nc)[labels] if len(labels.shape) == 1 else labels
                 batch, labels = batch.to(self.device), labels.to(self.device)
                 fwd = self.forward(batch)
                 # Calculate loss and accuracy, and update running totals
@@ -154,6 +157,7 @@ class ImageNetE(nn.Module, NetUtils):
             for i in range(gen.dataset.batches_per_epoch):
                 batch, labels = gen.dataset.next_batch()
                 # Forward pass
+                labels = torch.eye(self.nc)[labels] if len(labels.shape) == 1 else labels
                 batch, labels = batch.to(self.device), labels.to(self.device)
                 fwd = self.forward(batch)
                 # Calculate loss and accuracy, and update running totals
