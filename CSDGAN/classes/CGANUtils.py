@@ -116,7 +116,10 @@ class CGANUtils:
 
         gens = os.listdir(os.path.join(self.path, "stored_generators"))
         gens = sorted(gens, key=parse_epoch)
-        return parse_epoch(gens[np.argmax(self.stored_acc) // len(self.test_ranges)])
+        try:  # Test ranges attribute exists if tabular CGAN
+            return parse_epoch(gens[np.argmax(self.stored_acc) // len(self.test_ranges)])
+        except AttributeError:  # Image CGAN
+            return parse_epoch(gens[np.argmax(self.stored_acc)])
 
     def load_netG(self, best=True, epoch=None):
         """Load a previously stored netG"""

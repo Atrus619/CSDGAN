@@ -38,13 +38,18 @@ def make_image_dataset(run_id, username, title, folder, bs, x_dim=None, splits=N
         # Load and preprocess data
         import_gen = cuidl.import_dataset(path=unzipped_path, bs=bs, shuffle=False, incl_paths=True)
 
+        splits = [float(num) for num in splits]
         le, ohe, x_dim = cuidl.preprocess_imported_dataset(path=unzipped_path, import_gen=import_gen,
                                                            splits=splits, x_dim=x_dim)
+
+        logger.info('Data successfully imported and preprocessed. Splitting into train/val/test...')
 
         # Create data loader for each component of data set
         train_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'train'), bs=bs, shuffle=True, incl_paths=False)
         val_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'val'), bs=bs, shuffle=False, incl_paths=False)
         test_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'test'), bs=bs, shuffle=False, incl_paths=False)
+
+        logger.info('Data successfully split into train/va/test. Pickling and exiting.')
 
         # Pickle relevant objects
         with open(os.path.join(run_dir, "le.pkl"), "wb") as f:

@@ -68,9 +68,9 @@ sklearn==0.0
 SQLAlchemy==1.3.6
 tensorboard==1.13.1
 text-unidecode==1.2
-torch==1.1.0
+torch==1.2.0
 torchgan==0.0.2
-torchvision==0.3.0
+torchvision==0.4.0
 torchviz==0.0.1
 tqdm==4.32.1
 traitlets==4.3.2

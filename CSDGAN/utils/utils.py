@@ -72,6 +72,8 @@ def validate_image_choices(dep_var, x_dim, bs, splits, num_epochs, num_channels)
     Checks to see if user choices are consistent with expectations
     Returns failure message if it fails, None otherwise.
     """
+    splits = [float(num) for num in splits]
+
     if sum(splits) != 1:
         return 'Splits must add up to 1 (Currently adding up to ' + str(sum(splits)) + ')'
     if num_channels not in [1, 3]:
