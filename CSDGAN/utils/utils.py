@@ -108,7 +108,7 @@ def unzip_and_validate_img_zip(run_id, username, title):
     if not os.path.exists(unzipped_path):
         return False, "Image folder not named the same as zip file"
     if not all([os.path.isdir(os.path.join(unzipped_path, x)) for x in os.listdir(unzipped_path)]):
-        return False, "Not all files in main folder are folders"
+        return False, "Not all files in primary folder are folders"
     return True, os.path.splitext(file)[0]
 
 

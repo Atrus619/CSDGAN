@@ -124,21 +124,25 @@ def image():
         if 'cancel' in request.form:
             db.clean_run(run_id=session['run_id'])
             return redirect(url_for('index'))
+
         dep_choices = list(summarized_df.index)
         nc = len(dep_choices)
         dep_var = cs.IMAGE_DEFAULT_CLASS_NAME if request.form['dep_var'] == '' else request.form['dep_var']
         x_dim = x_dim if request.form['x_dim_width'] == '' or request.form['x_dim_length'] == '' else (int(request.form['x_dim_width']), int(request.form['x_dim_length']))
         bs = cs.IMAGE_DEFAULT_BATCH_SIZE if request.form['bs'] == '' else int(request.form['bs'])
+
         if all((request.form['splits_0'] == '', request.form['splits_1'] == '', request.form['splits_2'] == '')):
             splits = cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS
         else:
             splits = request.form['splits_0'], request.form['splits_1'], request.form['splits_2']
+
         num_epochs = cs.IMAGE_DEFAULT_NUM_EPOCHS if request.form['num_epochs'] == '' else int(request.form['num_epochs'])
         error = cu.validate_image_choices(dep_var=dep_var, x_dim=x_dim, bs=bs, splits=splits, num_epochs=num_epochs, num_channels=num_channels)
         if error:
             flash(error)
         else:
             db.query_add_depvar(run_id=session['run_id'], depvar=dep_var)
+            session['dep_choices'] = dep_choices
             session['dep_var'] = dep_var
             session['nc'] = nc
             session['x_dim'] = x_dim
@@ -146,7 +150,7 @@ def image():
             session['splits'] = splits
             session['num_epochs'] = num_epochs
             session['num_channels'] = num_channels
-            return redirect(url_for('create.success'))
+            return redirect(url_for('create.specify_output'))
     return render_template('create/image.html', title=session['title'], default_x_dim=x_dim, max_x_dim=cs.IMAGE_MAX_X_DIM, summarized_df=summarized_df,
                            default_dep_var=cs.IMAGE_DEFAULT_CLASS_NAME, default_bs=cs.IMAGE_DEFAULT_BATCH_SIZE, max_bs=cs.IMAGE_MAX_BS,
                            default_splits=cs.IMAGE_DEFAULT_TRAIN_VAL_TEST_SPLITS, default_num_epochs=cs.IMAGE_DEFAULT_NUM_EPOCHS, max_num_epochs=cs.IMAGE_MAX_NUM_EPOCHS)
@@ -157,6 +161,8 @@ def image():
 def specify_output():
     if session['format'] == 'tabular':
         dep_choices = cu.parse_tabular_dep(run_id=session['run_id'], dep_var=session['dep_var'])
+    else:  # Image
+        dep_choices = session['dep_choices']
     if request.method == 'POST':
         if 'cancel' in request.form:
             db.clean_run(run_id=session['run_id'])

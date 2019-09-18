@@ -7,6 +7,7 @@ import logging
 import os
 import pickle as pkl
 import numpy as np
+import shutil
 
 
 def generate_image_data(run_id, username, title, aug=None):
@@ -27,8 +28,7 @@ def generate_image_data(run_id, username, title, aug=None):
 
         # Check for objects created by train_image_model.py
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
-        assert os.path.exists(os.path.join(run_dir, 'CGAN.pkl')), \
-            "CGAN object not found"
+        assert os.path.exists(os.path.join(run_dir, 'CGAN.pkl')), "CGAN object not found"
         if aug:
             gen_dict_path = os.path.join(run_dir, cs.GEN_DICT_NAME + ' Additional Data ' + str(aug) + '.pkl')
         else:
@@ -57,6 +57,8 @@ def generate_image_data(run_id, username, title, aug=None):
                 uu.safe_mkdir(class_path)
                 stratify = np.eye(CGAN.nc)[i]
                 CGAN.gen_data(size=size, path=class_path, stratify=stratify, label=dep_class)
+
+        _ = shutil.make_archive(output_path, 'zip', output_path)
 
         if aug is None:
             db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Complete'])
