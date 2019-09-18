@@ -241,9 +241,9 @@ class ImageCGAN(CGANUtils):
 
         self.netG.eval()
         with torch.no_grad():
-            output = self.netG(noise, processed_label).view(28, 28).detach().cpu().numpy()
+            output = self.netG(noise, processed_label).view(self.num_channels, self.x_dim[0], self.x_dim[1]).detach().cpu()
 
-        plt.imshow(output, cmap='gray')
+        plt.imshow(output.permute(1, 2, 0))
         plt.show()
 
     def gen_fixed_img_grid(self):
