@@ -189,7 +189,7 @@ def export_tabular_to_zip(df, username, title):
 
 def create_gen_dict(request_form, directory, username, title, aug=None):
     """Creates a dictionary with keys as dependent variable labels and values as the number of examples pertaining to that label to generate"""
-    gen_dict = OrderedDict(request_form)  # TODO: Make sure this isn't causing any issues (changed from dict --> OrderedDict)
+    gen_dict = OrderedDict(request_form)
     if aug is not None:
         del gen_dict['download_button']
     for key, value in gen_dict.items():

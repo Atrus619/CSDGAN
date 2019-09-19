@@ -151,7 +151,7 @@ def find_first_img_dim(import_gen):
         return x[0].shape[-2], x[0].shape[-1]
 
 
-def find_first_img_num_channels(import_gen):  # TODO: Make sure this works as intended
+def find_first_img_num_channels(import_gen):
     """
         Loads in the first image in a provided data set and returns its number of channels
         Intentionally returns on first iteration of the loop

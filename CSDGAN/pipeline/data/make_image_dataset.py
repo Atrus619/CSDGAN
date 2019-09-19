@@ -8,7 +8,7 @@ import os
 import pickle as pkl
 
 
-def make_image_dataset(run_id, username, title, folder, bs, x_dim=None, splits=None):  # TODO: Set default for splits/bs/x_dim
+def make_image_dataset(run_id, username, title, folder, bs, x_dim=None, splits=None):
     """
     Requirements of image data set is that it should be a single zip with all images with same label in a folder named with the label name
     Images should either be the same size, or a specified image size should be provided (all images will be cropped to the same size)

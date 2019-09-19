@@ -61,7 +61,7 @@ def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels)
 
         logger.info('Successfully instantiated CGAN object. Beginning training...')
 
-        # Train TODO: Runtime Error catching issue with CUDA?
+        # Train
         CGAN.train_gan(num_epochs=num_epochs,
                        print_freq=cs.IMAGE_DEFAULT_PRINT_FREQ,
                        eval_freq=cs.IMAGE_DEFAULT_EVAL_FREQ,
