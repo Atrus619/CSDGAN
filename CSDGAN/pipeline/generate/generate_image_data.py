@@ -47,7 +47,7 @@ def generate_image_data(run_id, username, title, aug=None):
             logger.info('Successfully loaded in CGAN. Generating data...')
 
         # Generate and output data
-        folder_name = title + '' if aug is None else ' Additional Data ' + str(aug)
+        folder_name = title + ('' if aug is None else ' Additional Data ' + str(aug))
         output_path = os.path.join(cs.OUTPUT_FOLDER, username, folder_name)
         uu.safe_mkdir(output_path)
 
