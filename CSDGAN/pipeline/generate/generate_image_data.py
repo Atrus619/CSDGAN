@@ -49,12 +49,12 @@ def generate_image_data(run_id, username, title, aug=None):
         # Generate and output data
         folder_name = title + ('' if aug is None else ' Additional Data ' + str(aug))
         output_path = os.path.join(cs.OUTPUT_FOLDER, username, folder_name)
-        uu.safe_mkdir(output_path)
+        os.makedirs(output_path, exist_ok=True)
 
         for i, (dep_class, size) in enumerate(gen_dict.items()):
             if size > 0:
                 class_path = os.path.join(output_path, dep_class)
-                uu.safe_mkdir(class_path)
+                os.makedirs(class_path, exist_ok=True)
                 stratify = np.eye(CGAN.nc)[i]
                 CGAN.gen_data(size=size, path=class_path, stratify=stratify, label=dep_class)
 

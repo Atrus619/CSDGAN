@@ -73,15 +73,14 @@ def preprocess_imported_dataset(path, import_gen, splits=None, x_dim=None):
     dataset_map.set_index(keys=['id', 'label'], inplace=True)
 
     # Set up paths for image folder
-    uu.safe_mkdir(path)
-    uu.safe_mkdir(os.path.join(path, "train"))
-    uu.safe_mkdir(os.path.join(path, "val"))
-    uu.safe_mkdir(os.path.join(path, "test"))
+    os.makedirs(os.path.join(path, "train"), exist_ok=True)
+    os.makedirs(os.path.join(path, "val"), exist_ok=True)
+    os.makedirs(os.path.join(path, "test"), exist_ok=True)
 
     for label in labels:
-        uu.safe_mkdir(os.path.join(path, "train", label))
-        uu.safe_mkdir(os.path.join(path, "val", label))
-        uu.safe_mkdir(os.path.join(path, "test", label))
+        os.makedirs(os.path.join(path, "train", label), exist_ok=True)
+        os.makedirs(os.path.join(path, "val", label), exist_ok=True)
+        os.makedirs(os.path.join(path, "test", label), exist_ok=True)
 
     _, le, ohe = uu.encode_y(labels)
 
@@ -153,10 +152,10 @@ def find_first_img_dim(import_gen):
 
 def find_first_img_num_channels(import_gen):
     """
-        Loads in the first image in a provided data set and returns its number of channels
-        Intentionally returns on first iteration of the loop
-        :param import_gen: PyTorch DataLoader utilizing ImageFolderWithPaths for its dataset
-        :return: dimensions of image
-        """
+    Loads in the first image in a provided data set and returns its number of channels
+    Intentionally returns on first iteration of the loop
+    :param import_gen: PyTorch DataLoader utilizing ImageFolderWithPaths for its dataset
+    :return: dimensions of image
+    """
     for x, _, _ in import_gen:
         return x[0].shape[0]

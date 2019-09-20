@@ -84,6 +84,7 @@ class NetUtils:
         for layer in self.layer_list:
             self.histogram_weight_history[layer]['weight'].append(np.histogram(layer.weight.detach().cpu().numpy().reshape(-1), bins=self.bins))
             self.histogram_weight_history[layer]['bias'].append(np.histogram(layer.bias.detach().cpu().numpy().reshape(-1), bins=self.bins))
+
             if self.epoch == 0:  # Model is untrained; no gradients exist yet
                 self.histogram_gradient_history[layer]['weight'].append(None)
                 self.histogram_gradient_history[layer]['bias'].append(None)
@@ -104,10 +105,12 @@ class NetUtils:
             b_norm = np.linalg.norm(self.streaming_weight_history[layer]['bias'], self.norm_num)
             self.wnorm_history[layer]['weight'].append(w_norm)
             self.wnorm_history[layer]['bias'].append(b_norm)
+
             if self.norm_num == 1:
                 total_norm += abs(w_norm) + abs(b_norm)
             else:
                 total_norm += w_norm ** self.norm_num + b_norm ** self.norm_num
+
         total_norm = total_norm ** (1. / self.norm_num)
         self.wnorm_total_history.append(total_norm)
 
@@ -140,6 +143,7 @@ class NetUtils:
         for layer_name in self._modules:
             m = self._modules[layer_name]
             classname = m.__class__.__name__
+
             if classname.find('Linear') != -1:
                 nn.init.normal_(m.weight.data, 0.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
@@ -185,7 +189,7 @@ class NetUtils:
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            uu.safe_mkdir(save + '/layer_scatters')
+            os.makedirs(os.path.join(save, 'layer_scatters'), exist_ok=True)
             f.savefig(save + '/layer_scatters/' + self.name + '_layer_scatter.png')
 
     def plot_layer_hists(self, epoch=None, figsize=(20, 10), show=True, save=None):
@@ -234,8 +238,8 @@ class NetUtils:
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            uu.safe_mkdir(save + '/layer_histograms')
-            f.savefig(save + '/layer_histograms/' + self.name + '_epoch_' + str(epoch) + '_layer_histograms.png')
+            os.makedirs(os.path.join(save, 'layer_histograms'), exist_ok=True)
+            f.savefig(os.path.join(save, 'layer_histograms', self.name + '_epoch_' + str(epoch) + '_layer_histograms.png'))
 
     def build_hist_gif(self, path=None):
         """
@@ -258,7 +262,7 @@ class NetUtils:
                 for i in range(20):
                     ims.append(imageio.imread(img_name))
                     plt.close()
-        imageio.mimsave(path + '/' + self.name + '_histogram_generation_animation.gif', ims, fps=2)
+        imageio.mimsave(os.path.join(path, self.name + '_histogram_generation_animation.gif'), ims, fps=2)
 
     @torch.utils.hooks.unserializable_hook
     def activations_hook(self, grad):
@@ -297,9 +301,11 @@ class CustomCatGANLayer(nn.Module):
         super().__init__()
         # Softmax activation
         self.sm = nn.Softmax(dim=-2)
+
         # Masks
         self.cat = torch.Tensor(cat_mask).nonzero()
         self.cont = torch.Tensor(~cat_mask).nonzero()
+
         # Label encoding dictionary
         self.le_dict = le_dict
 

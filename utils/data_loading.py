@@ -3,7 +3,7 @@ import torchvision
 import os
 import pandas as pd
 import zipfile
-from utils.utils import safe_mkdir, safe_dl
+from utils.utils import safe_dl
 import pickle as pkl
 import torch
 
@@ -12,9 +12,8 @@ VALID_NAMES = {'iris', 'wine', 'titanic', 'lanl', 'MNIST', 'FashionMNIST'}
 
 def prep_path(path):
     """Helper function to utilize safe_mkdir to safely create necessary directories for downloading data"""
-    safe_mkdir(path)
-    safe_mkdir(path + '/processed')
-    safe_mkdir(path + '/raw')
+    os.makedirs(os.path.join(path, 'processed'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'raw'), exist_ok=True)
 
 
 def load_raw_dataset(name):
@@ -27,7 +26,7 @@ def load_raw_dataset(name):
     """
     assert name in VALID_NAMES, 'Invalid data set requested. Please make sure name is one of ' + ', '.join(VALID_NAMES) + '.'
 
-    safe_mkdir('downloads')
+    os.makedirs('downloads', exist_ok=True)
     kaggle.api.authenticate()
     path = os.path.join('downloads', name)
     path_raw = os.path.join(path, 'raw')

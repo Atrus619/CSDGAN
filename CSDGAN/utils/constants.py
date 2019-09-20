@@ -86,7 +86,9 @@ IMAGE_MAX_NUM_EPOCHS = 1000
 
 # App constants
 app = fake_create_app()
-DOCKERIZED = False
+DOCKERIZED = True
+TESTING = False
+DEBUG = False
 VOLUME = '/MyDataVolume' if DOCKERIZED else app.root_path
 UPLOAD_FOLDER = os.path.join(VOLUME, 'incoming_raw_data')
 RUN_FOLDER = os.path.join(VOLUME, 'runs')

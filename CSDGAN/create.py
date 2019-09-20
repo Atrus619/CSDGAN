@@ -60,7 +60,7 @@ def create():
                 session['run_id'] = run_id
 
                 # Save files
-                cu.safe_mkdir(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id)))  # Raw data gets saved to a folder titled with the run_id
+                os.makedirs(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id)), exist_ok=True)  # Raw data gets saved to a folder titled with the run_id
                 file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], str(run_id), filename))
 
                 # Update with data about run
@@ -182,7 +182,7 @@ def success():
             db.clean_run(run_id=session['run_id'])
             return redirect(url_for('index'))
 
-        cmd = 'redis-cli ping'  # Check to make sure redis server is up
+        cmd = 'redis-cli ' + ('-h redis-server ' if cs.DOCKERIZED else '') + 'ping'  # Check to make sure redis server is up
         if os.system(cmd) != 0:
             db.query_set_status(run_id=session['run_id'], status_id=cs.STATUS_DICT['Error'])
             e = 'Redis server is not set up to handle requests.'

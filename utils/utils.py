@@ -20,7 +20,10 @@ def fix_wd():
 
 
 def safe_mkdir(path):
-    """Create a directory if there isn't one already"""
+    """
+    Create a directory if there isn't one already
+    Deprecated in favor of os.makedirs(path, exist_ok=True)
+    """
     try:
         os.mkdir(path)
     except OSError:
@@ -99,8 +102,8 @@ def plot_scatter_matrix(df, cont_inputs, title, scaler=None, show=True, save=Non
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."
-        safe_mkdir(save + '/scatter_matrices')
-        plt.savefig(save + '/scatter_matrices/' + title + '_scatter_matrix.png')
+        os.makedirs(os.path.join(save, 'scatter_matrices'), exist_ok=True)
+        plt.savefig(os.path.join(save, 'scatter_matrices', title + '_scatter_matrix.png'))
 
 
 def plot_conditional_scatter(col1, col2, real_df, fake_df, dep_var, cont_inputs, labels_list, scaler=None, alpha=1.0, show=True, save=None):
@@ -156,8 +159,8 @@ def plot_conditional_scatter(col1, col2, real_df, fake_df, dep_var, cont_inputs,
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."
-        safe_mkdir(save + '/conditional_scatters')
-        f.savefig(save + '/conditional_scatters/' + col1 + '_vs_' + col2 + '_conditional_scatter.png')
+        os.makedirs(os.path.join(save, 'conditional_scatters'), exist_ok=True)
+        f.savefig(os.path.join(save, 'conditional_scatters', col1 + '_vs_' + col2 + '_conditional_scatter.png'))
 
 
 def plot_conditional_density(col, real_df, fake_df, dep_var, cont_inputs, labels_list, scaler=None, show=True, save=None):
@@ -206,8 +209,8 @@ def plot_conditional_density(col, real_df, fake_df, dep_var, cont_inputs, labels
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."
-        safe_mkdir(save + '/conditional_densities')
-        f.savefig(save + '/conditional_densities/' + col + '_conditional_density.png')
+        os.makedirs(os.path.join(save, 'conditional_densities'), exist_ok=True)
+        f.savefig(os.path.join(save, 'conditional_densities', col + '_conditional_density.png'))
 
 
 def scale_cont_inputs(arr, preprocessed_cat_mask, scaler=None):
@@ -297,8 +300,8 @@ def compare_cats(real_df, fake_df, x, y, hue, show=True, save=None):
 
     if save is not None:
         assert os.path.exists(save), "Check that the desired save path exists."
-        safe_mkdir(save + '/compare_cats')
-        f.savefig(save + '/compare_cats/' + x + '_' + hue + '_cat_comparison.png')
+        os.makedirs(os.path.join(save, 'compare_cats'), exist_ok=True)
+        f.savefig(os.path.join(save, 'compare_cats', x + '_' + hue + '_cat_comparison.png'))
 
 
 def train_val_test_split(x, y, splits, random_state=None):

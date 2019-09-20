@@ -217,8 +217,8 @@ class ImageNetE(nn.Module, NetUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            uu.safe_mkdir(save + '/conf_heatmaps')
-            plt.savefig(save + '/conf_heatmaps/' + title + '_conf_heatmap.png')
+            os.makedirs(os.path.join(save, 'conf_heatmaps'), exist_ok=True)
+            plt.savefig(os.path.join(save, 'conf_heatmaps', title + '_conf_heatmap.png'))
 
         return cm, cr
 

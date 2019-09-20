@@ -19,21 +19,24 @@ def allowed_file(filename):
 
 
 def safe_mkdir(path):
-    """Create a directory if there isn't one already"""
+    """
+    Create a directory if there isn't one already
+    Deprecated in favor of os.makedirs(path, exist_ok=True)
+    """
     try:
-        os.mkdir(path)
+        os.makedirs(path)
     except OSError:
         pass
 
 
 def new_run_mkdir(directory, username, title):
     """Initialize directories for a new run. Clears out prior uploads with same title."""
-    safe_mkdir(os.path.join(directory, username))
+    os.makedirs(os.path.join(directory, username), exist_ok=True)
     try:
         shutil.rmtree(os.path.join(directory, username, title))
     except OSError:
         pass
-    safe_mkdir(os.path.join(directory, username, title))
+    os.makedirs(os.path.join(directory, username, title), exist_ok=True)
     return os.path.join(directory, username, title)
 
 
@@ -177,7 +180,7 @@ def clean_filename(filename, replace=' '):
 def export_tabular_to_zip(df, username, title):
     """Exports a dataframe of generated data to an appropriate zip file"""
     full_path = os.path.join(cs.OUTPUT_FOLDER, username)
-    safe_mkdir(full_path)
+    os.makedirs(full_path, exist_ok=True)
     og_dir = os.getcwd()
     os.chdir(full_path)
     df.to_csv(title + '.txt', index=False)

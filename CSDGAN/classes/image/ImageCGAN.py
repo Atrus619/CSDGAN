@@ -278,7 +278,7 @@ class ImageCGAN(CGANUtils):
         if path is None:
             path = self.path
 
-        uu.safe_mkdir(path + "/imgs")
+        os.makedirs(os.path.join(path, "imgs"), exist_ok=True)
         ims = []
         for epoch, grid in enumerate(self.fixed_imgs):
             fig = plt.figure(figsize=(8, 8))
@@ -415,8 +415,8 @@ class ImageCGAN(CGANUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            uu.safe_mkdir(save + '/troubleshoot_plots')
-            f.savefig(save + '/troubleshoot_plots/discriminator.png')
+            os.makedirs(os.path.join(save, 'troubleshoot_plots'), exist_ok=True)
+            f.savefig(os.path.join(save, 'troubleshoot_plots', 'discriminator.png'))
 
     def troubleshoot_evaluator(self, real_netE, show=True, save=None):
         """
@@ -466,8 +466,8 @@ class ImageCGAN(CGANUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            uu.safe_mkdir(save + '/troubleshoot_plots')
-            f.savefig(save + '/troubleshoot_plots/evaluator.png')
+            os.makedirs(os.path.join(save, 'troubleshoot_plots'), exist_ok=True)
+            f.savefig(os.path.join(save, 'troubleshoot_plots', 'evaluator.png'))
 
     def build_grid1_and_grid2(self, exit_early_iters=1000):
         """Generate images and feeds them to discriminator in order to find 10 examples of each class"""

@@ -15,11 +15,11 @@ class CGANUtils:
         pass
 
     def init_paths(self):
-        uu.safe_mkdir(self.path)
+        os.makedirs(self.path, exist_ok=True)
         stored_gen_path = os.path.join(self.path, "stored_generators")
         if os.path.exists(stored_gen_path):
             shutil.rmtree(stored_gen_path)
-        uu.safe_mkdir(stored_gen_path)
+        os.makedirs(stored_gen_path, exist_ok=True)
 
     def train_one_step(self, x_train, y_train):
         """One full step of the CGAN training process"""
@@ -156,7 +156,7 @@ class CGANUtils:
 
         title = net.name
 
-        uu.safe_mkdir(save + "/architectures")
-        viz.render(filename=save + "/architectures/" + title, view=show)
+        os.makedirs(os.path.join(save, "architectures"), exist_ok=True)
+        viz.render(filename=os.path.join(save, "architectures", title), view=show)
 
         return viz

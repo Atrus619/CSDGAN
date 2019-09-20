@@ -15,7 +15,7 @@ torch.manual_seed(cfg.MANUAL_SEED)
 
 # Ensure directory exists for outputs
 exp_path = os.path.join("experiments", cfg.EXPERIMENT_NAME)
-safe_mkdir(exp_path)
+os.makedirs(exp_path, exist_ok=True)
 
 # Import data
 titanic = load_processed_dataset('titanic')

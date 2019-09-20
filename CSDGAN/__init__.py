@@ -1,5 +1,4 @@
 import CSDGAN.utils.constants as cs
-from CSDGAN.utils.utils import safe_mkdir
 from config import Config
 from flask import Flask
 from redis import Redis
