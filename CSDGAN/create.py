@@ -159,7 +159,7 @@ def image():
 @bp.route('/specify_output', methods=('GET', 'POST'))
 @login_required
 def specify_output():
-    if session['format'] == 'tabular':
+    if session['format'] == 'Tabular':
         dep_choices = cu.parse_tabular_dep(run_id=session['run_id'], dep_var=session['dep_var'])
     else:  # Image
         dep_choices = session['dep_choices']

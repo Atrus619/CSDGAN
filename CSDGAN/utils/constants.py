@@ -1,6 +1,17 @@
 import os
 from CSDGAN.fake_create_app import fake_create_app
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(basedir, '.env'))
+
+except ModuleNotFoundError:
+    pass
+
+DOCKERIZED = int(os.environ.get('DOCKERIZED')) or 0
+
 TABULAR_MEM_THRESHOLD = 1024 ** 3 * 5  # Threshold for determining if entire tabular data set can be stored on GPU (significant speedup)
 
 # Evaluation parameters for tabular data sets
@@ -86,7 +97,7 @@ IMAGE_MAX_NUM_EPOCHS = 1000
 
 # App constants
 app = fake_create_app()
-DOCKERIZED = True
+
 TESTING = False
 DEBUG = False
 VOLUME = '/MyDataVolume' if DOCKERIZED else app.root_path

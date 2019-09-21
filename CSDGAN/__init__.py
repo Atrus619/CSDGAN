@@ -26,7 +26,7 @@ def create_app(config_class=Config):
         os.makedirs(cs.OUTPUT_FOLDER, exist_ok=True)
         os.makedirs(cs.UPLOAD_FOLDER, exist_ok=True)
     except PermissionError:
-        raise NameError('Please change DOCKERIZED to False in CSDGAN.utils.constants.py')
+        raise NameError('Please change DOCKERIZED to False in .env')
 
     from CSDGAN.utils import db
     db.init_app(app)

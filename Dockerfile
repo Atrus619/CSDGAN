@@ -20,7 +20,6 @@ ENV NVIDIA_VISIBLE_DEVICES all
 RUN python3 -m venv venv
 RUN venv/bin/pip install --upgrade pip setuptools wheel
 RUN venv/bin/pip install -r requirements.txt
-RUN venv/bin/pip install gunicorn pymysql
 
 # Copy over CSDGAN files
 COPY CSDGAN CSDGAN

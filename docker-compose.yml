@@ -18,11 +18,13 @@ services:
       - DB_PW=${DB_PW}
       - DB_HOST=${DB_NAME}
       - APP_NAME=${APP_NAME}
+      - DOCKERIZED=1
     links:
       - redis:redis-server
       - mysql:dbserver
     volumes:
       - MyDataVolume:/MyDataVolume
+    command: '${RELOAD}'
     image: ${APP_NAME}:latest #atrus619/${APP_NAME}:latest
     depends_on:
       - redis
@@ -38,6 +40,7 @@ services:
       - DB_PW=${DB_PW}
       - DB_HOST=${DB_NAME}
       - APP_NAME=${APP_NAME}
+      - DOCKERIZED=1
     links:
       - redis:redis-server
       - mysql:dbserver
