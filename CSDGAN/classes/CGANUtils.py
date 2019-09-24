@@ -1,3 +1,5 @@
+import CSDGAN.utils.constants as cs
+
 import shutil
 import re
 from torchviz import make_dot
@@ -107,7 +109,7 @@ class CGANUtils:
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            f.savefig(save + '/training_plot.png')
+            f.savefig(os.path.join(save, cs.FILENAME_TRAINING_PLOT))
 
     def find_best_epoch(self):
         def parse_epoch(x):

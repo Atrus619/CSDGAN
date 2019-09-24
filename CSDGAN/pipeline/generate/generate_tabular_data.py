@@ -37,8 +37,7 @@ def generate_tabular_data(run_id, username, title, aug=None):
         assert os.path.exists(gen_dict_path), "gen_dict object not found"
 
         # Load in CGAN and gen_dict
-        with open(os.path.join(run_dir, 'CGAN.pkl'), 'rb') as f:
-            CGAN = pkl.load(f)
+        CGAN = cu.get_CGAN(username=username, title=title)
 
         with open(gen_dict_path, 'rb') as f:
             gen_dict = pkl.load(f)

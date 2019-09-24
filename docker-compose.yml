@@ -25,7 +25,7 @@ services:
     volumes:
       - MyDataVolume:/MyDataVolume
     command: '${RELOAD}'
-    image: ${APP_NAME}:latest #atrus619/${APP_NAME}:latest
+    image: atrus619/${APP_NAME}:latest
     depends_on:
       - redis
       - mysql
@@ -48,7 +48,7 @@ services:
       - MyDataVolume:/MyDataVolume
     entrypoint:
       - venv/bin/rq
-    image: ${APP_NAME}:latest #atrus619/${APP_NAME}:latest
+    image: atrus619/${APP_NAME}:latest
     depends_on:
       - redis
       - mysql

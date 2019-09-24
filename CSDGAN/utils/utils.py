@@ -13,6 +13,11 @@ import pickle as pkl
 from collections import OrderedDict
 
 
+def get_CGAN(username, title):
+    with open(os.path.join(cs.RUN_FOLDER, username, title, 'CGAN.pkl'), 'rb') as f:
+        return pkl.load(f)
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in cs.ALLOWED_EXTENSIONS

@@ -127,3 +127,7 @@ STATUS_DICT = {'Not started': 1,
                'Early Exit': 98,
                'Error': 99,
                'Unavailable': 100}
+
+# Filenames
+VIZ_FOLDER = os.path.join(VOLUME, 'visualizations')
+FILENAME_TRAINING_PLOT = 'training_plot.png'
