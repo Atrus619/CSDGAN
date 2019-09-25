@@ -169,7 +169,7 @@ def query_get_job_ids(run_id):
         cursor.execute(
             'SELECT data_job_id, train_job_id, generate_job_id '
             'FROM run '
-            'WHERE id = %s', (run_id, )
+            'WHERE id = %s', (run_id,)
         )
         result = cursor.fetchone()
 
@@ -225,7 +225,7 @@ def query_delete_run(run_id):
         cursor.execute(
             'UPDATE run '
             'SET live = 0 '
-            'WHERE id = %s', (run_id, )
+            'WHERE id = %s', (run_id,)
         )
     db.commit()
 
@@ -250,14 +250,15 @@ def query_verify_live_run(run_id):
         cursor.execute(
             'SELECT live '
             'FROM run '
-            'WHERE id = %s', (run_id, )
+            'WHERE id = %s', (run_id,)
         )
         result = cursor.fetchone()
     db.close()
 
     if result[0] == 0:
         query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Early Exit'])
-        import sys; sys.exit()
+        import sys;
+        sys.exit()
 
 
 def query_username_title(run_id):
@@ -269,7 +270,7 @@ def query_username_title(run_id):
             'SELECT user.username, run.title '
             'FROM run '
             'INNER JOIN user on run.user_id = user.id '
-            'WHERE run.id = %s', (str(run_id), )
+            'WHERE run.id = %s', (str(run_id),)
         )
         result = cursor.fetchone()
 
@@ -293,7 +294,7 @@ def query_all_runs(user_id):
             'LEFT JOIN status_info on status.status_id = status_info.id '
             'WHERE run.user_id = %s and run.live = 1 '
             'ORDER BY run.start_time DESC',
-            (user_id, )
+            (user_id,)
         )
         result = cursor.fetchall()
 
@@ -315,7 +316,7 @@ def query_check_status(run_id):
             '   GROUP BY run_id '
             ') as b on a.run_id = b.run_id and a.status_id = b.status_id '
             'INNER JOIN status_info as c on a.status_id = c.id',
-            (run_id, )
+            (run_id,)
         )
         result = cursor.fetchone()
 
@@ -329,7 +330,7 @@ def query_check_username(username):
     with db.cursor(pymysql.cursors.DictCursor) as cursor:
         cursor.execute(
             'SELECT id FROM user WHERE username = %s',
-            (username, )
+            (username,)
         )
     result = cursor.fetchone()
 
@@ -387,6 +388,19 @@ def query_load_logged_in_user(user_id):
         result = cursor.fetchone()
 
     return result
+
+
+def query_update_benchmark(run_id, benchmark):
+    """Updates the benchmark in the run table"""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET benchmark = %s '
+            'WHERE id = %s', (str(benchmark), run_id)
+        )
+    db.commit()
 
 
 def clean_run(run_id, delete=True):

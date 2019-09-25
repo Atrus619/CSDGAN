@@ -1,6 +1,7 @@
 import CSDGAN.utils.constants as cs
 import CSDGAN.utils.db as db
 import CSDGAN.utils.utils as cu
+import utils.utils as uu
 from CSDGAN.classes.tabular.TabularCGAN import TabularCGAN
 
 import logging
@@ -22,8 +23,6 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
     logger = logging.getLogger('train_func')
 
     try:
-        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
-
         # Check for objects created by make_tabular_dataset.py
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
         assert os.path.exists(os.path.join(run_dir, 'dataset.pkl')), \
@@ -46,14 +45,27 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
                            seed=None,
                            eval_param_grid=cs.TABULAR_EVAL_PARAM_GRID,
                            eval_folds=cs.TABULAR_EVAL_FOLDS,
-                           test_ranges=[dataset.x_train.shape[0]*2**x for x in range(5)],
+                           test_ranges=[dataset.x_train.shape[0] * 2 ** x for x in range(5)],
                            eval_stratify=dataset.eval_stratify,
                            nc=len(dataset.labels_list),
                            **cs.TABULAR_CGAN_INIT_PARAMS)
 
-        logger.info('Successfully instantiated CGAN object. Beginning training...')
+        # Benchmark
+        logger.info('Successfully instantiated CGAN object. Beginning benchmarking...')
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Benchmarking'])
+        benchmark = uu.train_test_logistic_reg(x_train=CGAN.data_gen.dataset.x_train.cpu().detach().numpy(),
+                                               y_train=CGAN.data_gen.dataset.y_train.cpu().detach().numpy(),
+                                               x_test=CGAN.data_gen.dataset.x_test.cpu().detach().numpy(),
+                                               y_test=CGAN.data_gen.dataset.y_test.cpu().detach().numpy(),
+                                               param_grid=cs.TABULAR_EVAL_PARAM_GRID,
+                                               cv=cs.TABULAR_EVAL_FOLDS,
+                                               labels_list=dataset.labels_list,
+                                               verbose=False)
+        db.query_update_benchmark(run_id=run_id, benchmark=benchmark)
 
         # Train
+        logger.info('Successfully completed benchmark. Beginning training...')
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
         CGAN.train_gan(num_epochs=num_epochs,
                        cadence=cs.TABULAR_DEFAULT_CADENCE,
                        print_freq=cs.TABULAR_DEFAULT_PRINT_FREQ,
