@@ -130,16 +130,21 @@ STATUS_DICT = {'Not started': 1,
                'Error': 99,
                'Unavailable': 100}
 
-# Filenames
+# Visualizations
 VIZ_FOLDER = os.path.join(VOLUME, 'static', 'visualizations')
 FILENAME_TRAINING_PLOT = 'training_plot.png'
+FILENAME_PLOT_PROGRESS = 'training_progress.png'
 
-# Visualizations
 AVAILABLE_TABULAR_VIZ = [
     {
         'title': FILENAME_TRAINING_PLOT,
         'pretty_title': 'Training Plot',
         'description': 'training_plot_descr'
+    },
+    {
+        'title': FILENAME_PLOT_PROGRESS,
+        'pretty_title': 'Training Curve',
+        'description': 'Evaluation over training evaluations descr'
     }# ,
     # {
     #     'title': 'layer_scatters',
@@ -152,6 +157,11 @@ AVAILABLE_IMAGE_VIZ = [
         'title': FILENAME_TRAINING_PLOT,
         'pretty_title': 'Training Plot',
         'description': 'training_plot_descr'
+    },
+    {
+        'title': FILENAME_PLOT_PROGRESS,
+        'pretty_title': 'Training Curve',
+        'description': 'Evaluation over training evaluations descr'
     }# ,
     # {
     #     'title': 'layer_scatters',

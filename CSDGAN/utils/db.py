@@ -50,14 +50,9 @@ def init_db_command():
 @with_appcontext
 def clear_runs_command():
     """Delete all stored run files. Does not remove runs from database. Does not delete daily logs."""
-    shutil.rmtree(cs.UPLOAD_FOLDER)
-    os.makedirs(cs.UPLOAD_FOLDER)
-
-    shutil.rmtree(cs.RUN_FOLDER)
-    os.makedirs(cs.RUN_FOLDER)
-
-    shutil.rmtree(cs.OUTPUT_FOLDER)
-    os.makedirs(cs.OUTPUT_FOLDER)
+    for directory in [cs.UPLOAD_FOLDER, cs.RUN_FOLDER, cs.OUTPUT_FOLDER, cs.VIZ_FOLDER]:
+        shutil.rmtree(directory)
+        os.makedirs(directory)
 
     click.echo('Cleared runs.')
 
@@ -392,7 +387,10 @@ def query_load_logged_in_user(user_id):
 
 def query_update_benchmark(run_id, benchmark):
     """Updates the benchmark in the run table"""
-    db = get_db()
+    db = pymysql.connect(host=Config.MYSQL_DATABASE_HOST,
+                         user=Config.MYSQL_DATABASE_USER,
+                         password=Config.MYSQL_DATABASE_PASSWORD,
+                         db=Config.MYSQL_DATABASE_DB)
 
     with db.cursor() as cursor:
         cursor.execute(
@@ -401,6 +399,22 @@ def query_update_benchmark(run_id, benchmark):
             'WHERE id = %s', (str(benchmark), run_id)
         )
     db.commit()
+    db.close()
+
+
+def query_get_benchmark(run_id):
+    """Retrieves stored benchmark score using run_id"""
+    db = get_db()
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT benchmark '
+            'FROM run '
+            'WHERE id = %s', (run_id,)
+        )
+        result = cursor.fetchone()
+
+    return result['benchmark']
 
 
 def clean_run(run_id, delete=True):
@@ -409,15 +423,11 @@ def clean_run(run_id, delete=True):
     full_path = os.path.join(cs.RUN_FOLDER, username, title)
     raw_path = os.path.join(cs.UPLOAD_FOLDER, str(run_id))
     output_path = os.path.join(cs.OUTPUT_FOLDER, username, title + '.zip')
+    viz_path = os.path.join(cs.VIZ_FOLDER, username, title)
 
-    if os.path.exists(full_path):
-        shutil.rmtree(full_path)
-
-    if os.path.exists(raw_path):
-        shutil.rmtree(raw_path)
-
-    if os.path.exists(output_path):
-        os.remove(output_path)
+    for path in [full_path, raw_path, output_path, viz_path]:
+        if os.path.exists(path):
+            shutil.rmtree(path)
 
     if delete:
         query_delete_run(run_id=run_id)

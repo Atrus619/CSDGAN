@@ -25,16 +25,17 @@ def viz():
     runs = db.query_all_runs(user_id=session['user_id'])
     session['format'] = runs[int(request.form['index']) - 1]['format']
     session['title'] = runs[int(request.form['index']) - 1]['title']
+    session['run_id'] = runs[int(request.form['index']) - 1]['id']
     session['available_viz'] = cs.AVAILABLE_TABULAR_VIZ if session['format'] == 'Tabular' else cs.AVAILABLE_IMAGE_VIZ
     if request.method == 'POST':
         pass
     return render_template('viz/viz.html', available_viz=session['available_viz'], title=session['title'])
 
-# TODO: Return here and work on getting image to show!
+
 @bp.route('/show_image/<img_key>', methods=('GET', 'POST'))
 @login_required
 def show_img(img_key):
-    mv.build_img(img_key=img_key, username=g.user['username'], title=session['title'])
+    mv.build_img(img_key=img_key, username=g.user['username'], title=session['title'], run_id=session['run_id'])
     if request.method == 'POST':
         if 'back' in request.form.keys():
             return render_template('viz/viz.html', available_viz=session['available_viz'], title=session['title'])

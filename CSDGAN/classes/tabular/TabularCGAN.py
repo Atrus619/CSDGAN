@@ -291,6 +291,7 @@ class TabularCGAN(CGANUtils):
 
         plt.xlabel('Evaluation', fontweight='bold')
         plt.xticks([r + barWidth for r in range(length)], list(range(1, length + 1)))
+        plt.tick_params(axis='x', which='major', labelsize=6)
         plt.ylabel('Accuracy (%)', fontweight='bold')
         plt.title('Evaluation Over Training Evaluations', fontweight='bold')
 
@@ -299,7 +300,7 @@ class TabularCGAN(CGANUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            plt.savefig(save + '/training_progress.png')
+            plt.savefig(os.path.join(save, cs.FILENAME_PLOT_PROGRESS), bbox_inches='tight', dpi=100)
 
     def gen_data(self, size, stratify=None):
         """Generates a data set formatted like the original data"""

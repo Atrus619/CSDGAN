@@ -361,7 +361,7 @@ class ImageCGAN(CGANUtils):
 
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
-            plt.savefig(save + '/training_progress.png')
+            plt.savefig(os.path.join(save, cs.FILENAME_PLOT_PROGRESS))
 
     def troubleshoot_discriminator(self, exit_early_iters=1000, gen=None, show=True, save=None):
         """
