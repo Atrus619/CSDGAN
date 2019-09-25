@@ -21,8 +21,6 @@ def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels)
     logger = logging.getLogger('train_func')
 
     try:
-        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
-
         # Check for objects created by make_image_dataset.py
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
         exp_obj_list = ['le.pkl', 'ohe.pkl', 'train_gen.pkl', 'val_gen.pkl', 'test_gen.pkl']
@@ -59,9 +57,21 @@ def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels)
                          fake_bs=bs,
                          **cs.IMAGE_CGAN_INIT_PARAMS)
 
-        logger.info('Successfully instantiated CGAN object. Beginning training...')
+        # Benchmark and store
+        logger.info('Successfully instantiated CGAN object. Beginning benchmarking...')
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Benchmarking'])
+
+        benchmark, real_netE = CGAN.eval_on_real_data(num_epochs=cs.IMAGE_CGAN_INIT_PARAMS['eval_num_epochs'],
+                                                      es=cs.IMAGE_CGAN_INIT_PARAMS['early_stopping_patience'])
+
+        db.query_update_benchmark(run_id=run_id, benchmark=benchmark)
+
+        with open(os.path.join(run_dir, 'real_netE.pkl'), 'wb') as f:
+            pkl.dump(real_netE, f)
 
         # Train
+        logger.info('Successfully completed benchmark. Beginning training...')
+        db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
         CGAN.train_gan(num_epochs=num_epochs,
                        print_freq=cs.IMAGE_DEFAULT_PRINT_FREQ,
                        eval_freq=cs.IMAGE_DEFAULT_EVAL_FREQ,

@@ -50,7 +50,7 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
                            nc=len(dataset.labels_list),
                            **cs.TABULAR_CGAN_INIT_PARAMS)
 
-        # Benchmark
+        # Benchmark and store
         logger.info('Successfully instantiated CGAN object. Beginning benchmarking...')
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Benchmarking'])
         benchmark = uu.train_test_logistic_reg(x_train=CGAN.data_gen.dataset.x_train.cpu().detach().numpy(),
