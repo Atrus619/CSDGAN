@@ -47,6 +47,10 @@ function refresh_status(index){
 
             $( "#gen_more_data_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
             $( "#gen_more_data_button" + index + " button" ).replaceWith('<button type="submit"  name="index" value="' + index + '" class="link-button">Generate More Data</button>');
+
+			$( "#visualize_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
+            $( "#visualize_button" + index + " button" ).replaceWith('<button type="submit"  name="index" value="' + index + '" class="link-button">See Visualizations</button>');
+
         }
     });
 }

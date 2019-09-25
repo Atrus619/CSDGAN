@@ -1,5 +1,6 @@
 html { font-family: sans-serif; background: #eee; padding: 1rem; }
 body { max-width: 960px; margin: 0 auto; background: white; }
+img { max-width: 100%; height: auto; }
 a, h1, h2 { color: #377ba8; }
 h1, h2 { font-family: serif; margin 1rem 0; }
 h1 { font-size: xx-large; }

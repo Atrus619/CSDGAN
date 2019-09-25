@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+
+<h2>Available Visualizations</h2>
+
+<table border="1" class="dataframe" id="viz_table">
+    <thead>
+    <tr style="text-align: right;">
+        <th>Name</th>
+        <th>Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for viz in available_viz %}
+    <tr id="{{ loop.index }}">
+        <td id="viz_button{{ viz.title }}">
+            <a href="{{ url_for('viz.show_img', img_key = viz.title) }}">{{ viz.pretty_title }}</a>
+        </td>
+        <td>{{ viz.description }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

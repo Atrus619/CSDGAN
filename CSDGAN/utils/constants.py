@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from CSDGAN.fake_create_app import fake_create_app
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -10,7 +11,7 @@ try:
 except ModuleNotFoundError:
     pass
 
-DOCKERIZED = int(os.environ.get('DOCKERIZED')) or 0
+DOCKERIZED = int(os.environ.get('DOCKERIZED')) if os.environ.get('DOCKERIZED') is not None else 0
 
 TABULAR_MEM_THRESHOLD = 1024 ** 3 * 5  # Threshold for determining if entire tabular data set can be stored on GPU (significant speedup)
 
@@ -129,5 +130,31 @@ STATUS_DICT = {'Not started': 1,
                'Unavailable': 100}
 
 # Filenames
-VIZ_FOLDER = os.path.join(VOLUME, 'visualizations')
+VIZ_FOLDER = os.path.join(VOLUME, 'static', 'visualizations')
 FILENAME_TRAINING_PLOT = 'training_plot.png'
+
+# Visualizations
+AVAILABLE_TABULAR_VIZ = [
+    {
+        'title': FILENAME_TRAINING_PLOT,
+        'pretty_title': 'Training Plot',
+        'description': 'training_plot_descr'
+    }# ,
+    # {
+    #     'title': 'layer_scatters',
+    #     'pretty_title': 'Layer Scatters',
+    #     'description': 'layer_scatters_descr'
+    # }
+]
+AVAILABLE_IMAGE_VIZ = [
+    {
+        'title': FILENAME_TRAINING_PLOT,
+        'pretty_title': 'Training Plot',
+        'description': 'training_plot_descr'
+    }# ,
+    # {
+    #     'title': 'layer_scatters',
+    #     'pretty_title': 'Layer Scatters',
+    #     'description': 'layer_scatters_descr'
+    # }
+]

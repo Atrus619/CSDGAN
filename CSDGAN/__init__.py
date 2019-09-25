@@ -40,6 +40,9 @@ def create_app(config_class=Config):
     from . import create
     app.register_blueprint(create.bp)
 
+    from . import viz
+    app.register_blueprint(viz.bp)
+
     from . import home
     app.register_blueprint(home.bp)
     app.add_url_rule('/', endpoint='index')
