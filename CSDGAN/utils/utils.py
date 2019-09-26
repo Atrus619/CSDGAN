@@ -23,6 +23,10 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in cs.ALLOWED_EXTENSIONS
 
 
+def translate_filepath(path):
+    return path.replace("|", "/")
+
+
 def safe_mkdir(path):
     """
     Create a directory if there isn't one already
@@ -184,7 +188,7 @@ def clean_filename(filename, replace=' '):
 
 def export_tabular_to_zip(df, username, title):
     """Exports a dataframe of generated data to an appropriate zip file"""
-    full_path = os.path.join(cs.OUTPUT_FOLDER, username)
+    full_path = os.path.join(cs.OUTPUT_FOLDER, username, title)
     os.makedirs(full_path, exist_ok=True)
     og_dir = os.getcwd()
     os.chdir(full_path)

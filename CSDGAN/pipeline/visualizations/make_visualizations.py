@@ -11,6 +11,10 @@ def build_img(img_key, username, title, run_id):
     if img_key == cs.FILENAME_TRAINING_PLOT:
         CGAN.plot_training_plots(show=False, save=viz_folder)
     elif img_key == cs.FILENAME_PLOT_PROGRESS:
+        import matplotlib; matplotlib.use('Agg')
         benchmark_acc = db.query_get_benchmark(run_id=run_id)
         CGAN.plot_progress(benchmark_acc=benchmark_acc, show=False, save=viz_folder)
-
+    elif img_key == cs.FILENAME_netG_LAYER_SCATTERS:
+        CGAN.netG.plot_layer_scatters(show=False, save=viz_folder)
+    elif img_key == cs.FILENAME_netD_LAYER_SCATTERS:
+        CGAN.netD.plot_layer_scatters(show=False, save=viz_folder)

@@ -47,5 +47,5 @@ def show_img(img_key):
 @bp.route('/images/<img_key>')
 @login_required
 def images(img_key):
-    plot_path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], img_key)
+    plot_path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], cu.translate_filepath(img_key))
     return send_file(plot_path, mimetype='image/png')

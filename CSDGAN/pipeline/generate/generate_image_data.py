@@ -46,7 +46,7 @@ def generate_image_data(run_id, username, title, aug=None):
 
         # Generate and output data
         folder_name = title + ('' if aug is None else ' Additional Data ' + str(aug))
-        output_path = os.path.join(cs.OUTPUT_FOLDER, username, folder_name)
+        output_path = os.path.join(cs.OUTPUT_FOLDER, username, title, folder_name)
         os.makedirs(output_path, exist_ok=True)
 
         for i, (dep_class, size) in enumerate(gen_dict.items()):

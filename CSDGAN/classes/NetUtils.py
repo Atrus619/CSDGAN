@@ -190,7 +190,7 @@ class NetUtils:
         if save:
             assert os.path.exists(save), "Check that the desired save path exists."
             os.makedirs(os.path.join(save, 'layer_scatters'), exist_ok=True)
-            f.savefig(save + '/layer_scatters/' + self.name + '_layer_scatter.png')
+            f.savefig(os.path.join(save, 'layer_scatters', self.name + '_layer_scatters.png'))
 
     def plot_layer_hists(self, epoch=None, figsize=(20, 10), show=True, save=None):
         """Plots histograms of weight and gradients for each layer in layer_list at the desired epoch"""

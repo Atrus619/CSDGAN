@@ -422,7 +422,7 @@ def clean_run(run_id, delete=True):
     username, title = query_username_title(run_id=run_id)
     full_path = os.path.join(cs.RUN_FOLDER, username, title)
     raw_path = os.path.join(cs.UPLOAD_FOLDER, str(run_id))
-    output_path = os.path.join(cs.OUTPUT_FOLDER, username, title + '.zip')
+    output_path = os.path.join(cs.OUTPUT_FOLDER, username, title)
     viz_path = os.path.join(cs.VIZ_FOLDER, username, title)
 
     for path in [full_path, raw_path, output_path, viz_path]:
@@ -458,7 +458,7 @@ def parse_sql(filename):
             DELIMITER = line.split()[1]
             continue
 
-        if (DELIMITER not in line):
+        if DELIMITER not in line:
             stmt += line.replace(DELIMITER, ';')
             continue
 

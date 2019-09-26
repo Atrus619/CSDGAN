@@ -134,6 +134,8 @@ STATUS_DICT = {'Not started': 1,
 VIZ_FOLDER = os.path.join(VOLUME, 'static', 'visualizations')
 FILENAME_TRAINING_PLOT = 'training_plot.png'
 FILENAME_PLOT_PROGRESS = 'training_progress.png'
+FILENAME_netG_LAYER_SCATTERS = 'layer_scatters|Generator_layer_scatters.png'
+FILENAME_netD_LAYER_SCATTERS = 'layer_scatters|Discriminator_layer_scatters.png'
 
 AVAILABLE_TABULAR_VIZ = [
     {
@@ -145,12 +147,17 @@ AVAILABLE_TABULAR_VIZ = [
         'title': FILENAME_PLOT_PROGRESS,
         'pretty_title': 'Training Curve',
         'description': 'Evaluation over training evaluations descr'
-    }# ,
-    # {
-    #     'title': 'layer_scatters',
-    #     'pretty_title': 'Layer Scatters',
-    #     'description': 'layer_scatters_descr'
-    # }
+    },
+    {
+        'title': FILENAME_netG_LAYER_SCATTERS,
+        'pretty_title': 'Generator Network Layer Scatter Plots',
+        'description': 'netG_layer_scatters_descr'
+    },
+    {
+        'title': FILENAME_netD_LAYER_SCATTERS,
+        'pretty_title': 'Discriminator Network Layer Scatter Plots',
+        'description': 'netD_layer_scatters_descr'
+    }
 ]
 AVAILABLE_IMAGE_VIZ = [
     {
@@ -162,10 +169,15 @@ AVAILABLE_IMAGE_VIZ = [
         'title': FILENAME_PLOT_PROGRESS,
         'pretty_title': 'Training Curve',
         'description': 'Evaluation over training evaluations descr'
-    }# ,
-    # {
-    #     'title': 'layer_scatters',
-    #     'pretty_title': 'Layer Scatters',
-    #     'description': 'layer_scatters_descr'
-    # }
+    },
+    {
+        'title': FILENAME_netG_LAYER_SCATTERS,
+        'pretty_title': 'Generator Network Layer Scatter Plots',
+        'description': 'netG_layer_scatters_descr'
+    },
+    {
+        'title': FILENAME_netD_LAYER_SCATTERS,
+        'pretty_title': 'Discriminator Network Layer Scatter Plots',
+        'description': 'netD_layer_scatters_descr'
+    }
 ]
