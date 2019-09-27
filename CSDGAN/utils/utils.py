@@ -18,6 +18,11 @@ def get_CGAN(username, title):
         return pkl.load(f)
 
 
+def get_max_epoch(username, title):
+    CGAN = get_CGAN(username, title)
+    return CGAN.epoch
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in cs.ALLOWED_EXTENSIONS

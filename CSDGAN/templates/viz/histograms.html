@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Generate Histograms at Specified Epoch</h2>
+
+    <p><i>
+        Please specify the epoch for which you would like to generate a snapshot histogram. The maximum epoch
+        on record is {{ max_epoch }}. Please select an integer value between 0 and {{ max_epoch }}.
+    </i></p>
+    <input name="epoch" id="epoch" type="number" min="0" max="{{ max_epoch }}" value="{{ max_epoch }}">
+    <p><i>
+        Please specify whether you are interested in generating histograms for the Generator or Discriminator network.
+    </i></p>
+    <input type="radio" name="net" id="net" value="Generator">Generator</input><br>
+    <input type="radio" name="net" id="net" value="Discriminator">Discriminator</input><br>
+    <br>
+    <input type="submit" value="Download">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}
