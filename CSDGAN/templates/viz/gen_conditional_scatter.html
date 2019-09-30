@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Generate Conditional Scatter Plots for Generated and Real Data</h2>
+
+    <p><i>
+        Please specify the size of the data set to generate in order to produce the conditional scatter plots.
+    </i></p>
+    <input name="n" id="n" type="number" min="0" max="{{ genned_size_limit }}" value="{{ request.form['n'] }}" required>
+    <hr><br>
+
+    <p><i>
+        Please select the first of two continuous features to compare. Only the first selected value will be used.
+    </i></p>
+    <select name="col1" multiple size="5">
+        {% for cont_col in cont_cols %}
+        <option value="{{ cont_col }}">{{ cont_col }}</option>
+        {% endfor %}
+    </select>
+    <hr><br>
+
+    <p><i>
+        Please select the second of two continuous features to compare. Only the first selected value will be used.
+    </i></p>
+    <select name="col2" multiple size="5">
+        {% for cont_col in cont_cols %}
+        <option value="{{ cont_col }}">{{ cont_col }}</option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <input type="submit" name="generate" value="Generate">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}

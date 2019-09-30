@@ -139,6 +139,8 @@ FILENAME_netD_LAYER_SCATTERS = 'layer_scatters|Discriminator_layer_scatters.png'
 FILENAME_HIST_SCATTERS = 'layer_histograms|{net}_epoch_{num}_layer_histograms.png'
 FILENAME_SCATTER_MATRIX = 'scatter_matrices|{title}_scatter_matrix.png'
 FILENAME_COMPARE_CATS = 'compare_cats|{x}_{hue}_cat_comparison.png'
+FILENAME_CONDITIONAL_SCATTER = 'conditional_scatters|{col1}_vs_{col2}_conditional_scatter.png'
+FILENAME_CONDITIONAL_DENSITY = 'conditional_densities|{col1}_conditional_density.png'
 MAX_GENNED_DATA_SET_SIZE = 1e6
 
 AVAILABLE_BASIC_VIZ = [
@@ -187,9 +189,21 @@ AVAILABLE_TABULAR_VIZ['compare_cats'] = {
         'description': 'INSERT_DESCRIPTION_HERE',
         'url_func': 'viz.gen_compare_cats'
 }
+AVAILABLE_TABULAR_VIZ['conditional_scatter'] = {
+        'title': FILENAME_CONDITIONAL_SCATTER,
+        'pretty_title': 'Conditional Scatter Plot of Generated vs. Real Data',
+        'description': 'INSERT_DESCRIPTION_HERE',
+        'url_func': 'viz.gen_conditional_scatter'
+}
+# AVAILABLE_TABULAR_VIZ['conditional_density'] = {
+#         'title': FILENAME_CONDITIONAL_DENSITY,
+#         'pretty_title': 'Conditional Density Plot of Generated vs. Real Data',
+#         'description': 'INSERT_DESCRIPTION_HERE',
+#         'url_func': 'viz.gen_conditional_density'
+# }
 
 AVAILABLE_IMAGE_VIZ = OrderedDict()
-AVAILABLE_IMAGE_VIZ['test'] = {
+AVAILABLE_IMAGE_VIZ['placeholder'] = {
     'title': None,
     'pretty_title': None,
     'description': None,

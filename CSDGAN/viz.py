@@ -161,3 +161,47 @@ def show_compare_cats():
 
     img_key = cs.FILENAME_COMPARE_CATS.replace('{x}', session['x']).replace('{hue}', session['hue'])
     return render_template('viz/show_compare_cats.html', title=session['title'], img_key=img_key)
+
+
+@bp.route('/gen_conditional_scatter', methods=('GET', 'POST'))
+@login_required
+def gen_conditional_scatter():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'generate' in request.form.keys():
+            error = None
+            if 'col1' not in request.form.keys():
+                error = 'Please select a first feature.'
+            elif 'col2' not in request.form.keys():
+                error = 'Please select a second feature.'
+            elif request.form['col1'] == request.form['col2']:
+                error = 'Please select two different features.'
+            if error:
+                flash(error)
+            else:
+                session['col1'] = request.form['col1']
+                session['col2'] = request.form['col2']
+                mv.build_conditional_scatter(size=request.form['n'], col1=session['col1'], col2=session['col2'],
+                                             username=g.user['username'], title=session['title'])
+                return redirect(url_for('viz.show_conditional_scatter'))
+
+    dataset = cu.get_dataset(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_conditional_scatter.html', title=session['title'], cont_cols=dataset.cont_inputs)
+
+
+@bp.route('/show_conditional_scatter', methods=('GET', 'POST'))
+@login_required
+def show_conditional_scatter():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            filename = cu.translate_filepath(cs.FILENAME_CONDITIONAL_SCATTER.replace('{col1}', session['col1']).replace('{col2}', session['col2']))
+            path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
+            return send_file(path, mimetype='image/png', as_attachment=True)
+
+    img_key = cs.FILENAME_CONDITIONAL_SCATTER.replace('{col1}', session['col1']).replace('{col2}', session['col2'])
+    return render_template('viz/show_conditional_scatter.html', title=session['title'], img_key=img_key)
