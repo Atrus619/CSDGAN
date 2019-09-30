@@ -6,7 +6,7 @@
 
 {% block content %}
 <form method=post>
-    <h2>Generate Conditional Scatter Plot for Generated and Real Data</h2>
+    <h2>Generate Conditional Density Plot for Generated and Real Data</h2>
 
     <p><i>
         Please specify the size of the data set to generate in order to produce the conditional scatter plot.
@@ -15,24 +15,13 @@
     <hr><br>
 
     <p><i>
-        Please select the first of two continuous features to compare. Only the first selected value will be used.
+        Please select the first continuous feature. Only the first selected value will be used.
     </i></p>
-    <select name="col1" multiple size="5">
+    <select name="col" multiple size="5">
         {% for cont_col in cont_cols %}
         <option value="{{ cont_col }}">{{ cont_col }}</option>
         {% endfor %}
     </select>
-    <hr><br>
-
-    <p><i>
-        Please select the second of two continuous features to compare. Only the first selected value will be used.
-    </i></p>
-    <select name="col2" multiple size="5">
-        {% for cont_col in cont_cols %}
-        <option value="{{ cont_col }}">{{ cont_col }}</option>
-        {% endfor %}
-    </select>
-
     <br><br>
 
     <input type="submit" name="generate" value="Generate">

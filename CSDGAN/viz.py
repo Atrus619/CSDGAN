@@ -205,3 +205,42 @@ def show_conditional_scatter():
 
     img_key = cs.FILENAME_CONDITIONAL_SCATTER.replace('{col1}', session['col1']).replace('{col2}', session['col2'])
     return render_template('viz/show_conditional_scatter.html', title=session['title'], img_key=img_key)
+
+
+@bp.route('/gen_conditional_density', methods=('GET', 'POST'))
+@login_required
+def gen_conditional_density():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'generate' in request.form.keys():
+            error = None
+            if 'col' not in request.form.keys():
+                error = 'Please select a feature.'
+            if error:
+                flash(error)
+            else:
+                session['col'] = request.form['col']
+                mv.build_conditional_density(size=request.form['n'], col=session['col'],
+                                             username=g.user['username'], title=session['title'])
+                return redirect(url_for('viz.show_conditional_density'))
+
+    dataset = cu.get_dataset(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_conditional_density.html', title=session['title'], cont_cols=dataset.cont_inputs)
+
+
+@bp.route('/show_conditional_density', methods=('GET', 'POST'))
+@login_required
+def show_conditional_density():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            filename = cu.translate_filepath(cs.FILENAME_CONDITIONAL_DENSITY.replace('{col}', session['col']))
+            path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
+            return send_file(path, mimetype='image/png', as_attachment=True)
+
+    img_key = cs.FILENAME_CONDITIONAL_DENSITY.replace('{col}', session['col'])
+    return render_template('viz/show_conditional_density.html', title=session['title'], img_key=img_key)

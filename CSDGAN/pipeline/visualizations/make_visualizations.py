@@ -104,3 +104,22 @@ def build_conditional_scatter(size, col1, col2, username, title):
     uu.plot_conditional_scatter(real_df=real_df, fake_df=genned_df, col1=col1, col2=col2, dep_var=dep_var,
                                 cont_inputs=cont_inputs, labels_list=labels_list, scaler=scaler, alpha=0.25,
                                 show=False, save=viz_folder)
+
+
+def build_conditional_density(size, col, username, title):
+    """Generates a conditional scatter plot for a tabular CGAN with a specified data set size, and 2 continuous features"""
+    size = int(size)
+    CGAN = cu.get_CGAN(username=username, title=title)
+    viz_folder = os.path.join(cs.VIZ_FOLDER, username, title)
+    os.makedirs(viz_folder, exist_ok=True)
+
+    genned_df = CGAN.gen_data(size=size, stratify=None)
+    real_df = CGAN.gen_og_data()
+    dep_var = CGAN.data_gen.dataset.dep_var
+    cont_inputs = CGAN.data_gen.dataset.cont_inputs
+    labels_list = CGAN.data_gen.dataset.labels_list
+    scaler = None  # Already handled when generating data
+
+    uu.plot_conditional_density(real_df=real_df, fake_df=genned_df, col=col, dep_var=dep_var,
+                                cont_inputs=cont_inputs, labels_list=labels_list, scaler=scaler,
+                                show=False, save=viz_folder)

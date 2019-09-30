@@ -140,7 +140,7 @@ FILENAME_HIST_SCATTERS = 'layer_histograms|{net}_epoch_{num}_layer_histograms.pn
 FILENAME_SCATTER_MATRIX = 'scatter_matrices|{title}_scatter_matrix.png'
 FILENAME_COMPARE_CATS = 'compare_cats|{x}_{hue}_cat_comparison.png'
 FILENAME_CONDITIONAL_SCATTER = 'conditional_scatters|{col1}_vs_{col2}_conditional_scatter.png'
-FILENAME_CONDITIONAL_DENSITY = 'conditional_densities|{col1}_conditional_density.png'
+FILENAME_CONDITIONAL_DENSITY = 'conditional_densities|{col}_conditional_density.png'
 MAX_GENNED_DATA_SET_SIZE = 1e6
 
 AVAILABLE_BASIC_VIZ = [
@@ -177,7 +177,7 @@ AVAILABLE_HIST_VIZ = [
 AVAILABLE_TABULAR_VIZ = OrderedDict()
 AVAILABLE_TABULAR_VIZ['scatter_matrix'] = {
         'title': FILENAME_SCATTER_MATRIX,
-        'pretty_title': 'Scatter Matrix of Generated vs. Real Data',
+        'pretty_title': 'Scatter Matrix',
         'description': 'INSERT_DESCRIPTION_HERE',
         'url_func': 'viz.gen_scatter_matrix',
         'fake_title': 'Fake Data',
@@ -185,22 +185,22 @@ AVAILABLE_TABULAR_VIZ['scatter_matrix'] = {
 }
 AVAILABLE_TABULAR_VIZ['compare_cats'] = {
         'title': FILENAME_COMPARE_CATS,
-        'pretty_title': 'Categorical Feature Comparison of Generated vs. Real Data',
+        'pretty_title': 'Categorical Feature Comparison',
         'description': 'INSERT_DESCRIPTION_HERE',
         'url_func': 'viz.gen_compare_cats'
 }
 AVAILABLE_TABULAR_VIZ['conditional_scatter'] = {
         'title': FILENAME_CONDITIONAL_SCATTER,
-        'pretty_title': 'Conditional Scatter Plot of Generated vs. Real Data',
+        'pretty_title': 'Conditional Scatter Plot',
         'description': 'INSERT_DESCRIPTION_HERE',
         'url_func': 'viz.gen_conditional_scatter'
 }
-# AVAILABLE_TABULAR_VIZ['conditional_density'] = {
-#         'title': FILENAME_CONDITIONAL_DENSITY,
-#         'pretty_title': 'Conditional Density Plot of Generated vs. Real Data',
-#         'description': 'INSERT_DESCRIPTION_HERE',
-#         'url_func': 'viz.gen_conditional_density'
-# }
+AVAILABLE_TABULAR_VIZ['conditional_density'] = {
+        'title': FILENAME_CONDITIONAL_DENSITY,
+        'pretty_title': 'Conditional Density Plot',
+        'description': 'INSERT_DESCRIPTION_HERE',
+        'url_func': 'viz.gen_conditional_density'
+}
 
 AVAILABLE_IMAGE_VIZ = OrderedDict()
 AVAILABLE_IMAGE_VIZ['placeholder'] = {
