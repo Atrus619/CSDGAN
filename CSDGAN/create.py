@@ -106,6 +106,7 @@ def tabular():
             flash(error)
         else:
             db.query_add_depvar(run_id=session['run_id'], depvar=dep_var)
+            db.query_add_cont_inputs(run_id=session['run_id'], cont_inputs=cont_inputs)
             session['dep_var'] = dep_var
             session['cont_inputs'] = cont_inputs
             session['int_inputs'] = int_inputs

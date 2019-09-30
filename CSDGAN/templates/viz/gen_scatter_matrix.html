@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Generate Scatter Matrices for Generated and Real Data</h2>
+
+    <p><i>
+        Please specify the size of the data set to generate in order to produce the scatter matrix.
+    </i></p>
+    <input name="n" id="n" type="number" min="0" max="{{ genned_size_limit }}" value="{{ request.form['n'] }}">
+    <br>
+    <input type="submit" name="generate" value="Generate">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}

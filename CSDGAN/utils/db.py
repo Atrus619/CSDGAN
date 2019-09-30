@@ -130,6 +130,36 @@ def query_add_depvar(run_id, depvar):
     db.commit()
 
 
+def query_add_cont_inputs(run_id, cont_inputs):
+    """Updates run table to include cont_inputs. Joins using a pipe delimiter."""
+    cont_inputs = '|'.join(cont_inputs)
+
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET cont_inputs = %s '
+            'WHERE id = %s', (cont_inputs, run_id)
+        )
+    db.commit()
+
+
+def query_get_cont_inputs(run_id):
+    """Retrieves cont_inputs from run based on run_id. Returns as a parsed list."""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'SELECT cont_inputs '
+            'FROM run '
+            'WHERE id = %s', (run_id,)
+        )
+        result = cursor.fetchone()
+
+    return result[0].split('|')
+
+
 def query_add_filesize(run_id, filesize):
     """Updates run table to include filesize"""
     db = get_db()

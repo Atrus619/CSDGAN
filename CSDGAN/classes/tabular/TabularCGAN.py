@@ -317,3 +317,20 @@ class TabularCGAN(CGANUtils):
                                                 cont_inputs=self.data_gen.dataset.cont_inputs,
                                                 int_inputs=self.data_gen.dataset.int_inputs)
         return genned_data_df
+
+    def gen_og_data(self):
+        """Rebuilds the original data set via the data_gen.dataset"""
+        data = np.concatenate((self.data_gen.dataset.x_train.cpu().numpy(), self.data_gen.dataset.x_test.cpu().numpy()), axis=0)
+        labels = np.concatenate((self.data_gen.dataset.y_train.cpu().numpy(), self.data_gen.dataset.y_test.cpu().numpy()), axis=0).argmax(axis=1)
+        data = self.reencode(data, self.data_gen.dataset.le_dict)
+        data_df = self.rev_ohe_le_scaler(data=data,
+                                         genned_labels=labels,
+                                         dep_var=self.data_gen.dataset.dep_var,
+                                         preprocessed_cat_mask=self.data_gen.dataset.preprocessed_cat_mask,
+                                         ohe=self.data_gen.dataset.ohe,
+                                         le_dict=self.data_gen.dataset.le_dict,
+                                         scaler=self.data_gen.dataset.scaler,
+                                         cat_inputs=self.data_gen.dataset.cat_inputs,
+                                         cont_inputs=self.data_gen.dataset.cont_inputs,
+                                         int_inputs=self.data_gen.dataset.int_inputs)
+        return data_df

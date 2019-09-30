@@ -19,6 +19,7 @@ create TABLE run (
   format VARCHAR(20) NOT NULL,
   filesize INTEGER,
   depvar VARCHAR(50),
+  cont_inputs VARCHAR(200),
   benchmark FLOAT DEFAULT NULL,
   num_augs INTEGER NOT NULL DEFAULT 0,
   live TINYINT(1) NOT NULL DEFAULT 1,

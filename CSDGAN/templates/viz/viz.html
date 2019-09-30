@@ -25,13 +25,32 @@
     </tr>
     {% endfor %}
     {% for viz in available_hist_viz %}
-    <tr id="{{ loop.index }} + {{available_basic_viz|length}}">
+    <tr id="{{ loop.index }} + {{ available_basic_viz|length }}">
         <td id="viz_button{{ viz.title }}">
             <a href="{{ url_for('viz.histograms') }}">{{ viz.pretty_title }}</a>
         </td>
         <td>{{ viz.description }}</td>
     </tr>
     {% endfor %}
+    {% if format == 'Tabular' %}
+        {% for viz in available_tabular_viz %}
+            <tr id="{{ loop.index }} + {{ available_basic_viz|length }} + {{ available_hist_viz|length }}">
+                <td id="viz_button{{ viz.title }}">
+                    <a href="{{ url_for(viz.url_func) }}">{{ viz.pretty_title }}</a>
+                </td>
+                <td>{{ viz.description }}</td>
+            </tr>
+        {% endfor %}
+<!--    {% elif format == 'Image' %}-->
+<!--        {% for viz in available_image_viz %}-->
+<!--            <tr id="{{ loop.index }} + {{ available_basic_viz|length }} + {{ available_hist_viz|length }}">-->
+<!--                <td id="viz_button{{ viz.title }}">-->
+<!--                    <a href="{{ url_for(viz.url_func) }}">{{ viz.pretty_title }}</a>-->
+<!--                </td>-->
+<!--                <td>{{ viz.description }}</td>-->
+<!--            </tr>-->
+<!--        {% endfor %}-->
+    {% endif %}
     </tbody>
 </table>
 

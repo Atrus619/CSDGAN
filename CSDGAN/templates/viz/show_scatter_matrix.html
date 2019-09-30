@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<h2>Generate Scatter Matrices for Generated and Real Data</h2>
+<img src="{{ url_for('viz.images', img_key = sm_fake) }}" alt="Placeholder Image">
+<img src="{{ url_for('viz.images', img_key = sm_real) }}" alt="Placeholder Image">
+<form method=post><input type="submit" name="download_fake" value="Download Fake Data Scatter Matrix"></form>
+<form method=post><input type="submit" name="download_real" value="Download Real Data Scatter Matrix"></form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}
