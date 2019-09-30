@@ -69,3 +69,19 @@ def build_scatter_matrices(size, username, title, run_id):
 
     uu.plot_scatter_matrix(df=genned_df, cont_inputs=cont_inputs, title=cs.AVAILABLE_TABULAR_VIZ['scatter_matrix']['fake_title'], show=False, save=viz_folder)
     uu.plot_scatter_matrix(df=real_df, cont_inputs=cont_inputs, title=cs.AVAILABLE_TABULAR_VIZ['scatter_matrix']['real_title'], show=False, save=viz_folder)
+
+
+def build_compare_cats(size, x, hue, username, title):
+    """
+    Generates categorical feature comparisons for a tabular CGAN with a specified data set size, and 2 categorical feature columns.
+    """
+    size = int(size)
+    CGAN = cu.get_CGAN(username=username, title=title)
+    viz_folder = os.path.join(cs.VIZ_FOLDER, username, title)
+    os.makedirs(viz_folder, exist_ok=True)
+
+    genned_df = CGAN.gen_data(size=size, stratify=None)
+    real_df = CGAN.gen_og_data()
+    dep_var = CGAN.data_gen.dataset.dep_var
+
+    uu.compare_cats(real_df=real_df, fake_df=genned_df, x=x, hue=hue, y=dep_var, show=False, save=viz_folder)

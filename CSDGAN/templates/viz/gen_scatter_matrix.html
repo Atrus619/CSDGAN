@@ -11,7 +11,7 @@
     <p><i>
         Please specify the size of the data set to generate in order to produce the scatter matrix.
     </i></p>
-    <input name="n" id="n" type="number" min="0" max="{{ genned_size_limit }}" value="{{ request.form['n'] }}">
+    <input name="n" id="n" type="number" min="0" max="{{ genned_size_limit }}" value="{{ request.form['n'] }}" required>
     <br>
     <input type="submit" name="generate" value="Generate">
 </form>

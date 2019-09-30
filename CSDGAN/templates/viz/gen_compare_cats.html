@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Generate Categorical Feature Comparisons for Generated and Real Data</h2>
+
+    <p><i>
+        Please specify the size of the data set to generate in order to produce the categorical feature comparison.
+    </i></p>
+    <input name="n" id="n" type="number" min="0" max="{{ genned_size_limit }}" value="{{ request.form['n'] }}" required>
+    <hr><br>
+
+    <p><i>
+        Please select the first of two categorical features to compare. Only the first selected value will be used.
+    </i></p>
+    <select name="x" multiple size="5">
+        {% for cat_col in cat_cols %}
+        <option value="{{ cat_col }}">{{ cat_col }}</option>
+        {% endfor %}
+    </select>
+    <hr><br>
+
+    <p><i>
+        Please select the second of two categorical features to compare. Only the first selected value will be used.
+    </i></p>
+    <select name="hue" multiple size="5">
+        {% for cat_col in cat_cols %}
+        <option value="{{ cat_col }}">{{ cat_col }}</option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <input type="submit" name="generate" value="Generate">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}

@@ -138,6 +138,7 @@ FILENAME_netG_LAYER_SCATTERS = 'layer_scatters|Generator_layer_scatters.png'
 FILENAME_netD_LAYER_SCATTERS = 'layer_scatters|Discriminator_layer_scatters.png'
 FILENAME_HIST_SCATTERS = 'layer_histograms|{net}_epoch_{num}_layer_histograms.png'
 FILENAME_SCATTER_MATRIX = 'scatter_matrices|{title}_scatter_matrix.png'
+FILENAME_COMPARE_CATS = 'compare_cats|{x}_{hue}_cat_comparison.png'
 MAX_GENNED_DATA_SET_SIZE = 1e6
 
 AVAILABLE_BASIC_VIZ = [
@@ -174,11 +175,17 @@ AVAILABLE_HIST_VIZ = [
 AVAILABLE_TABULAR_VIZ = OrderedDict()
 AVAILABLE_TABULAR_VIZ['scatter_matrix'] = {
         'title': FILENAME_SCATTER_MATRIX,
-        'pretty_title': 'Scatter Matrix of Generated vs Real Data',
+        'pretty_title': 'Scatter Matrix of Generated vs. Real Data',
         'description': 'INSERT_DESCRIPTION_HERE',
         'url_func': 'viz.gen_scatter_matrix',
         'fake_title': 'Fake Data',
         'real_title': 'Real Data'
+}
+AVAILABLE_TABULAR_VIZ['compare_cats'] = {
+        'title': FILENAME_COMPARE_CATS,
+        'pretty_title': 'Categorical Feature Comparison of Generated vs. Real Data',
+        'description': 'INSERT_DESCRIPTION_HERE',
+        'url_func': 'viz.gen_compare_cats'
 }
 
 AVAILABLE_IMAGE_VIZ = OrderedDict()

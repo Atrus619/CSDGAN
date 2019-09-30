@@ -18,6 +18,11 @@ def get_CGAN(username, title):
         return pkl.load(f)
 
 
+def get_dataset(username, title):
+    with open(os.path.join(cs.RUN_FOLDER, username, title, 'dataset.pkl'), 'rb') as f:
+        return pkl.load(f)
+
+
 def get_max_epoch(username, title):
     CGAN = get_CGAN(username, title)
     return CGAN.epoch

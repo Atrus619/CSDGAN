@@ -19,6 +19,15 @@ cu.setup_daily_logger(name=__name__, path=cs.LOG_FOLDER)
 logger = logging.getLogger(__name__)
 
 
+def go_back_to_viz():
+    """Helper function to return to viz page"""
+    return render_template('viz/viz.html', title=session['title'], format=session['format'],
+                           available_basic_viz=cs.AVAILABLE_BASIC_VIZ,
+                           available_hist_viz=cs.AVAILABLE_HIST_VIZ,
+                           available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()))  # ,
+    # available_image_viz=cs.AVAILABLE_IMAGE_VIZ)
+
+
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
 def viz():
@@ -28,11 +37,7 @@ def viz():
     session['run_id'] = runs[int(request.form['index']) - 1]['id']
     if request.method == 'POST':
         pass
-    return render_template('viz/viz.html', title=session['title'], format=session['format'],
-                           available_basic_viz=cs.AVAILABLE_BASIC_VIZ,
-                           available_hist_viz=cs.AVAILABLE_HIST_VIZ,
-                           available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()))  # ,
-    # available_image_viz=cs.AVAILABLE_IMAGE_VIZ)
+    return go_back_to_viz()
 
 
 @bp.route('/show_image/<img_key>', methods=('GET', 'POST'))
@@ -41,11 +46,7 @@ def show_img(img_key):
     mv.build_img(img_key=img_key, username=g.user['username'], title=session['title'], run_id=session['run_id'])
     if request.method == 'POST':
         if 'back' in request.form.keys():
-            return render_template('viz/viz.html', title=session['title'], format=session['format'],
-                                   available_basic_viz=cs.AVAILABLE_BASIC_VIZ,
-                                   available_hist_viz=cs.AVAILABLE_HIST_VIZ,
-                                   available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()))  # ,
-            # available_image_viz=cs.AVAILABLE_IMAGE_VIZ)
+            return go_back_to_viz()
         elif 'download' in request.form.keys():
             return send_file(os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], img_key), mimetype='image/png', as_attachment=True)
     return render_template('viz/show_img.html', title=session['title'], img_key=img_key)
@@ -64,11 +65,7 @@ def histograms():
     max_epoch = cu.get_max_epoch(username=g.user['username'], title=session['title'])
     if request.method == 'POST':
         if 'back' in request.form.keys():
-            return render_template('viz/viz.html', title=session['title'], format=session['format'],
-                                   available_basic_viz=cs.AVAILABLE_BASIC_VIZ,
-                                   available_hist_viz=cs.AVAILABLE_HIST_VIZ,
-                                   available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()))  # ,
-            # available_image_viz=cs.AVAILABLE_IMAGE_VIZ)
+            return go_back_to_viz()
 
         error = None
         if 'net' not in request.form.keys():
@@ -91,11 +88,7 @@ def histograms():
 def gen_scatter_matrix():
     if request.method == 'POST':
         if 'back' in request.form.keys():
-            return render_template('viz/viz.html', title=session['title'], format=session['format'],
-                                   available_basic_viz=cs.AVAILABLE_BASIC_VIZ,
-                                   available_hist_viz=cs.AVAILABLE_HIST_VIZ,
-                                   available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()))  # ,
-            # available_image_viz=cs.AVAILABLE_IMAGE_VIZ)
+            return go_back_to_viz()
 
         if 'generate' in request.form.keys():
             mv.build_scatter_matrices(size=request.form['n'], username=g.user['username'], title=session['title'], run_id=session['run_id'])
@@ -109,21 +102,62 @@ def gen_scatter_matrix():
 def show_scatter_matrix():
     if request.method == 'POST':
         if 'back' in request.form.keys():
-            return render_template('viz/viz.html', title=session['title'], format=session['format'],
-                                   available_basic_viz=cs.AVAILABLE_BASIC_VIZ,
-                                   available_hist_viz=cs.AVAILABLE_HIST_VIZ,
-                                   available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()))  # ,
-            # available_image_viz=cs.AVAILABLE_IMAGE_VIZ)
+            return go_back_to_viz()
+
         if 'download_fake' in request.form.keys():
             filename = cu.translate_filepath(cs.FILENAME_SCATTER_MATRIX.replace('{title}', cs.AVAILABLE_TABULAR_VIZ['scatter_matrix']['fake_title']))
             path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
-
             return send_file(path, mimetype='image/png', as_attachment=True)
+
         if 'download_real' in request.form.keys():
             filename = cu.translate_filepath(cs.FILENAME_SCATTER_MATRIX.replace('{title}', cs.AVAILABLE_TABULAR_VIZ['scatter_matrix']['real_title']))
             path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
-
             return send_file(path, mimetype='image/png', as_attachment=True)
+
     return render_template('viz/show_scatter_matrix.html', title=session['title'],
                            sm_fake=cs.FILENAME_SCATTER_MATRIX.replace('{title}', cs.AVAILABLE_TABULAR_VIZ['scatter_matrix']['fake_title']),
                            sm_real=cs.FILENAME_SCATTER_MATRIX.replace('{title}', cs.AVAILABLE_TABULAR_VIZ['scatter_matrix']['real_title']))
+
+
+@bp.route('/gen_compare_cats', methods=('GET', 'POST'))
+@login_required
+def gen_compare_cats():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'generate' in request.form.keys():
+            error = None
+            if 'x' not in request.form.keys():
+                error = 'Please select a first feature.'
+            elif 'hue' not in request.form.keys():
+                error = 'Please select a second feature.'
+            elif request.form['x'] == request.form['hue']:
+                error = 'Please select two different features.'
+            if error:
+                flash(error)
+            else:
+                session['x'] = request.form['x']
+                session['hue'] = request.form['hue']
+                mv.build_compare_cats(size=request.form['n'], x=session['x'], hue=session['hue'],
+                                      username=g.user['username'], title=session['title'])
+                return redirect(url_for('viz.show_compare_cats'))
+
+    dataset = cu.get_dataset(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_compare_cats.html', title=session['title'], cat_cols=dataset.cat_inputs)
+
+
+@bp.route('/show_compare_cats', methods=('GET', 'POST'))
+@login_required
+def show_compare_cats():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            filename = cu.translate_filepath(cs.FILENAME_COMPARE_CATS.replace('{x}', session['x']).replace('{hue}', session['hue']))
+            path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
+            return send_file(path, mimetype='image/png', as_attachment=True)
+
+    img_key = cs.FILENAME_COMPARE_CATS.replace('{x}', session['x']).replace('{hue}', session['hue'])
+    return render_template('viz/show_compare_cats.html', title=session['title'], img_key=img_key)
