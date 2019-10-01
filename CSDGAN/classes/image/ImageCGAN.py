@@ -347,7 +347,7 @@ class ImageCGAN(CGANUtils):
             plt.suptitle('Epoch ' + str(epoch))
             grid = self.get_grid(index=epoch, labels=labels, num_examples=num_examples)
             plt.imshow(np.transpose(grid, (1, 2, 0)))
-            img_name = path + "/imgs/Epoch " + str(epoch) + ".png"
+            img_name = os.path.join(path, 'imgs', 'Epoch ' + str(epoch) + '.png')
             plt.savefig(img_name)
             ims.append(imageio.imread(img_name))
             plt.close()
@@ -355,7 +355,7 @@ class ImageCGAN(CGANUtils):
                 for i in range(final_img_frames):
                     ims.append(imageio.imread(img_name))
                     plt.close()
-        imageio.mimsave(path + '/generation_animation.gif', ims, fps=fps)
+        imageio.mimsave(os.path.join(path, 'generation_animation.gif'), ims, fps=fps)
 
     def run_all_diagnostics(self, real_netE, benchmark_acc, show=False, save=None):
         """

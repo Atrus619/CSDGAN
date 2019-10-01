@@ -24,8 +24,8 @@ def go_back_to_viz():
     return render_template('viz/viz.html', title=session['title'], format=session['format'],
                            available_basic_viz=cs.AVAILABLE_BASIC_VIZ,
                            available_hist_viz=cs.AVAILABLE_HIST_VIZ,
-                           available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()))  # ,
-    # available_image_viz=cs.AVAILABLE_IMAGE_VIZ)
+                           available_tabular_viz=list(cs.AVAILABLE_TABULAR_VIZ.values()),
+                           available_image_viz=list(cs.AVAILABLE_IMAGE_VIZ.values()))
 
 
 @bp.route('/', methods=('GET', 'POST'))
@@ -244,3 +244,44 @@ def show_conditional_density():
 
     img_key = cs.FILENAME_CONDITIONAL_DENSITY.replace('{col}', session['col'])
     return render_template('viz/show_conditional_density.html', title=session['title'], img_key=img_key)
+
+
+@bp.route('/gen_img_grid', methods=('GET', 'POST'))
+@login_required
+def gen_img_grid():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'generate' in request.form.keys():
+            error = None
+            if 'labels' not in request.form.keys():
+                error = 'Please select at least one label.'
+            if error:
+                flash(error)
+            else:
+                labels = request.form.getlist('labels')
+                session['epoch'] = request.form['epoch']
+                mv.build_img_grid(labels=labels, num_examples=request.form['num_examples'], epoch=request.form['epoch'],
+                                  username=g.user['username'], title=session['title'])
+                return redirect(url_for('viz.show_img_grid'))
+
+    CGAN = cu.get_CGAN(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_img_grid.html', title=session['title'], max_epoch=CGAN.epoch,
+                           labels=list(CGAN.le.classes_), max_num_examples=CGAN.grid_num_examples)
+
+
+@bp.route('/show_img_grid', methods=('GET', 'POST'))
+@login_required
+def show_img_grid():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            filename = cu.translate_filepath(cs.FILENAME_IMG_GRIDS.replace('{epoch}', session['epoch']))
+            path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
+            return send_file(path, mimetype='image/png', as_attachment=True)
+
+    img_key = cs.FILENAME_IMG_GRIDS.replace('{epoch}', session['epoch'])
+    return render_template('viz/show_img_grid.html', title=session['title'], img_key=img_key)

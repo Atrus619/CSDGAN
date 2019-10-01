@@ -1,8 +1,11 @@
-import os
 import CSDGAN.utils.constants as cs
 import CSDGAN.utils.utils as cu
 import CSDGAN.utils.db as db
 import utils.utils as uu
+
+import matplotlib.pyplot as plt
+import numpy as np
+import os
 
 
 def build_img(img_key, username, title, run_id):
@@ -123,3 +126,21 @@ def build_conditional_density(size, col, username, title):
     uu.plot_conditional_density(real_df=real_df, fake_df=genned_df, col=col, dep_var=dep_var,
                                 cont_inputs=cont_inputs, labels_list=labels_list, scaler=scaler,
                                 show=False, save=viz_folder)
+
+
+def build_img_grid(labels, num_examples, epoch, username, title):
+    """Generates an image of grids for an image CGAN with a specified epoch, labels, and number of examples of each label"""
+    epoch = int(epoch)
+    num_examples = int(num_examples)
+    CGAN = cu.get_CGAN(username=username, title=title)
+    viz_folder = os.path.join(cs.VIZ_FOLDER, username, title, 'imgs')
+    os.makedirs(viz_folder, exist_ok=True)
+
+    grid = CGAN.get_grid(index=epoch, labels=labels, num_examples=num_examples)
+    fig = plt.figure(figsize=(8, 8))
+    plt.axis('off')
+    plt.suptitle('Epoch ' + str(epoch))
+    plt.imshow(np.transpose(grid, (1, 2, 0)))
+    os.makedirs(viz_folder, exist_ok=True)
+    img_name = os.path.join(viz_folder, 'Epoch ' + str(epoch) + '.png')
+    plt.savefig(img_name)

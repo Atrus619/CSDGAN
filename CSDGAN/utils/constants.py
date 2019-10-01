@@ -137,12 +137,19 @@ FILENAME_PLOT_PROGRESS = 'training_progress.png'
 FILENAME_netG_LAYER_SCATTERS = 'layer_scatters|Generator_layer_scatters.png'
 FILENAME_netD_LAYER_SCATTERS = 'layer_scatters|Discriminator_layer_scatters.png'
 FILENAME_HIST_SCATTERS = 'layer_histograms|{net}_epoch_{num}_layer_histograms.png'
+
+# Tabular Only
 FILENAME_SCATTER_MATRIX = 'scatter_matrices|{title}_scatter_matrix.png'
 FILENAME_COMPARE_CATS = 'compare_cats|{x}_{hue}_cat_comparison.png'
 FILENAME_CONDITIONAL_SCATTER = 'conditional_scatters|{col1}_vs_{col2}_conditional_scatter.png'
 FILENAME_CONDITIONAL_DENSITY = 'conditional_densities|{col}_conditional_density.png'
 MAX_GENNED_DATA_SET_SIZE = 1e6
 
+# Image Only
+FILENAME_IMG_GRIDS = 'imgs|Epoch {epoch}.png'
+FILENAME_IMG_GIF = 'generation_animation.gif'
+
+# Details about visualizations
 AVAILABLE_BASIC_VIZ = [
     {
         'title': FILENAME_TRAINING_PLOT,
@@ -203,9 +210,9 @@ AVAILABLE_TABULAR_VIZ['conditional_density'] = {
 }
 
 AVAILABLE_IMAGE_VIZ = OrderedDict()
-AVAILABLE_IMAGE_VIZ['placeholder'] = {
-    'title': None,
-    'pretty_title': None,
-    'description': None,
-    'url_func': None
+AVAILABLE_IMAGE_VIZ['img_grid'] = {
+    'title': FILENAME_IMG_GRIDS,
+    'pretty_title': 'Grid of Generated Images at Specified Epoch',
+    'description': 'INSERT_DESCRIPTION_HERE',
+    'url_func': 'viz.gen_img_grid'
 }

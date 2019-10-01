@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Generate Grid of Generated Images at Specified Epoch</h2>
+
+    <p><i>
+        Please specify the epoch for which to generate the grid of images. The maximum epoch available is the number of trained epochs ({{ max_epoch }}).
+    </i></p>
+    <input name="epoch" id="epoch" type="number" min="0" max="{{ max_epoch }}" value="{{ request.form['epoch'] }}" required>
+    <hr><br>
+
+    <p><i>
+        Please select the labels for which to generate the grid. You can select multiple by holding ctrl.
+    </i></p>
+    <select name="labels" multiple size="5">
+        {% for label in labels %}
+        <option value="{{ label }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+    <hr><br>
+
+    <p><i>
+        Please select the number of examples of each label to generate. The maximum number of examples available is {{ max_num_examples }}.
+    </i></p>
+    <input name="num_examples" id="num_examples" type="number" min="1" max="{{ max_num_examples }}" value="{{ request.form['num_examples'] }}" required>
+    <br><br>
+
+    <input type="submit" name="generate" value="Generate">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}
