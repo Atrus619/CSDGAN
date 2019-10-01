@@ -29,7 +29,7 @@ class ImageCGAN(CGANUtils):
                  netD_nf, netD_lr, netD_beta1, netD_beta2, netD_wd,
                  netE_lr, netE_beta1, netE_beta2, netE_wd,
                  fake_data_set_size, fake_bs,
-                 eval_num_epochs, early_stopping_patience):
+                 eval_num_epochs, early_stopping_patience, grid_num_examples=10):
         super().__init__()
 
         self.path = path  # default file path for saved objects
@@ -50,7 +50,7 @@ class ImageCGAN(CGANUtils):
 
         self.le = le
         self.ohe = ohe
-        self.grid_num_examples = 10
+        self.grid_num_examples = grid_num_examples
 
         # Anti-discriminator properties
         assert 0.0 <= label_noise <= 1.0, "Label noise must be between 0 and 1"
@@ -256,44 +256,106 @@ class ImageCGAN(CGANUtils):
             fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
         return vutils.make_grid(tensor=fixed_imgs, nrow=self.grid_num_examples, normalize=True).detach().cpu()
 
-    def show_grid(self, index=-1):
+    def get_grid(self, index=-1, labels=None, num_examples=None):
+        """Same as show_grid, but produces the specific grid (helper function)"""
+        # Check inputs
+        assert len(self.fixed_imgs) > 0, 'Model not yet trained'
+
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
+
+        if labels is None:
+            labels = self.le.classes_
+
+        # Instantiate output object
+        og_img = self.fixed_imgs[index]
+        new_img = torch.zeros([og_img.shape[0], len(labels) * self.x_dim[0] + 2 * (1 + len(labels)), num_examples * self.x_dim[1] + 2 * (1 + num_examples)],
+                              dtype=torch.float32)
+
+        # Fill in new_img with relevant parts of og_img
+        for i, label in enumerate(labels):
+            for j in range(num_examples):
+                start_loc = np.where(label == self.le.classes_)[0][0]
+                new_img[:, i * self.x_dim[0] + 2 * (1 + i):(1 + i) * self.x_dim[0] + 2 * (2 + i), j * self.x_dim[1] + 2 * (1 + j):(1 + j) * self.x_dim[1] + 2 * (2 + j)] = \
+                    og_img[:, start_loc * self.x_dim[0] + 2 * (1 + start_loc):(1 + start_loc) * self.x_dim[0] + 2 * (2 + start_loc),
+                    j * self.x_dim[1] + 2 * (1 + j):(1 + j) * self.x_dim[1] + 2 * (2 + j)]
+
+        return new_img
+
+    def show_grid(self, index=-1, labels=None, num_examples=None):
         """
         Print a specified fixed image grid from the self.fixed_imgs list
         :param index: Evaluation index to display
+        :param labels: Which categories to show grid for
+        :param num_examples: Number of examples of each category to include in grid
         :return: Nothing. Displays the desired image instead.
         """
-        assert len(self.fixed_imgs) > 0, "Model not yet trained"
+        # Check inputs
+        assert len(self.fixed_imgs) > 0, 'Model not yet trained'
+
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
+
+        if labels is None:
+            labels = self.le.classes_
+
+        # Get img
+        new_img = self.get_grid(index=index, labels=labels, num_examples=num_examples)
+
+        # Show img
         fig = plt.figure(figsize=(8, 8))
         plt.axis('off')
-        plt.imshow(np.transpose(self.fixed_imgs[index], (1, 2, 0)))
+        plt.imshow(np.transpose(new_img, (1, 2, 0)))
         plt.show()
 
-    def build_gif(self, path=None):
+    def build_gif(self, labels=None, num_examples=None, path=None, start=0, stop=None, freq=1, fps=5, final_img_frames=20):
         """
         Loop through self.fixed_imgs and saves the images to a folder.
+        :param labels: List of which labels to produce. Defaults to all.
+        :param num_examples: Number of each label to produce. Defaults to self.grid_num_examples (10 generally).
         :param path: Path to folder to save images. Folder will be created if it does not already exist.
+        :param start: Epoch to start gif on. Default 0.
+        :param stop: Epoch to end gif on. Default self.epoch (number of epochs trained so far).
+        :param freq: Interval of skipping epochs. Defaults to 1 (no skipping).
+        :param fps: Number of frames to display per second in gif. Defaults to 5.
+        :param final_img_frames: Number of times to repeat final image of gif before it will restart. Defaults to 20 (4 seconds with 5 fps).
+        :return: GIF (large file size, be careful!).
         """
-        assert len(self.fixed_imgs) > 0, "Model not yet trained"
+        # Check inputs
+        assert len(self.fixed_imgs) > 0, 'Model not yet trained'
+
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
+
+        if labels is None:
+            labels = self.le.classes_
 
         if path is None:
             path = self.path
 
+        if stop is None:
+            stop = self.epoch
+
         os.makedirs(os.path.join(path, "imgs"), exist_ok=True)
         ims = []
-        for epoch, grid in enumerate(self.fixed_imgs):
+        for epoch in range(start, self.epoch + 1, freq):
             fig = plt.figure(figsize=(8, 8))
             plt.axis('off')
             plt.suptitle('Epoch ' + str(epoch))
+            grid = self.get_grid(index=epoch, labels=labels, num_examples=num_examples)
             plt.imshow(np.transpose(grid, (1, 2, 0)))
             img_name = path + "/imgs/Epoch " + str(epoch) + ".png"
             plt.savefig(img_name)
             ims.append(imageio.imread(img_name))
             plt.close()
             if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
-                for i in range(20):
+                for i in range(final_img_frames):
                     ims.append(imageio.imread(img_name))
                     plt.close()
-        imageio.mimsave(path + '/generation_animation.gif', ims, fps=5)
+        imageio.mimsave(path + '/generation_animation.gif', ims, fps=fps)
 
     def run_all_diagnostics(self, real_netE, benchmark_acc, show=False, save=None):
         """
