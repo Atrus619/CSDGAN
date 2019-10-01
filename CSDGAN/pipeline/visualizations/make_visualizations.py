@@ -130,8 +130,7 @@ def build_conditional_density(size, col, username, title):
 
 def build_img_grid(labels, num_examples, epoch, username, title):
     """Generates an image of grids for an image CGAN with a specified epoch, labels, and number of examples of each label"""
-    epoch = int(epoch)
-    num_examples = int(num_examples)
+    epoch, num_examples = int(epoch), int(num_examples)
     CGAN = cu.get_CGAN(username=username, title=title)
     viz_folder = os.path.join(cs.VIZ_FOLDER, username, title, 'imgs')
     os.makedirs(viz_folder, exist_ok=True)
@@ -144,3 +143,13 @@ def build_img_grid(labels, num_examples, epoch, username, title):
     os.makedirs(viz_folder, exist_ok=True)
     img_name = os.path.join(viz_folder, 'Epoch ' + str(epoch) + '.png')
     plt.savefig(img_name)
+
+
+def build_img_gif(labels, num_examples, start, stop, freq, fps, final_img_frames, username, title):
+    """Generates a gif of images describing the effects of training over time with a specified epoch, labels, and number of examples of each label"""
+    num_examples, start, stop, freq, fps, final_img_frames = int(num_examples), int(start), int(stop), int(freq), int(fps), int(final_img_frames)
+    CGAN = cu.get_CGAN(username=username, title=title)
+    viz_folder = os.path.join(cs.VIZ_FOLDER, username, title)
+    os.makedirs(viz_folder, exist_ok=True)
+
+    CGAN.build_gif(labels=labels, num_examples=num_examples, start=start, stop=stop, freq=freq, fps=fps, final_img_frames=final_img_frames, path=viz_folder)

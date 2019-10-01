@@ -216,3 +216,9 @@ AVAILABLE_IMAGE_VIZ['img_grid'] = {
     'description': 'INSERT_DESCRIPTION_HERE',
     'url_func': 'viz.gen_img_grid'
 }
+AVAILABLE_IMAGE_VIZ['img_gif'] = {
+    'title': FILENAME_IMG_GIF,
+    'pretty_title': 'GIF of Generated Images Over Specified Epochs',
+    'description': 'INSERT_DESCRIPTION_HERE',
+    'url_func': 'viz.gen_img_gif'
+}

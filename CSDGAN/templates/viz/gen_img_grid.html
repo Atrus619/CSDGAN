@@ -9,7 +9,7 @@
     <h2>Generate Grid of Generated Images at Specified Epoch</h2>
 
     <p><i>
-        Please specify the epoch for which to generate the grid of images. The maximum epoch available is the number of trained epochs ({{ max_epoch }}).
+        Please specify the epoch for which to generate the grid of images. Pre-training initializations can be seen at epoch 0. The maximum epoch available is the number of trained epochs ({{ max_epoch }}).
     </i></p>
     <input name="epoch" id="epoch" type="number" min="0" max="{{ max_epoch }}" value="{{ request.form['epoch'] }}" required>
     <hr><br>

@@ -285,3 +285,29 @@ def show_img_grid():
 
     img_key = cs.FILENAME_IMG_GRIDS.replace('{epoch}', session['epoch'])
     return render_template('viz/show_img_grid.html', title=session['title'], img_key=img_key)
+
+
+@bp.route('/gen_img_gif', methods=('GET', 'POST'))
+@login_required
+def gen_img_gif():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            error = None
+            if 'labels' not in request.form.keys():
+                error = 'Please select at least one label.'
+            if error:
+                flash(error)
+            else:
+                labels = request.form.getlist('labels')
+                mv.build_img_gif(labels=labels, num_examples=request.form['num_examples'], start=request.form['start'],
+                                 stop=request.form['stop'], freq=request.form['freq'], fps=request.form['fps'],
+                                 final_img_frames=request.form['final_img_frames'], username=g.user['username'], title=session['title'])
+                path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], cs.FILENAME_IMG_GIF)
+                return send_file(path, mimetype='image/gif', as_attachment=True)
+
+    CGAN = cu.get_CGAN(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_img_gif.html', title=session['title'], max_epoch=CGAN.epoch,
+                           labels=list(CGAN.le.classes_), max_num_examples=CGAN.grid_num_examples)
