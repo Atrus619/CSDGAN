@@ -50,7 +50,7 @@ class ImageCGAN(CGANUtils):
 
         self.le = le
         self.ohe = ohe
-        self.grid_nrow = 10
+        self.grid_num_examples = 10
 
         # Anti-discriminator properties
         assert 0.0 <= label_noise <= 1.0, "Label noise must be between 0 and 1"
@@ -81,7 +81,7 @@ class ImageCGAN(CGANUtils):
 
         # Instantiate sub-nets
         self.netG = ImageNetG(nz=self.nz, num_channels=self.num_channels, nf=netG_nf, x_dim=self.x_dim, nc=self.nc, device=self.device, path=self.path,
-                              grid_nrow=self.grid_nrow, lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
+                              grid_num_examples=self.grid_num_examples, lr=netG_lr, beta1=netG_beta1, beta2=netG_beta2, wd=netG_wd).to(self.device)
         self.netD = ImageNetD(nf=netD_nf, num_channels=self.num_channels, nc=self.nc, noise=self.discrim_noise, device=self.device, x_dim=self.x_dim,
                               path=self.path, lr=netD_lr, beta1=netD_beta1, beta2=netD_beta2, wd=netD_wd).to(self.device)
         self.netE = None  # Initialized through init_evaluator method
@@ -254,7 +254,7 @@ class ImageCGAN(CGANUtils):
         self.netG.eval()
         with torch.no_grad():
             fixed_imgs = self.netG(self.netG.fixed_noise, self.netG.fixed_labels)
-        return vutils.make_grid(tensor=fixed_imgs, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        return vutils.make_grid(tensor=fixed_imgs, nrow=self.grid_num_examples, normalize=True).detach().cpu()
 
     def show_grid(self, index=-1):
         """
@@ -384,10 +384,10 @@ class ImageCGAN(CGANUtils):
         grid1, grid2 = self.build_grid1_and_grid2(exit_early_iters=exit_early_iters)
         grid3, grid4 = self.build_grid3_and_grid4(gen=gen)
 
-        grid1 = vutils.make_grid(tensor=grid1, nrow=self.grid_nrow, normalize=True).detach().cpu()
-        grid2 = vutils.make_grid(tensor=grid2, nrow=self.grid_nrow, normalize=True).detach().cpu()
-        grid3 = vutils.make_grid(tensor=grid3, nrow=self.grid_nrow, normalize=True).detach().cpu()
-        grid4 = vutils.make_grid(tensor=grid4, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid1 = vutils.make_grid(tensor=grid1, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        grid2 = vutils.make_grid(tensor=grid2, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        grid3 = vutils.make_grid(tensor=grid3, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        grid4 = vutils.make_grid(tensor=grid4, nrow=self.grid_num_examples, normalize=True).detach().cpu()
 
         f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
@@ -435,10 +435,10 @@ class ImageCGAN(CGANUtils):
         grid5, grid6 = self.build_eval_grids(netE=self.netE)
         grid7, grid8 = self.build_eval_grids(netE=real_netE)
 
-        grid5 = vutils.make_grid(tensor=grid5, nrow=self.grid_nrow, normalize=True).detach().cpu()
-        grid6 = vutils.make_grid(tensor=grid6, nrow=self.grid_nrow, normalize=True).detach().cpu()
-        grid7 = vutils.make_grid(tensor=grid7, nrow=self.grid_nrow, normalize=True).detach().cpu()
-        grid8 = vutils.make_grid(tensor=grid8, nrow=self.grid_nrow, normalize=True).detach().cpu()
+        grid5 = vutils.make_grid(tensor=grid5, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        grid6 = vutils.make_grid(tensor=grid6, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        grid7 = vutils.make_grid(tensor=grid7, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        grid8 = vutils.make_grid(tensor=grid8, nrow=self.grid_num_examples, normalize=True).detach().cpu()
 
         f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
@@ -475,8 +475,8 @@ class ImageCGAN(CGANUtils):
         self.netD.eval()
         bs = 128  # Seems to be a good number with training above.
 
-        grid1 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid2 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid1 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid2 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid1_counts = {}  # Represents the number of each class acquired so far for this grid
         grid2_counts = {}
@@ -487,7 +487,7 @@ class ImageCGAN(CGANUtils):
 
         count = 0
 
-        while not (all(x == self.grid_nrow for x in grid1_counts.values()) and all(x == self.grid_nrow for x in grid2_counts.values())) and count < exit_early_iters:
+        while not (all(x == self.grid_num_examples for x in grid1_counts.values()) and all(x == self.grid_num_examples for x in grid2_counts.values())) and count < exit_early_iters:
             noise = torch.randn(bs, self.nz, device=self.device)
             random_labels = IU.convert_y_to_one_hot(y=torch.from_numpy(np.random.randint(0, self.nc, bs)), nc=self.nc).to(self.device).type(torch.float32)
 
@@ -499,11 +499,11 @@ class ImageCGAN(CGANUtils):
                 grid1_contenders = fakes[(random_labels[:, i] == 1) * (fwd[:, 0] < 0.5)]
                 grid2_contenders = fakes[(random_labels[:, i] == 1) * (fwd[:, 0] > 0.5)]
 
-                grid1_retain = min(self.grid_nrow - grid1_counts[i], len(grid1_contenders))
-                grid2_retain = min(self.grid_nrow - grid2_counts[i], len(grid2_contenders))
+                grid1_retain = min(self.grid_num_examples - grid1_counts[i], len(grid1_contenders))
+                grid2_retain = min(self.grid_num_examples - grid2_counts[i], len(grid2_contenders))
 
-                grid1[(i * self.grid_nrow) + grid1_counts[i]:(i * self.grid_nrow) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
-                grid2[(i * self.grid_nrow) + grid2_counts[i]:(i * self.grid_nrow) + grid2_counts[i] + grid2_retain] = grid2_contenders[:grid2_retain]
+                grid1[(i * self.grid_num_examples) + grid1_counts[i]:(i * self.grid_num_examples) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                grid2[(i * self.grid_num_examples) + grid2_counts[i]:(i * self.grid_num_examples) + grid2_counts[i] + grid2_retain] = grid2_contenders[:grid2_retain]
 
                 grid1_counts[i] += grid1_retain
                 grid2_counts[i] += grid2_retain
@@ -519,8 +519,8 @@ class ImageCGAN(CGANUtils):
         """
         self.netD.eval()
 
-        grid3 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid4 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid3 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid4 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid3_counts = {}  # Represents the number of each class acquired so far for this grid
         grid4_counts = {}
@@ -539,17 +539,17 @@ class ImageCGAN(CGANUtils):
                 grid3_contenders = x[(y[:, i] == 1) * (fwd[:, 0] < 0.5)]
                 grid4_contenders = x[(y[:, i] == 1) * (fwd[:, 0] > 0.5)]
 
-                grid3_retain = min(self.grid_nrow - grid3_counts[i], len(grid3_contenders))
-                grid4_retain = min(self.grid_nrow - grid4_counts[i], len(grid4_contenders))
+                grid3_retain = min(self.grid_num_examples - grid3_counts[i], len(grid3_contenders))
+                grid4_retain = min(self.grid_num_examples - grid4_counts[i], len(grid4_contenders))
 
-                grid3[(i * self.grid_nrow) + grid3_counts[i]:(i * self.grid_nrow) + grid3_counts[i] + grid3_retain] = grid3_contenders[:grid3_retain]
-                grid4[(i * self.grid_nrow) + grid4_counts[i]:(i * self.grid_nrow) + grid4_counts[i] + grid4_retain] = grid4_contenders[:grid4_retain]
+                grid3[(i * self.grid_num_examples) + grid3_counts[i]:(i * self.grid_num_examples) + grid3_counts[i] + grid3_retain] = grid3_contenders[:grid3_retain]
+                grid4[(i * self.grid_num_examples) + grid4_counts[i]:(i * self.grid_num_examples) + grid4_counts[i] + grid4_retain] = grid4_contenders[:grid4_retain]
 
                 grid3_counts[i] += grid3_retain
                 grid4_counts[i] += grid4_retain
 
                 # Exit early if grid filled up
-                if all(x == self.grid_nrow for x in grid3_counts.values()) and all(x == self.grid_nrow for x in grid4_counts.values()):
+                if all(x == self.grid_num_examples for x in grid3_counts.values()) and all(x == self.grid_num_examples for x in grid4_counts.values()):
                     return grid3, grid4
 
         return grid3, grid4
@@ -558,12 +558,12 @@ class ImageCGAN(CGANUtils):
         """Construct grids 5-8 for troubleshoot_evaluator method"""
         netE.eval()
 
-        grid1 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid2 = torch.zeros(self.grid_nrow * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid1 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid2 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid1_counts = {}  # Represents the number of each class acquired so far for this grid
 
-        for i in range(self.grid_nrow):
+        for i in range(self.grid_num_examples):
             grid1_counts[i] = 0
 
         for x, y in self.test_gen:
@@ -572,7 +572,7 @@ class ImageCGAN(CGANUtils):
             with torch.no_grad():
                 fwd = netE(x)
 
-            for i in range(self.grid_nrow):
+            for i in range(self.grid_num_examples):
                 grid1_contenders = x[(torch.argmax(y, -1) != torch.argmax(fwd, -1)) * (torch.argmax(y, -1) == i)]
 
                 if len(grid1_contenders) > 0:
@@ -583,15 +583,15 @@ class ImageCGAN(CGANUtils):
                         grid2_contenders = torch.cat((grid2_contenders,
                                                       x[torch.argmax(y, -1) == mistake][0].view(-1, self.num_channels, self.x_dim[0], self.x_dim[1])), dim=0)
 
-                    grid1_retain = min(self.grid_nrow - grid1_counts[i], len(grid1_contenders))
+                    grid1_retain = min(self.grid_num_examples - grid1_counts[i], len(grid1_contenders))
 
-                    grid1[(i * self.grid_nrow) + grid1_counts[i]:(i * self.grid_nrow) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
-                    grid2[(i * self.grid_nrow) + grid1_counts[i]:(i * self.grid_nrow) + grid1_counts[i] + grid1_retain] = grid2_contenders[:grid1_retain]
+                    grid1[(i * self.grid_num_examples) + grid1_counts[i]:(i * self.grid_num_examples) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                    grid2[(i * self.grid_num_examples) + grid1_counts[i]:(i * self.grid_num_examples) + grid1_counts[i] + grid1_retain] = grid2_contenders[:grid1_retain]
 
                     grid1_counts[i] += grid1_retain
 
                 # Exit early if grid filled up
-                if all(x == self.grid_nrow for x in grid1_counts.values()):
+                if all(x == self.grid_num_examples for x in grid1_counts.values()):
                     return grid1, grid2
 
         return grid1, grid2
