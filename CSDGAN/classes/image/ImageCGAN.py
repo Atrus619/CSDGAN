@@ -515,10 +515,10 @@ class ImageCGAN(CGANUtils):
         grid5, grid6 = self.build_eval_grids(netE=self.netE, labels=labels, num_examples=num_examples)
         grid7, grid8 = self.build_eval_grids(netE=real_netE, labels=labels, num_examples=num_examples)
 
-        grid5 = vutils.make_grid(tensor=grid5, nrow=self.grid_num_examples, normalize=True).detach().cpu()
-        grid6 = vutils.make_grid(tensor=grid6, nrow=self.grid_num_examples, normalize=True).detach().cpu()
-        grid7 = vutils.make_grid(tensor=grid7, nrow=self.grid_num_examples, normalize=True).detach().cpu()
-        grid8 = vutils.make_grid(tensor=grid8, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        grid5 = vutils.make_grid(tensor=grid5, nrow=num_examples, normalize=True).detach().cpu()
+        grid6 = vutils.make_grid(tensor=grid6, nrow=num_examples, normalize=True).detach().cpu()
+        grid7 = vutils.make_grid(tensor=grid7, nrow=num_examples, normalize=True).detach().cpu()
+        grid8 = vutils.make_grid(tensor=grid8, nrow=num_examples, normalize=True).detach().cpu()
 
         f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
