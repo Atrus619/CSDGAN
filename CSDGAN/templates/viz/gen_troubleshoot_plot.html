@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Generate Troubleshoot Grid to Visually Inspect Errors Made by Specified Network</h2>
+
+    <p><i>
+        Please specify whether you are interested in generating troubleshooting grids for the Discriminator or Evaluator network.
+    </i></p>
+    <input type="radio" name="net" id="net" value="discriminator">Discriminator</input><br>
+    <input type="radio" name="net" id="net" value="evaluator">Evaluator</input><br>
+    <hr><br>
+
+    <p><i>
+        Please select the labels for which to generate the grid. You can select multiple by holding ctrl.
+    </i></p>
+    <select name="labels" multiple size="5">
+        {% for label in labels %}
+        <option value="{{ label }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+    <hr><br>
+
+    <p><i>
+        Please select the number of examples of each label to generate. The maximum number of examples available is {{ max_num_examples }}.
+    </i></p>
+    <input name="num_examples" id="num_examples" type="number" min="1" max="{{ max_num_examples }}" value="{{ request.form['num_examples'] }}" required>
+    <br><br>
+
+    <input type="submit" name="generate" value="Generate">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}

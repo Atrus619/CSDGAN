@@ -1,4 +1,4 @@
-import utils.image_utils as IU
+import utils.image_utils as iu
 from CSDGAN.classes.NetUtils import NetUtils, GaussianNoise
 
 import torch.optim as optim
@@ -137,7 +137,7 @@ class ImageNetD(nn.Module, NetUtils):
         self.eval()
 
         # Preprocess inputs
-        label = IU.convert_y_to_one_hot(y=torch.full((1, 1), label, dtype=torch.int64), nc=self.nc)
+        label = iu.convert_y_to_one_hot(y=torch.full((1, 1), label, dtype=torch.int64), nc=self.nc)
         img, label = img.to(self.device), label.to(self.device)
         img = img.view(-1, 1, self.x_dim[0], self.x_dim[1])
         label = label.view(-1, self.nc).type(torch.float32)
@@ -210,8 +210,8 @@ class ImageNetD(nn.Module, NetUtils):
 
     def assemble_architecture(self, h, w):
         """Fills in an ordered dictionaries with tuples, one for the layers and one for the corresponding batch norm layers"""
-        h_best_crop, h_best_first, h_pow_2 = IU.find_pow_2_arch(h)
-        w_best_crop, w_best_first, w_pow_2 = IU.find_pow_2_arch(w)
+        h_best_crop, h_best_first, h_pow_2 = iu.find_pow_2_arch(h)
+        w_best_crop, w_best_first, w_pow_2 = iu.find_pow_2_arch(w)
         assert (h_best_crop, w_best_crop) == (0, 0), "Crop not working properly"
 
         # Conv Layers
@@ -220,15 +220,15 @@ class ImageNetD(nn.Module, NetUtils):
         h_rem, w_rem = self.x_dim[0] - h_best_crop, self.x_dim[1] - w_best_crop
         h_rem, w_rem = h_rem // h_best_first, w_rem // w_best_first
 
-        h_rem, w_rem, h_curr, w_curr = IU.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
-        self.arch['cn1'] = IU.cn2_downsample_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
+        h_rem, w_rem, h_curr, w_curr = iu.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+        self.arch['cn1'] = iu.cn2_downsample_block(h=h_curr, w=w_curr, in_channels=self.num_channels, out_channels=self.nf)
         self.add_module('cn1', self.arch['cn1'][0])
         self.add_module('cn1_bn', self.arch['cn1'][1])
 
         # Downsample by 2x until it is no longer necessary, then downsample by 1x
         for i in range(num_intermediate_downsample_layers):
-            h_rem, w_rem, h_curr, w_curr = IU.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
-            self.arch['cn' + str(i + 2)] = IU.cn2_downsample_block(h=h_curr, w=w_curr,
+            h_rem, w_rem, h_curr, w_curr = iu.update_h_w_curr(h_rem=h_rem, w_rem=w_rem)
+            self.arch['cn' + str(i + 2)] = iu.cn2_downsample_block(h=h_curr, w=w_curr,
                                                                    in_channels=self.nf * 2 ** i,
                                                                    out_channels=self.nf * 2 ** (i + 1))
             self.add_module('cn' + str(i + 2), self.arch['cn' + str(i + 2)][0])

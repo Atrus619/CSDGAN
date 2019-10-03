@@ -1,6 +1,6 @@
 import CSDGAN.utils.db as db
 import CSDGAN.utils.constants as cs
-import utils.image_utils as IU
+import utils.image_utils as iu
 import utils.utils as uu
 from CSDGAN.classes.image.ImageDataset import OnlineGeneratedImageDataset
 from CSDGAN.classes.image.ImageNetD import ImageNetD
@@ -425,13 +425,15 @@ class ImageCGAN(CGANUtils):
             assert os.path.exists(save), "Check that the desired save path exists."
             plt.savefig(os.path.join(save, cs.FILENAME_PLOT_PROGRESS))
 
-    def troubleshoot_discriminator(self, exit_early_iters=1000, gen=None, show=True, save=None):
+    def troubleshoot_discriminator(self, labels=None, num_examples=None, exit_early_iters=1000, gen=None, show=True, save=None):
         """
         Produce several nrow x nc grids of examples of interest for troubleshooting the model
         1. Grid of generated examples discriminator labeled as fake.
         2. Grid of generated examples discriminator labeled as real.
         3. Grid of real examples discriminator labeled as fake.
         4. Grid of real examples discriminator labeled as real.
+        :param labels: Which classes to generate examples for. Default is all.
+        :param num_examples: Number of examples of each class to generate examples for. Default is 10.
         :param exit_early_iters: Number of iterations to exit after if not enough images are found for grids 1 and 2
         :param gen: Generator to use for grids 3 and 4
         :param show: Whether to show the plots
@@ -443,13 +445,20 @@ class ImageCGAN(CGANUtils):
         if gen is None:
             gen = self.test_gen  # More data exists
 
-        grid1, grid2 = self.build_grid1_and_grid2(exit_early_iters=exit_early_iters)
-        grid3, grid4 = self.build_grid3_and_grid4(gen=gen)
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
 
-        grid1 = vutils.make_grid(tensor=grid1, nrow=self.grid_num_examples, normalize=True).detach().cpu()
-        grid2 = vutils.make_grid(tensor=grid2, nrow=self.grid_num_examples, normalize=True).detach().cpu()
-        grid3 = vutils.make_grid(tensor=grid3, nrow=self.grid_num_examples, normalize=True).detach().cpu()
-        grid4 = vutils.make_grid(tensor=grid4, nrow=self.grid_num_examples, normalize=True).detach().cpu()
+        if labels is None:
+            labels = self.le.classes_
+
+        grid1, grid2 = self.build_grid1_and_grid2(labels=labels, num_examples=num_examples, exit_early_iters=exit_early_iters)
+        grid3, grid4 = self.build_grid3_and_grid4(labels=labels, num_examples=num_examples, gen=gen)
+
+        grid1 = vutils.make_grid(tensor=grid1, nrow=num_examples, normalize=True).detach().cpu()
+        grid2 = vutils.make_grid(tensor=grid2, nrow=num_examples, normalize=True).detach().cpu()
+        grid3 = vutils.make_grid(tensor=grid3, nrow=num_examples, normalize=True).detach().cpu()
+        grid4 = vutils.make_grid(tensor=grid4, nrow=num_examples, normalize=True).detach().cpu()
 
         f, axes = plt.subplots(2, 2, figsize=(12, 12))
         axes[0, 0].axis('off')
@@ -480,7 +489,7 @@ class ImageCGAN(CGANUtils):
             os.makedirs(os.path.join(save, 'troubleshoot_plots'), exist_ok=True)
             f.savefig(os.path.join(save, 'troubleshoot_plots', 'discriminator.png'))
 
-    def troubleshoot_evaluator(self, real_netE, show=True, save=None):
+    def troubleshoot_evaluator(self, real_netE, labels=None, num_examples=None, show=True, save=None):
         """
         Produce several nrow x nc grids of examples of interest for troubleshooting the model
         5. Grid of real examples that the evaluator failed to identify correctly (separate plot).
@@ -488,14 +497,23 @@ class ImageCGAN(CGANUtils):
         7. Grid of misclassified examples by model trained on real data.
         8. Grid of what the evaluator THOUGHT each example in grid 7 should be.
         :param real_netE: A version of netE trained on real data, rather than synthetic data
+        :param labels: Which classes to generate examples for. Default is all.
+        :param num_examples: Number of examples of each class to generate examples for. Default is 10.
         :param show: Whether to show the plots
         :param save: Where to save the plots. If set to None default path is used. If false, not saved.
         """
         if save is None:
             save = self.path
 
-        grid5, grid6 = self.build_eval_grids(netE=self.netE)
-        grid7, grid8 = self.build_eval_grids(netE=real_netE)
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
+
+        if labels is None:
+            labels = self.le.classes_
+
+        grid5, grid6 = self.build_eval_grids(netE=self.netE, labels=labels, num_examples=num_examples)
+        grid7, grid8 = self.build_eval_grids(netE=real_netE, labels=labels, num_examples=num_examples)
 
         grid5 = vutils.make_grid(tensor=grid5, nrow=self.grid_num_examples, normalize=True).detach().cpu()
         grid6 = vutils.make_grid(tensor=grid6, nrow=self.grid_num_examples, normalize=True).detach().cpu()
@@ -531,41 +549,48 @@ class ImageCGAN(CGANUtils):
             os.makedirs(os.path.join(save, 'troubleshoot_plots'), exist_ok=True)
             f.savefig(os.path.join(save, 'troubleshoot_plots', 'evaluator.png'))
 
-    def build_grid1_and_grid2(self, exit_early_iters=1000):
-        """Generate images and feeds them to discriminator in order to find 10 examples of each class"""
+    def build_grid1_and_grid2(self, labels=None, num_examples=None, exit_early_iters=1000):
+        """Generate images and feeds them to discriminator in order to find num_examples of each class specified"""
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
+
+        if labels is None:
+            labels = self.le.classes_
+
         self.netG.eval()
         self.netD.eval()
-        bs = 128  # Seems to be a good number with training above.
+        bs = self.fake_bs  # Seems to be a good number with training above.
 
-        grid1 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid2 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid1 = torch.zeros(num_examples * len(labels), self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid2 = torch.zeros(num_examples * len(labels), self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid1_counts = {}  # Represents the number of each class acquired so far for this grid
         grid2_counts = {}
 
-        for i in range(self.nc):
+        for i in range(len(labels)):
             grid1_counts[i] = 0
             grid2_counts[i] = 0
 
         count = 0
 
-        while not (all(x == self.grid_num_examples for x in grid1_counts.values()) and all(x == self.grid_num_examples for x in grid2_counts.values())) and count < exit_early_iters:
+        while not (all(x == num_examples for x in grid1_counts.values()) and all(x == num_examples for x in grid2_counts.values())) and count < exit_early_iters:
             noise = torch.randn(bs, self.nz, device=self.device)
-            random_labels = IU.convert_y_to_one_hot(y=torch.from_numpy(np.random.randint(0, self.nc, bs)), nc=self.nc).to(self.device).type(torch.float32)
+            random_labels = iu.convert_y_to_one_hot(y=torch.from_numpy(np.random.choice(self.le.transform(labels), bs)), nc=self.nc).to(self.device).type(torch.float32)
 
             with torch.no_grad():
                 fakes = self.netG(noise, random_labels)
                 fwd = self.netD(fakes, random_labels)
 
-            for i in range(10):
-                grid1_contenders = fakes[(random_labels[:, i] == 1) * (fwd[:, 0] < 0.5)]
-                grid2_contenders = fakes[(random_labels[:, i] == 1) * (fwd[:, 0] > 0.5)]
+            for i in range(len(labels)):
+                grid1_contenders = fakes[(random_labels[:, self.le.transform(labels)[i]] == 1) * (fwd[:, 0] < 0.5)]
+                grid2_contenders = fakes[(random_labels[:, self.le.transform(labels)[i]] == 1) * (fwd[:, 0] > 0.5)]
 
-                grid1_retain = min(self.grid_num_examples - grid1_counts[i], len(grid1_contenders))
-                grid2_retain = min(self.grid_num_examples - grid2_counts[i], len(grid2_contenders))
+                grid1_retain = min(num_examples - grid1_counts[i], len(grid1_contenders))
+                grid2_retain = min(num_examples - grid2_counts[i], len(grid2_contenders))
 
-                grid1[(i * self.grid_num_examples) + grid1_counts[i]:(i * self.grid_num_examples) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
-                grid2[(i * self.grid_num_examples) + grid2_counts[i]:(i * self.grid_num_examples) + grid2_counts[i] + grid2_retain] = grid2_contenders[:grid2_retain]
+                grid1[(i * num_examples) + grid1_counts[i]:(i * num_examples) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                grid2[(i * num_examples) + grid2_counts[i]:(i * num_examples) + grid2_counts[i] + grid2_retain] = grid2_contenders[:grid2_retain]
 
                 grid1_counts[i] += grid1_retain
                 grid2_counts[i] += grid2_retain
@@ -574,86 +599,106 @@ class ImageCGAN(CGANUtils):
 
         return grid1, grid2
 
-    def build_grid3_and_grid4(self, gen):
+    def build_grid3_and_grid4(self, gen, labels=None, num_examples=None):
         """
-        Feed real images to discriminator in order to find 10 examples of each class labeled as fake
+        Feed real images to discriminator in order to find num_examples of each specified class labeled as fake
         Runs one full epoch over training data
         """
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
+
+        if labels is None:
+            labels = self.le.classes_
+
         self.netD.eval()
 
-        grid3 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid4 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid3 = torch.zeros(num_examples * len(labels), self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid4 = torch.zeros(num_examples * len(labels), self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid3_counts = {}  # Represents the number of each class acquired so far for this grid
         grid4_counts = {}
 
-        for i in range(self.nc):
+        for i in range(len(labels)):
             grid3_counts[i] = 0
             grid4_counts[i] = 0
 
         for x, y in gen:
             x, y = x.to(self.device), y.type(torch.float32).to(self.device)
+            y = iu.convert_y_to_one_hot(y=y.type(torch.LongTensor).cpu().detach(), nc=self.nc).to(self.device).type(torch.float32)
 
             with torch.no_grad():
                 fwd = self.netD(x, y)
 
-            for i in range(10):
-                grid3_contenders = x[(y[:, i] == 1) * (fwd[:, 0] < 0.5)]
-                grid4_contenders = x[(y[:, i] == 1) * (fwd[:, 0] > 0.5)]
+            for i in range(len(labels)):
+                grid3_contenders = x[(y[:, self.le.transform(labels)[i]] == 1) * (fwd[:, 0] < 0.5)]
+                grid4_contenders = x[(y[:, self.le.transform(labels)[i]] == 1) * (fwd[:, 0] > 0.5)]
 
-                grid3_retain = min(self.grid_num_examples - grid3_counts[i], len(grid3_contenders))
-                grid4_retain = min(self.grid_num_examples - grid4_counts[i], len(grid4_contenders))
+                grid3_retain = min(num_examples - grid3_counts[i], len(grid3_contenders))
+                grid4_retain = min(num_examples - grid4_counts[i], len(grid4_contenders))
 
-                grid3[(i * self.grid_num_examples) + grid3_counts[i]:(i * self.grid_num_examples) + grid3_counts[i] + grid3_retain] = grid3_contenders[:grid3_retain]
-                grid4[(i * self.grid_num_examples) + grid4_counts[i]:(i * self.grid_num_examples) + grid4_counts[i] + grid4_retain] = grid4_contenders[:grid4_retain]
+                grid3[(i * num_examples) + grid3_counts[i]:(i * num_examples) + grid3_counts[i] + grid3_retain] = grid3_contenders[:grid3_retain]
+                grid4[(i * num_examples) + grid4_counts[i]:(i * num_examples) + grid4_counts[i] + grid4_retain] = grid4_contenders[:grid4_retain]
 
                 grid3_counts[i] += grid3_retain
                 grid4_counts[i] += grid4_retain
 
                 # Exit early if grid filled up
-                if all(x == self.grid_num_examples for x in grid3_counts.values()) and all(x == self.grid_num_examples for x in grid4_counts.values()):
+                if all(x == num_examples for x in grid3_counts.values()) and all(x == num_examples for x in grid4_counts.values()):
                     return grid3, grid4
 
         return grid3, grid4
 
-    def build_eval_grids(self, netE):
+    def build_eval_grids(self, netE, labels=None, num_examples=None):
         """Construct grids 5-8 for troubleshoot_evaluator method"""
+        if num_examples is None:
+            num_examples = self.grid_num_examples
+        assert num_examples <= self.grid_num_examples, 'Num examples must be less than or equal to ' + str(self.grid_num_examples)
+
+        if labels is None:
+            labels = self.le.classes_
+
         netE.eval()
 
-        grid1 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
-        grid2 = torch.zeros(self.grid_num_examples * self.nc, self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid1 = torch.zeros(num_examples * len(labels), self.num_channels, self.x_dim[0], self.x_dim[1])
+        grid2 = torch.zeros(num_examples * len(labels), self.num_channels, self.x_dim[0], self.x_dim[1])
 
         grid1_counts = {}  # Represents the number of each class acquired so far for this grid
 
-        for i in range(self.grid_num_examples):
+        for i in range(num_examples):
             grid1_counts[i] = 0
 
         for x, y in self.test_gen:
             x, y = x.to(self.device), y.type(torch.float32).to(self.device)
+            y = iu.convert_y_to_one_hot(y=y.type(torch.LongTensor).cpu().detach(), nc=self.nc).to(self.device).type(torch.float32)
 
             with torch.no_grad():
                 fwd = netE(x)
 
-            for i in range(self.grid_num_examples):
-                grid1_contenders = x[(torch.argmax(y, -1) != torch.argmax(fwd, -1)) * (torch.argmax(y, -1) == i)]
+            for i in range(len(labels)):
+                grid1_contenders = x[(torch.argmax(y, -1) != torch.argmax(fwd, -1)) * (torch.argmax(y, -1) == self.le.transform(labels)[i])]
 
                 if len(grid1_contenders) > 0:
-                    grid1_intended = torch.argmax(fwd[(torch.argmax(y, -1) != torch.argmax(fwd, -1)) * (torch.argmax(y, -1) == i)], -1)
+                    grid1_intended = torch.argmax(fwd[(torch.argmax(y, -1) != torch.argmax(fwd, -1)) * (torch.argmax(y, -1) == self.le.transform(labels)[i])], -1)
 
                     grid2_contenders = torch.zeros(0, self.num_channels, self.x_dim[0], self.x_dim[1]).to(self.device)
                     for mistake in grid1_intended:
-                        grid2_contenders = torch.cat((grid2_contenders,
-                                                      x[torch.argmax(y, -1) == mistake][0].view(-1, self.num_channels, self.x_dim[0], self.x_dim[1])), dim=0)
+                        img = self.find_particular_img(gen=self.train_gen, net=None, mistake=None, label=self.le.inverse_transform([mistake.item()])[0])
+                        if img is None:
+                            img = torch.zeros((1, self.num_channels, self.x_dim[0], self.x_dim[1]), dtype=torch.float32).to(self.device)
+                        else:
+                            img = img.view(-1, self.num_channels, self.x_dim[0], self.x_dim[1])
+                        grid2_contenders = torch.cat((grid2_contenders, img), dim=0)
 
-                    grid1_retain = min(self.grid_num_examples - grid1_counts[i], len(grid1_contenders))
+                    grid1_retain = min(num_examples - grid1_counts[i], len(grid1_contenders))
 
-                    grid1[(i * self.grid_num_examples) + grid1_counts[i]:(i * self.grid_num_examples) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
-                    grid2[(i * self.grid_num_examples) + grid1_counts[i]:(i * self.grid_num_examples) + grid1_counts[i] + grid1_retain] = grid2_contenders[:grid1_retain]
+                    grid1[(i * num_examples) + grid1_counts[i]:(i * num_examples) + grid1_counts[i] + grid1_retain] = grid1_contenders[:grid1_retain]
+                    grid2[(i * num_examples) + grid1_counts[i]:(i * num_examples) + grid1_counts[i] + grid1_retain] = grid2_contenders[:grid1_retain]
 
                     grid1_counts[i] += grid1_retain
 
                 # Exit early if grid filled up
-                if all(x == self.grid_num_examples for x in grid1_counts.values()):
+                if all(x == num_examples for x in grid1_counts.values()):
                     return grid1, grid2
 
         return grid1, grid2
@@ -669,15 +714,17 @@ class ImageCGAN(CGANUtils):
         :return: torch tensor of image (x_dim[0] x x_dim[1])
         """
         assert gen in {self.train_gen, self.val_gen, self.test_gen, self.netG}, "Please use a valid generator (train/val/test/generator)"
-        assert net in {self.netD, self.netE}, "Please use a valid net (netD or netE)"
-        assert mistake in {True, False}, "Mistake should be True or False"
+        assert (mistake is None) == (net is None), "Either both mistake and net must be None, or neither must be None"
+        assert net in {self.netD, self.netE, None}, "Please use a valid net (netD, netE, or None)"
+        assert mistake in {True, False, None}, "Mistake should be True, False, or None"
         assert label in self.le.classes_, "Make sure label is a valid class"
 
         label = self.le.transform([label]).take(0)
 
-        bs = 128
+        bs = self.fake_bs
 
-        net.eval()
+        if net is not None:
+            net.eval()
 
         escape_counter = 0
 
@@ -687,7 +734,7 @@ class ImageCGAN(CGANUtils):
             # Generate examples
             if gen == self.netG:
                 noise = torch.randn(bs, self.nz, device=self.device)
-                y = IU.convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
+                y = iu.convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
 
                 with torch.no_grad():
                     x = self.netG(noise, y)
@@ -696,43 +743,46 @@ class ImageCGAN(CGANUtils):
                 iterator = gen.__iter__()
                 x, y = next(iterator)
                 x, y = x.to(self.device), y.type(torch.float32).to(self.device)
-                intended_y = IU.convert_y_to_one_hot(y=torch.full((bs, 1), label, dtype=torch.int64), nc=self.nc).to(self.device).type(torch.float32)
-                boolz = torch.argmax(y, -1) == torch.argmax(intended_y, -1)
+                boolz = y == label
                 x, y = x[boolz], y[boolz]
 
-            with torch.no_grad():
+            if len(x) > 0:
+                if mistake is None:
+                    return x[0]
+                y = iu.convert_y_to_one_hot(y=y.type(torch.LongTensor).cpu().detach(), nc=self.nc).to(self.device).type(torch.float32)
+                with torch.no_grad():
+                    if net == self.netD:
+                        fwd = net(x, y)
+                    else:
+                        fwd = net(x)
+
+                # Check if conditions are met and exit, otherwise continue.
+                # netD and incorrect
                 if net == self.netD:
-                    fwd = net(x, y)
-                else:
-                    fwd = net(x)
-
-            # Check if conditions are met and exit, otherwise continue.
-            # netD and incorrect
-            if net == self.netD:
-                if mistake:
-                    if gen == self.netG:  # Incorrect means classifying as real
-                        contenders = x[fwd > 0.5]
+                    if mistake:
+                        if gen == self.netG:  # Incorrect means classifying as real
+                            contenders = x[fwd > 0.5]
+                        else:
+                            contenders = x[fwd < 0.5]
+                    # netD and correct
                     else:
-                        contenders = x[fwd < 0.5]
-                # netD and correct
+                        if gen == self.netG:  # Correct means classifying as fake
+                            contenders = x[fwd < 0.5]
+                        else:
+                            contenders = x[fwd > 0.5]
+                # netE and incorrect
+                elif mistake:
+                    contenders = x[torch.argmax(fwd, -1) != torch.argmax(y, -1)]
+                # netE and incorrect
                 else:
-                    if gen == self.netG:  # Correct means classifying as fake
-                        contenders = x[fwd < 0.5]
-                    else:
-                        contenders = x[fwd > 0.5]
-            # netE and incorrect
-            elif mistake:
-                contenders = x[torch.argmax(fwd, -1) != torch.argmax(y, -1)]
-            # netE and incorrect
-            else:
-                contenders = x[torch.argmax(fwd, -1) == torch.argmax(y, -1)]
+                    contenders = x[torch.argmax(fwd, -1) == torch.argmax(y, -1)]
 
-            # If 1 or more values returned, return that value and exit. Otherwise, continue.
-            if len(contenders) > 0:
-                return contenders[0]
+                # If 1 or more values returned, return that value and exit. Otherwise, continue.
+                if len(contenders) > 0:
+                    return contenders[0]
 
-            if escape_counter == escape:
-                return None
+                if escape_counter == escape:
+                    return None
 
     def draw_cam(self, gen, net, label, mistake, show, path, scale=None, escape=999):
         """

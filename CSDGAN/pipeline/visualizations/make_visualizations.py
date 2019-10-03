@@ -6,6 +6,7 @@ import utils.utils as uu
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pickle as pkl
 
 
 def build_img(img_key, username, title, run_id):
@@ -153,3 +154,18 @@ def build_img_gif(labels, num_examples, start, stop, freq, fps, final_img_frames
     os.makedirs(viz_folder, exist_ok=True)
 
     CGAN.build_gif(labels=labels, num_examples=num_examples, start=start, stop=stop, freq=freq, fps=fps, final_img_frames=final_img_frames, path=viz_folder)
+
+
+def build_troubleshoot_plot(labels, num_examples, net, username, title):
+    """Generates a troubleshoot plot showing examples where the specified network made mistakes"""
+    num_examples = int(num_examples)
+    CGAN = cu.get_CGAN(username=username, title=title)
+    viz_folder = os.path.join(cs.VIZ_FOLDER, username, title)
+    os.makedirs(viz_folder, exist_ok=True)
+
+    if net == 'discriminator':
+        CGAN.troubleshoot_discriminator(labels=labels, num_examples=num_examples, show=False, save=viz_folder)
+    else:  # net == 'evaluator':
+        with open(os.path.join(cs.RUN_FOLDER, username, title, 'real_netE.pkl'), 'rb') as f:
+            real_netE = pkl.load(f)
+        CGAN.troubleshoot_evaluator(real_netE=real_netE, labels=labels, num_examples=num_examples, show=False, save=viz_folder)

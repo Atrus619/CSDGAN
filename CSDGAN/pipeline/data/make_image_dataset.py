@@ -46,8 +46,8 @@ def make_image_dataset(run_id, username, title, folder, bs, x_dim=None, splits=N
 
         # Create data loader for each component of data set
         train_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'train'), bs=bs, shuffle=True, incl_paths=False)
-        val_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'val'), bs=bs, shuffle=False, incl_paths=False)
-        test_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'test'), bs=bs, shuffle=False, incl_paths=False)
+        val_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'val'), bs=bs, shuffle=True, incl_paths=False)
+        test_gen = cuidl.import_dataset(os.path.join(unzipped_path, 'test'), bs=bs, shuffle=True, incl_paths=False)
 
         logger.info('Data successfully split into train/va/test. Pickling and exiting.')
 

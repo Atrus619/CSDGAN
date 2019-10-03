@@ -148,6 +148,7 @@ MAX_GENNED_DATA_SET_SIZE = 1e6
 # Image Only
 FILENAME_IMG_GRIDS = 'imgs|Epoch {epoch}.png'
 FILENAME_IMG_GIF = 'generation_animation.gif'
+FILENAME_TROUBLESHOOT_PLOT = 'troubleshoot_plots|{net}.png'
 
 # Details about visualizations
 AVAILABLE_BASIC_VIZ = [
@@ -221,4 +222,10 @@ AVAILABLE_IMAGE_VIZ['img_gif'] = {
     'pretty_title': 'GIF of Generated Images Over Specified Epochs',
     'description': 'INSERT_DESCRIPTION_HERE',
     'url_func': 'viz.gen_img_gif'
+}
+AVAILABLE_IMAGE_VIZ['troubleshoot_plot'] = {
+    'title': FILENAME_TROUBLESHOOT_PLOT,
+    'pretty_title': 'Visually Inspect Mistakes by Discriminator/Evaluator',
+    'description': 'INSERT_DESCRIPTION_HERE',
+    'url_func': 'viz.gen_troubleshoot_plot'
 }

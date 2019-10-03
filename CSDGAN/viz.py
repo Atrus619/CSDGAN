@@ -311,3 +311,46 @@ def gen_img_gif():
     CGAN = cu.get_CGAN(username=g.user['username'], title=session['title'])
     return render_template('viz/gen_img_gif.html', title=session['title'], max_epoch=CGAN.epoch,
                            labels=list(CGAN.le.classes_), max_num_examples=CGAN.grid_num_examples)
+
+
+@bp.route('/gen_troubleshoot_plot', methods=('GET', 'POST'))
+@login_required
+def gen_troubleshoot_plot():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'generate' in request.form.keys():
+            error = None
+            if 'net' not in request.form.keys():
+                error = 'Please select a network.'
+            elif 'labels' not in request.form.keys():
+                error = 'Please select at least one label.'
+            if error:
+                flash(error)
+            else:
+                labels = request.form.getlist('labels')
+                session['net'] = request.form['net']
+                mv.build_troubleshoot_plot(labels=labels, num_examples=request.form['num_examples'], net=request.form['net'],
+                                           username=g.user['username'], title=session['title'])
+                return redirect(url_for('viz.show_troubleshoot_plot'))
+
+    CGAN = cu.get_CGAN(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_troubleshoot_plot.html', title=session['title'],
+                           labels=list(CGAN.le.classes_), max_num_examples=CGAN.grid_num_examples)
+
+
+@bp.route('/show_troubleshoot_plot', methods=('GET', 'POST'))
+@login_required
+def show_troubleshoot_plot():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            filename = cu.translate_filepath(cs.FILENAME_TROUBLESHOOT_PLOT.replace('{net}', session['net']))
+            path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
+            return send_file(path, mimetype='image/png', as_attachment=True)
+
+    img_key = cs.FILENAME_TROUBLESHOOT_PLOT.replace('{net}', session['net'])
+    return render_template('viz/show_troubleshoot_plot.html', title=session['title'], img_key=img_key, net=session['net'].capitalize())

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<h2>Generate Troubleshoot Grid to Visually Inspect Errors Made by Specified Network ({{ net }} Network)</h2>
+<img src="{{ url_for('viz.images', img_key = img_key) }}" alt="Placeholder Image">
+<br>
+<form method=post><input type="submit" name="download" value="Download"></form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}
