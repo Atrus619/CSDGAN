@@ -149,6 +149,7 @@ MAX_GENNED_DATA_SET_SIZE = 1e6
 FILENAME_IMG_GRIDS = 'imgs|Epoch {epoch}.png'
 FILENAME_IMG_GIF = 'generation_animation.gif'
 FILENAME_TROUBLESHOOT_PLOT = 'troubleshoot_plots|{net}.png'
+FILENAME_GRAD_CAM = 'grad_cam|{label}_{gen}_{net}_{mistake}_grad_cam.jpg'
 
 # Details about visualizations
 AVAILABLE_BASIC_VIZ = [
@@ -213,19 +214,25 @@ AVAILABLE_TABULAR_VIZ['conditional_density'] = {
 AVAILABLE_IMAGE_VIZ = OrderedDict()
 AVAILABLE_IMAGE_VIZ['img_grid'] = {
     'title': FILENAME_IMG_GRIDS,
-    'pretty_title': 'Grid of Generated Images at Specified Epoch',
-    'description': 'INSERT_DESCRIPTION_HERE',
+    'pretty_title': 'Image Grid',
+    'description': 'Grid of Generated Images at Specified Epoch',
     'url_func': 'viz.gen_img_grid'
 }
 AVAILABLE_IMAGE_VIZ['img_gif'] = {
     'title': FILENAME_IMG_GIF,
-    'pretty_title': 'GIF of Generated Images Over Specified Epochs',
-    'description': 'INSERT_DESCRIPTION_HERE',
+    'pretty_title': 'Image GIF',
+    'description': 'GIF of Generated Images Over Specified Epochs',
     'url_func': 'viz.gen_img_gif'
 }
 AVAILABLE_IMAGE_VIZ['troubleshoot_plot'] = {
     'title': FILENAME_TROUBLESHOOT_PLOT,
-    'pretty_title': 'Visually Inspect Mistakes by Discriminator/Evaluator',
-    'description': 'INSERT_DESCRIPTION_HERE',
+    'pretty_title': 'Troubleshoot Plot',
+    'description': 'Visually Inspect Mistakes by Discriminator/Evaluator',
     'url_func': 'viz.gen_troubleshoot_plot'
+}
+AVAILABLE_IMAGE_VIZ['grad_cam'] = {
+    'title': FILENAME_GRAD_CAM,
+    'pretty_title': 'Gradient Class Activation Matrix (GradCAM)',
+    'description': 'Visualization of how image-based neural networks make their decisions',
+    'url_func': 'viz.gen_grad_cam'
 }

@@ -758,6 +758,7 @@ class ImageCGAN(CGANUtils):
 
                 # Check if conditions are met and exit, otherwise continue.
                 # netD and incorrect
+                fwd = fwd.reshape(-1)
                 if net == self.netD:
                     if mistake:
                         if gen == self.netG:  # Incorrect means classifying as real
@@ -807,6 +808,8 @@ class ImageCGAN(CGANUtils):
         assert img is not None, "Unable to find an image within the specified timeframe"
 
         real = gen != self.netG
+
+        os.makedirs(os.path.dirname(path), exist_ok=True)
 
         if net == self.netD:
             label = self.le.transform([label])[0]

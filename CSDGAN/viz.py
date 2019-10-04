@@ -354,3 +354,52 @@ def show_troubleshoot_plot():
 
     img_key = cs.FILENAME_TROUBLESHOOT_PLOT.replace('{net}', session['net'])
     return render_template('viz/show_troubleshoot_plot.html', title=session['title'], img_key=img_key, net=session['net'].capitalize())
+
+
+@bp.route('/gen_grad_cam', methods=('GET', 'POST'))
+@login_required
+def gen_grad_cam():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'generate' in request.form.keys():
+            error = None
+
+            if 'label' not in request.form.keys():
+                error = 'Please select a label.'
+            elif 'gen' not in request.form.keys():
+                error = 'Please select a generator.'
+            elif 'net' not in request.form.keys():
+                error = 'Please select a network.'
+            elif 'mistake' not in request.form.keys():
+                error = 'Please select whether the classification should be a mistake.'
+            if error:
+                flash(error)
+            else:
+                session['label'] = request.form['label']
+                session['gen'] = request.form['gen']
+                session['net'] = request.form['net']
+                session['mistake'] = request.form['mistake']
+                mv.build_grad_cam(label=request.form['label'], gen=request.form['gen'], net=request.form['net'], mistake=request.form['mistake'],
+                                  username=g.user['username'], title=session['title'])
+                return redirect(url_for('viz.show_grad_cam'))
+
+    CGAN = cu.get_CGAN(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_grad_cam.html', title=session['title'], labels=list(CGAN.le.classes_))
+
+
+@bp.route('/show_grad_cam', methods=('GET', 'POST'))
+@login_required
+def show_grad_cam():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            filename = cu.translate_filepath(cs.FILENAME_GRAD_CAM.replace('{label}', session['label']).replace('{gen}', session['gen']).replace('{net}', session['net']).replace('{mistake}', session['mistake']))
+            path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
+            return send_file(path, mimetype='image/png', as_attachment=True)
+
+    img_key = cs.FILENAME_GRAD_CAM.replace('{label}', session['label']).replace('{gen}', session['gen']).replace('{net}', session['net']).replace('{mistake}', session['mistake'])
+    return render_template('viz/show_grad_cam.html', title=session['title'], img_key=img_key, net=session['net'].capitalize())

@@ -169,3 +169,34 @@ def build_troubleshoot_plot(labels, num_examples, net, username, title):
         with open(os.path.join(cs.RUN_FOLDER, username, title, 'real_netE.pkl'), 'rb') as f:
             real_netE = pkl.load(f)
         CGAN.troubleshoot_evaluator(real_netE=real_netE, labels=labels, num_examples=num_examples, show=False, save=viz_folder)
+
+
+def build_grad_cam(label, gen, net, mistake, username, title):
+    """Generates a gradient class activation matrix (GradCAM) based on specifications"""
+    CGAN = cu.get_CGAN(username=username, title=title)
+    viz_folder = os.path.join(cs.VIZ_FOLDER, username, title)
+    os.makedirs(viz_folder, exist_ok=True)
+
+    if mistake == 'False':
+        mistake2 = False
+    elif mistake == 'True':
+        mistake2 = True
+
+    if gen == 'netG':
+        gen2 = CGAN.netG
+    elif gen == 'train_gen':
+        gen2 = CGAN.train_gen
+    elif gen == 'val_gen':
+        gen2 = CGAN.val_gen
+    elif gen == 'test_gen':
+        gen2 = CGAN.test_gen
+
+    if net == 'discriminator':
+        net2 = CGAN.netD
+    elif net == 'evaluator':
+        net2 = CGAN.netE
+
+    path = os.path.join(cs.VIZ_FOLDER, username, title,
+                        cu.translate_filepath(cs.FILENAME_GRAD_CAM.replace('{label}', label).replace('{gen}', gen).replace('{net}', net).replace('{mistake}', str(mistake))))
+
+    CGAN.draw_cam(gen=gen2, net=net2, label=label, mistake=mistake2, show=False, path=path)

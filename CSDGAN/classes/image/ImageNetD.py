@@ -139,7 +139,7 @@ class ImageNetD(nn.Module, NetUtils):
         # Preprocess inputs
         label = iu.convert_y_to_one_hot(y=torch.full((1, 1), label, dtype=torch.int64), nc=self.nc)
         img, label = img.to(self.device), label.to(self.device)
-        img = img.view(-1, 1, self.x_dim[0], self.x_dim[1])
+        img = img.view(-1, self.num_channels, self.x_dim[0], self.x_dim[1])
         label = label.view(-1, self.nc).type(torch.float32)
 
         pred = self.forward(img, label)
@@ -163,7 +163,7 @@ class ImageNetD(nn.Module, NetUtils):
         heatmap = heatmap.numpy()
 
         # Save original image
-        img_transformed = img.view(self.x_dim[0], self.x_dim[1]).detach().cpu().numpy() * scale
+        img_transformed = img.squeeze().permute(1, 2, 0).detach().cpu().numpy() * scale
         matplotlib.image.imsave(path, img_transformed, cmap='gray')
 
         # Read in image and cut pixels in half for visibility
@@ -193,7 +193,7 @@ class ImageNetD(nn.Module, NetUtils):
         plt.axis('off')
         plt.title('Original Image', fontweight='bold')
         img = img.squeeze().detach().cpu().numpy()
-        plt.imshow(img, cmap='gray')
+        plt.imshow(np.transpose(img, (1, 2, 0)), cmap='gray')
 
         real_or_fake = 'real' if pred > 0.5 else 'fake'
         real_str = 'Real' if real else 'Fake'

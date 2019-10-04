@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ title }} Run{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Generate Gradient Class Activation Matrix (GradCAM)</h2>
+
+    <p><i>
+        Please select the label of interest. Only the first label selected will be used.
+    </i></p>
+    <select name="label" multiple size="5">
+        {% for label in labels %}
+        <option value="{{ label }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+    <hr>
+    <br>
+
+    <p><i>
+        Please specify the generator to use for producing images for GradCAM. You can select either the trained generator or one that will draw from real training examples.
+    </i></p>
+    <input type="radio" name="gen" id="gen" value="netG">Trained Generator</input><br>
+    <input type="radio" name="gen" id="gen" value="train_gen">Training Data</input><br>
+    <input type="radio" name="gen" id="gen" value="val_gen">Validation Data</input><br>
+    <input type="radio" name="gen" id="gen" value="test_gen">Testing Data</input><br>
+    <hr>
+    <br>
+
+    <p><i>
+        Please specify which network's classification you are interested in. You can select either the Discriminator or Evaluator Network.
+    </i></p>
+    <input type="radio" name="net" id="net" value="discriminator">Discriminator</input><br>
+    <input type="radio" name="net" id="net" value="evaluator">Evaluator</input><br>
+    <hr>
+    <br>
+
+
+    <p><i>
+        Please specify whether the example drawn should be one that the specified network made a mistake.
+    </i></p>
+        <input type="radio" name="mistake" id="mistake" value="False">Correctly Classified</input><br>
+    <input type="radio" name="mistake" id="mistake" value="True">Incorrectly Classified</input><br>
+    <br><br>
+
+    <p><i>
+        Note: It may take a minute or two to locate the images necessary to build the plot.
+    </i></p>
+
+    <input type="submit" name="generate" value="Generate">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+{% endblock %}
