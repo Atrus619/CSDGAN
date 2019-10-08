@@ -341,7 +341,7 @@ class ImageCGAN(CGANUtils):
 
         os.makedirs(os.path.join(path, "imgs"), exist_ok=True)
         ims = []
-        for epoch in range(start, self.epoch + 1, freq):
+        for epoch in range(start, stop + freq, freq):
             fig = plt.figure(figsize=(8, 8))
             plt.axis('off')
             plt.suptitle('Epoch ' + str(epoch))
@@ -351,7 +351,7 @@ class ImageCGAN(CGANUtils):
             plt.savefig(img_name)
             ims.append(imageio.imread(img_name))
             plt.close()
-            if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
+            if epoch == (stop + freq):  # Hacky method to stay on the final frame for longer
                 for i in range(final_img_frames):
                     ims.append(imageio.imread(img_name))
                     plt.close()

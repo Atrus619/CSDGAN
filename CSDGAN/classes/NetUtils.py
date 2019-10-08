@@ -241,10 +241,15 @@ class NetUtils:
             os.makedirs(os.path.join(save, 'layer_histograms'), exist_ok=True)
             f.savefig(os.path.join(save, 'layer_histograms', self.name + '_epoch_' + str(epoch) + '_layer_histograms.png'))
 
-    def build_hist_gif(self, path=None):
+    def build_hist_gif(self, path=None, start=0, stop=None, freq=1, fps=5, final_img_frames=20):
         """
         Loop through self.histogram_weight_history and saves the images to a folder.
         :param path: Path to folder to save images. Folder will be created if it does not already exist.
+        :param start: Epoch to start gif on. Default 0.
+        :param stop: Epoch to end gif on. Default self.epoch (number of epochs trained so far).
+        :param freq: Interval of skipping epochs. Defaults to 1 (no skipping).
+        :param fps: Number of frames to display per second in gif. Defaults to 5.
+        :param final_img_frames: Number of times to repeat final image of gif before it will restart. Defaults to 20 (4 seconds with 5 fps).
         :return: Saves a gif with the title net + _histogram_generation_animation.gif (as well as the images comprising the gif into the layer_histograms folder)
         """
         assert len(self.histogram_weight_history[self.layer_list[0]]['weight']) > 1, "Model not yet trained"
@@ -252,17 +257,20 @@ class NetUtils:
         if path is None:
             path = self.path
 
+        if stop is None:
+            stop = self.epoch
+
         ims = []
-        for epoch in range(self.epoch+1):
+        for epoch in range(start, stop + freq, freq):
             self.plot_layer_hists(epoch=epoch, show=False, save=path)
-            img_name = path + '/layer_histograms/' + self.name + '_epoch_' + str(epoch) + '_layer_histograms.png'
+            img_name = os.path.join(path, 'layer_histograms', self.name + '_epoch_' + str(epoch) + '_layer_histograms.png')
             ims.append(imageio.imread(img_name))
             plt.close()
-            if epoch == self.epoch:  # Hacky method to stay on the final frame for longer
-                for i in range(20):
+            if epoch == (stop + freq):  # Hacky method to stay on the final frame for longer
+                for i in range(final_img_frames):
                     ims.append(imageio.imread(img_name))
                     plt.close()
-        imageio.mimsave(os.path.join(path, self.name + '_histogram_generation_animation.gif'), ims, fps=2)
+        imageio.mimsave(os.path.join(path, self.name + '_histogram_generation_animation.gif'), ims, fps=fps)
 
     @torch.utils.hooks.unserializable_hook
     def activations_hook(self, grad):

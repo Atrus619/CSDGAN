@@ -5,11 +5,8 @@ import CSDGAN.utils.constants as cs
 import CSDGAN.pipeline.visualizations.make_visualizations as mv
 
 from flask import (
-    Blueprint, flash, redirect, render_template, request, url_for, session, current_app, g, send_file
+    Blueprint, flash, redirect, render_template, request, url_for, session, g, send_file
 )
-from werkzeug.utils import secure_filename
-from zipfile import ZipFile
-import pickle as pkl
 import logging
 import os
 
@@ -59,28 +56,54 @@ def images(img_key):
     return send_file(plot_path, mimetype='image/png')
 
 
-@bp.route('/histograms', methods=('GET', 'POST'))
+@bp.route('/gen_histograms', methods=('GET', 'POST'))
 @login_required
-def histograms():
+def gen_histograms():
     max_epoch = cu.get_max_epoch(username=g.user['username'], title=session['title'])
     if request.method == 'POST':
         if 'back' in request.form.keys():
             return go_back_to_viz()
 
-        error = None
-        if 'net' not in request.form.keys():
-            error = 'Please select a network.'
+        if 'download' in request.form.keys():
+            error = None
+            if 'net' not in request.form.keys():
+                error = 'Please select a network.'
 
-        if error:
-            flash(error)
-        else:
-            mv.build_histograms(net=request.form['net'], epoch=request.form['epoch'], username=g.user['username'],
-                                title=session['title'])
-            hist_filename = cu.translate_filepath(cs.FILENAME_HIST_SCATTERS.replace('{net}', request.form['net']).replace('{num}', request.form['epoch']))
-            hist_filepath = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], hist_filename)
-            return send_file(hist_filepath, mimetype='image/png', as_attachment=True)
+            if error:
+                flash(error)
+            else:
+                mv.build_histograms(net=request.form['net'], epoch=request.form['epoch'], username=g.user['username'], title=session['title'])
+                hist_filename = cu.translate_filepath(cs.FILENAME_HIST_SCATTERS.replace('{net}', request.form['net']).replace('{num}', request.form['epoch']))
+                hist_filepath = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], hist_filename)
+                return send_file(hist_filepath, mimetype='image/png', as_attachment=True)
 
-    return render_template('viz/histograms.html', title=session['title'], max_epoch=max_epoch)
+    return render_template('viz/gen_histograms.html', title=session['title'], max_epoch=max_epoch)
+
+
+@bp.route('/gen_histogram_gif', methods=('GET', 'POST'))
+@login_required
+def gen_histogram_gif():
+    if request.method == 'POST':
+        if 'back' in request.form.keys():
+            return go_back_to_viz()
+
+        if 'download' in request.form.keys():
+            error = None
+            if 'net' not in request.form.keys():
+                error = 'Please select a network.'
+
+            if error:
+                flash(error)
+
+            else:
+                mv.build_hist_gif(net=request.form['net'], start=request.form['start'], stop=request.form['stop'], freq=request.form['freq'], fps=request.form['fps'],
+                                  final_img_frames=request.form['final_img_frames'], username=g.user['username'], title=session['title'])
+                filename = cs.FILENAME_HIST_GIF.replace('{net}', request.form['net'])
+                path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
+                return send_file(path, mimetype='image/gif', as_attachment=True)
+
+    CGAN = cu.get_CGAN(username=g.user['username'], title=session['title'])
+    return render_template('viz/gen_histogram_gif.html', title=session['title'], max_epoch=CGAN.epoch)
 
 
 @bp.route('/gen_scatter_matrix', methods=('GET', 'POST'))
@@ -397,9 +420,12 @@ def show_grad_cam():
             return go_back_to_viz()
 
         if 'download' in request.form.keys():
-            filename = cu.translate_filepath(cs.FILENAME_GRAD_CAM.replace('{label}', session['label']).replace('{gen}', session['gen']).replace('{net}', session['net']).replace('{mistake}', session['mistake']))
+            filename = cu.translate_filepath(
+                cs.FILENAME_GRAD_CAM.replace('{label}', session['label']).replace('{gen}', session['gen']).replace('{net}', session['net']).replace('{mistake}',
+                                                                                                                                                    session['mistake']))
             path = os.path.join(cs.VIZ_FOLDER, g.user['username'], session['title'], filename)
             return send_file(path, mimetype='image/png', as_attachment=True)
 
-    img_key = cs.FILENAME_GRAD_CAM.replace('{label}', session['label']).replace('{gen}', session['gen']).replace('{net}', session['net']).replace('{mistake}', session['mistake'])
+    img_key = cs.FILENAME_GRAD_CAM.replace('{label}', session['label']).replace('{gen}', session['gen']).replace('{net}', session['net']).replace('{mistake}',
+                                                                                                                                                  session['mistake'])
     return render_template('viz/show_grad_cam.html', title=session['title'], img_key=img_key, net=session['net'].capitalize())

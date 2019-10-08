@@ -52,6 +52,19 @@ def build_histograms(net, epoch, username, title):
         CGAN.netG.plot_layer_hists(epoch=epoch, show=False, save=viz_folder)
 
 
+def build_hist_gif(net, start, stop, freq, fps, final_img_frames, username, title):
+    """Generates a gif of histograms of layer weights for a specified network"""
+    start, stop, freq, fps, final_img_frames = int(start), int(stop), int(freq), int(fps), int(final_img_frames)
+    CGAN = cu.get_CGAN(username=username, title=title)
+    viz_folder = os.path.join(cs.VIZ_FOLDER, username, title)
+    os.makedirs(viz_folder, exist_ok=True)
+
+    if net == "Discriminator":
+        CGAN.netD.build_hist_gif(start=start, stop=stop, freq=freq, fps=fps, final_img_frames=final_img_frames, path=viz_folder)
+    elif net == "Generator":
+        CGAN.netG.build_hist_gif(start=start, stop=stop, freq=freq, fps=fps, final_img_frames=final_img_frames, path=viz_folder)
+
+
 def build_scatter_matrices(size, username, title, run_id):
     """
     Generates scatter matrices for a tabular CGAN with a specified data set size

@@ -6,7 +6,7 @@
 
 {% block content %}
 <form method=post>
-    <h2>Generate GIF of Generated Images Over Specified Epochs</h2>
+    <h2>Generate Histogram GIF</h2>
 
     <p><i>
         Please specify the following parameters for generating the GIF. Pre-training initializations can be seen at epoch 0.
@@ -20,21 +20,11 @@
     <hr><br>
 
     <p><i>
-        Please select the labels for which to generate the gif. You can select multiple by holding ctrl.
+        Please specify whether you are interested in generating histograms for the Generator or Discriminator network.
     </i></p>
-    <select name="labels" multiple size="5">
-        {% for label in labels %}
-        <option value="{{ label }}">{{ label }}</option>
-        {% endfor %}
-    </select>
-    <hr><br>
-
-    <p><i>
-        Please select the number of examples of each label to generate. The maximum number of examples available is {{ max_num_examples }}.
-    </i></p>
-    <input name="num_examples" id="num_examples" type="number" min="1" max="{{ max_num_examples }}" value="{{ request.form['num_examples'] }}" required>
-    <br><br>
-
+    <input type="radio" name="net" id="net" value="Generator">Generator</input><br>
+    <input type="radio" name="net" id="net" value="Discriminator">Discriminator</input><br>
+    <br>
     <input type="submit" name="download" value="Download">
 </form>
 <form method=post><input type="submit" name="back" value="Back"></form>

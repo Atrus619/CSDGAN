@@ -137,6 +137,7 @@ FILENAME_PLOT_PROGRESS = 'training_progress.png'
 FILENAME_netG_LAYER_SCATTERS = 'layer_scatters|Generator_layer_scatters.png'
 FILENAME_netD_LAYER_SCATTERS = 'layer_scatters|Discriminator_layer_scatters.png'
 FILENAME_HIST_SCATTERS = 'layer_histograms|{net}_epoch_{num}_layer_histograms.png'
+FILENAME_HIST_GIF = '{net}_histogram_generation_animation.gif'
 
 # Tabular Only
 FILENAME_SCATTER_MATRIX = 'scatter_matrices|{title}_scatter_matrix.png'
@@ -179,7 +180,14 @@ AVAILABLE_HIST_VIZ = [
     {
         'title': FILENAME_HIST_SCATTERS,
         'pretty_title': 'Network Layer Weights/Biases Histograms',
-        'description': 'Insert_Description_Here'
+        'description': 'Insert_Description_Here',
+        'url_func': 'viz.gen_histograms'
+    },
+    {
+        'title': FILENAME_HIST_GIF,
+        'pretty_title': 'Histogram GIF',
+        'description': 'GIF of Histograms for specified network',
+        'url_func': 'viz.gen_histogram_gif'
     }
 ]
 
