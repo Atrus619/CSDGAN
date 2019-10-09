@@ -30,6 +30,7 @@
         <th>Download Data</th>
         <th>Get More Data</th>
         <th>Visualize Results</th>
+        <th>Continue Training</th>
         <th>Delete</th>
     </tr>
     </thead>
@@ -43,26 +44,51 @@
         <td id="status{{ loop.index }}">{{ run.descr }}</td>
         <td><a href="#" onclick="refresh_status({{ loop.index }})">Refresh</a></td>
         {% if 'Data available' in run.descr %}
-            <td id="download_button{{ loop.index }}">
-                <form method="post" action="{{ url_for('home.download_data') }}" class="inline">
-                    <button type="submit" name="index" value="{{ loop.index }}" class="link-button">Download Data</button>
-                </form></td>
-            <td id="gen_more_data_button{{ loop.index }}">
-                <form method="post" action="{{ url_for('home.gen_more_data') }}" class="inline">
-                    <button type="submit" name="index" value="{{ loop.index }}" class="link-button">Generate More Data</button>
-                </form></td>
-            <td id="visualize_button{{ loop.index }}">
-                <form method="post" action="{{ url_for('viz.viz') }}" class="inline">
-                    <button type="submit" name="index" value="{{ loop.index }}" class="link-button">See Visualizations</button>
-                </form>
-            </td>
+        <td id="download_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('home.download_data') }}" class="inline">
+                <button type="submit" name="index" value="{{ loop.index }}" class="link-button">Download Data</button>
+            </form>
+        </td>
+        <td id="gen_more_data_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('home.gen_more_data') }}" class="inline">
+                <button type="submit" name="index" value="{{ loop.index }}" class="link-button">Generate More Data</button>
+            </form>
+        </td>
+        <td id="visualize_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('viz.viz') }}" class="inline">
+                <button type="submit" name="index" value="{{ loop.index }}" class="link-button">See Visualizations</button>
+            </form>
+        </td>
+        <td id="continue_training_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('home.continue_training') }}" class="inline">
+                <button type="submit" name="index" value="{{ loop.index }}" class="link-button">Train Longer</button>
+            </form>
+        </td>
         {% else %}
-            <td id="download_button{{ loop.index }}">
-                <form method="post" action="{{ url_for('home.download_data') }}" class="inline"><button class="invis-button"></button></form>----</td>
-            <td id="gen_more_data_button{{ loop.index }}">
-                <form method="post" action="{{ url_for('home.gen_more_data') }}" class="inline"><button class="invis-button"></button></form>----</td>
-            <td id="visualize_button{{ loop.index }}">
-                <form method="post" action="{{ url_for('viz.viz') }}" class="inline"><button class="invis-button"></button></form>----</td>
+        <td id="download_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('home.download_data') }}" class="inline">
+                <button class="invis-button"></button>
+            </form>
+            ----
+        </td>
+        <td id="gen_more_data_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('home.gen_more_data') }}" class="inline">
+                <button class="invis-button"></button>
+            </form>
+            ----
+        </td>
+        <td id="visualize_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('viz.viz') }}" class="inline">
+                <button class="invis-button"></button>
+            </form>
+            ----
+        </td>
+        <td id="continue_training_button{{ loop.index }}">
+            <form method="post" action="{{ url_for('home.continue_training') }}" class="inline">
+                <button class="invis-button"></button>
+            </form>
+            ----
+        </td>
         {% endif %}
         <td id="delete_button{{ loop.index }}"><a href="#" onclick="delete_button({{ loop.index }})">Delete</a></td>
     </tr>
@@ -73,4 +99,3 @@
 {% endif %}
 
 {% endblock %}
-

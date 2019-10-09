@@ -14,13 +14,42 @@ from collections import OrderedDict
 
 
 def get_CGAN(username, title):
-    with open(os.path.join(cs.RUN_FOLDER, username, title, 'CGAN.pkl'), 'rb') as f:
+    path = os.path.join(cs.RUN_FOLDER, username, title, 'CGAN.pkl')
+    assert os.path.exists(path), 'CGAN object not found'
+    with open(path, 'rb') as f:
         return pkl.load(f)
 
 
-def get_dataset(username, title):
-    with open(os.path.join(cs.RUN_FOLDER, username, title, 'dataset.pkl'), 'rb') as f:
+def get_tabular_dataset(username, title):
+    path = os.path.join(cs.RUN_FOLDER, username, title, 'dataset.pkl')
+    assert os.path.exists(path), 'Datset object not found'
+    with open(path, 'rb') as f:
         return pkl.load(f)
+
+
+def get_image_dataset(username, title):
+    run_dir = os.path.join(cs.RUN_FOLDER, username, title)
+    exp_obj_list = ['le.pkl', 'ohe.pkl', 'train_gen.pkl', 'val_gen.pkl', 'test_gen.pkl']
+    for exp_obj in exp_obj_list:
+        assert os.path.exists(os.path.join(run_dir, exp_obj)), exp_obj + ' object not found'
+
+    # Load prior constructed objects necessary for training of Image CGAN
+    with open(os.path.join(run_dir, "le.pkl"), "rb") as f:
+        le = pkl.load(f)
+
+    with open(os.path.join(run_dir, "ohe.pkl"), "rb") as f:
+        ohe = pkl.load(f)
+
+    with open(os.path.join(run_dir, "train_gen.pkl"), "rb") as f:
+        train_gen = pkl.load(f)
+
+    with open(os.path.join(run_dir, "val_gen.pkl"), "rb") as f:
+        val_gen = pkl.load(f)
+
+    with open(os.path.join(run_dir, "test_gen.pkl"), "rb") as f:
+        test_gen = pkl.load(f)
+
+    return le, ohe, train_gen, val_gen, test_gen
 
 
 def get_max_epoch(username, title):

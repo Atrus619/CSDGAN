@@ -6,7 +6,7 @@ from CSDGAN.pipeline.generate.generate_tabular_data import generate_tabular_data
 from CSDGAN.pipeline.generate.generate_image_data import generate_image_data
 
 from flask import (
-    Blueprint, render_template, session, request, send_file, current_app, g
+    Blueprint, render_template, session, request, send_file, current_app, g, redirect, url_for
 )
 import logging
 import os
@@ -101,3 +101,24 @@ def gen_more_data():
             generate_image_data(run_id=session['run_id'], username=username, title=title, aug=aug)
         file = os.path.join(cs.OUTPUT_FOLDER, username, title + ' Additional Data ' + str(aug) + '.zip')
         return send_file(file, mimetype='zip', as_attachment=True)
+
+
+@bp.route('/continue_training', methods=['POST'])
+@login_required
+def continue_training():
+    if 'index' in request.form.keys():  # Entering page for the first time
+        runs = db.query_all_runs(session['user_id'])
+        session['run_id'] = int(runs[int(request.form['index']) - 1]['id'])
+        session['title'] = runs[int(request.form['index']) - 1]['title']
+        return render_template('home/continue_training.html', title=session['title'])
+    if 'cancel' in request.form.keys():
+        return redirect(url_for('index'))
+    if 'train' in request.form.keys():
+        db.query_clear_prior_retraining(run_id=session['run_id'])  # run_id/status_id combination is primary key in status table
+        db.query_incr_retrains(run_id=session['run_id'])
+        retrain = current_app.task_queue.enqueue('CSDGAN.pipeline.train.retrain.retrain',
+                                                 args=(session['run_id'], g.user['username'], session['title'], int(request.form['num_epochs'])),
+                                                 job_timeout=-1)
+        db.query_update_train_id(run_id=session['run_id'], train_id=retrain.get_id())
+        logger.info('User #{} ({}) continued training Run #{} ({})'.format(g.user['id'], g.user['username'], session['run_id'], session['title']))
+        return redirect(url_for('index'))

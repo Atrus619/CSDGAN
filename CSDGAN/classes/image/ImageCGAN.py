@@ -97,7 +97,7 @@ class ImageCGAN(CGANUtils):
 
         self.fixed_imgs = [self.gen_fixed_img_grid()]
 
-    def train_gan(self, num_epochs, print_freq, eval_freq=None, run_id=None, logger=None):
+    def train_gan(self, num_epochs, print_freq, eval_freq=None, run_id=None, logger=None, retrain=False):
         """
         Primary method for training
         :param num_epochs: Desired number of epochs to train for
@@ -105,6 +105,7 @@ class ImageCGAN(CGANUtils):
         :param eval_freq: How frequently to evaluate with netE. If None, no evaluation will occur. Evaluation takes a significant amount of time.
         :param run_id: If not None, will update database as it progresses through training in quarter increments.
         :param logger: Logger to be used for logging training progress. Must exist if run_id is not None.
+        :param retrain: Whether model is being retrained
         """
         assert logger if run_id else True, "Must pass a logger if run_id is passed"
 
@@ -148,6 +149,7 @@ class ImageCGAN(CGANUtils):
                     db.query_verify_live_run(run_id=run_id)
                     logger.info('Checkpoint reached.')
                     status_id = 'Train ' + str(checkpoints.index(self.epoch) + 1) + '/4'
+                    status_id = status_id.replace('Train', 'Retrain') if retrain else status_id
                     db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT[status_id])
 
         uu.train_log_print(run_id=run_id, logger=logger, statement="Total training time: %ds" % (time.time() - og_start_time))

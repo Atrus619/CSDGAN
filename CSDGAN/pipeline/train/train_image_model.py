@@ -23,25 +23,7 @@ def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels)
     try:
         # Check for objects created by make_image_dataset.py
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
-        exp_obj_list = ['le.pkl', 'ohe.pkl', 'train_gen.pkl', 'val_gen.pkl', 'test_gen.pkl']
-        for exp_obj in exp_obj_list:
-            assert os.path.exists(os.path.join(run_dir, exp_obj)), exp_obj + ' object not found'
-
-        # Load prior constructed objects and instantiate CGAN object
-        with open(os.path.join(run_dir, "le.pkl"), "rb") as f:
-            le = pkl.load(f)
-
-        with open(os.path.join(run_dir, "ohe.pkl"), "rb") as f:
-            ohe = pkl.load(f)
-
-        with open(os.path.join(run_dir, "train_gen.pkl"), "rb") as f:
-            train_gen = pkl.load(f)
-
-        with open(os.path.join(run_dir, "val_gen.pkl"), "rb") as f:
-            val_gen = pkl.load(f)
-
-        with open(os.path.join(run_dir, "test_gen.pkl"), "rb") as f:
-            test_gen = pkl.load(f)
+        le, ohe, train_gen, val_gen, test_gen = cu.get_image_dataset(username=username, title=title)
 
         device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 

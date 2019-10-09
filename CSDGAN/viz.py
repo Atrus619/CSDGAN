@@ -166,7 +166,7 @@ def gen_compare_cats():
                                       username=g.user['username'], title=session['title'])
                 return redirect(url_for('viz.show_compare_cats'))
 
-    dataset = cu.get_dataset(username=g.user['username'], title=session['title'])
+    dataset = cu.get_tabular_dataset(username=g.user['username'], title=session['title'])
     return render_template('viz/gen_compare_cats.html', title=session['title'], cat_cols=dataset.cat_inputs)
 
 
@@ -210,7 +210,7 @@ def gen_conditional_scatter():
                                              username=g.user['username'], title=session['title'])
                 return redirect(url_for('viz.show_conditional_scatter'))
 
-    dataset = cu.get_dataset(username=g.user['username'], title=session['title'])
+    dataset = cu.get_tabular_dataset(username=g.user['username'], title=session['title'])
     return render_template('viz/gen_conditional_scatter.html', title=session['title'], cont_cols=dataset.cont_inputs)
 
 
@@ -249,7 +249,7 @@ def gen_conditional_density():
                                              username=g.user['username'], title=session['title'])
                 return redirect(url_for('viz.show_conditional_density'))
 
-    dataset = cu.get_dataset(username=g.user['username'], title=session['title'])
+    dataset = cu.get_tabular_dataset(username=g.user['username'], title=session['title'])
     return render_template('viz/gen_conditional_density.html', title=session['title'], cont_cols=dataset.cont_inputs)
 
 

@@ -51,6 +51,8 @@ function refresh_status(index){
 			$( "#visualize_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
             $( "#visualize_button" + index + " button" ).replaceWith('<button type="submit"  name="index" value="' + index + '" class="link-button">See Visualizations</button>');
 
+			$( "#continue_training_button" + index).contents().filter(function () { return this.nodeType === 3; }).remove();
+            $( "#continue_training_button" + index + " button" ).replaceWith('<button type="submit"  name="index" value="' + index + '" class="link-button">Train Longer</button>');
         }
     });
 }

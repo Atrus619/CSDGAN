@@ -25,12 +25,7 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
     try:
         # Check for objects created by make_tabular_dataset.py
         run_dir = os.path.join(cs.RUN_FOLDER, username, title)
-        assert os.path.exists(os.path.join(run_dir, 'dataset.pkl')), \
-            "Data set object not found"
-
-        # Load data set and instantiate CGAN object
-        with open(os.path.join(run_dir, "dataset.pkl"), 'rb') as f:
-            dataset = pkl.load(f)
+        dataset = cu.get_tabular_dataset(username=username, title=title)
 
         device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 

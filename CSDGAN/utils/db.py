@@ -186,6 +186,19 @@ def query_add_job_ids(run_id, data_id, train_id, generate_id):
     db.commit()
 
 
+def query_update_train_id(run_id, train_id):
+    """Updates run table with a new train id for train job (used for retraining CGAN)"""
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET train_job_id = %s '
+            'WHERE id = %s', (train_id, run_id)
+        )
+    db.commit()
+
+
 def query_get_job_ids(run_id):
     """Retrieves data, train, and generate job ids based on run_id"""
     db = get_db()
@@ -202,7 +215,7 @@ def query_get_job_ids(run_id):
 
 
 def query_incr_augs(run_id):
-    """Returns current aug and increments it by 1 in the database"""
+    """Increments number of retrains in run table by 1 and returns this value"""
     db = get_db()
 
     with db.cursor(pymysql.cursors.DictCursor) as cursor:
@@ -217,7 +230,7 @@ def query_incr_augs(run_id):
         cursor.execute(
             'UPDATE run '
             'SET num_augs = %s '
-            'WHERE id = %s', (result['num_augs'] + 1, run_id)
+            'WHERE id = %s', (str(result['num_augs'] + 1), run_id)
         )
     db.commit()
 
@@ -230,6 +243,7 @@ def query_set_status(run_id, status_id):
                          user=Config.MYSQL_DATABASE_USER,
                          password=Config.MYSQL_DATABASE_PASSWORD,
                          db=Config.MYSQL_DATABASE_DB)
+
     with db.cursor() as cursor:
         cursor.execute(
             'INSERT INTO status ('
@@ -240,6 +254,48 @@ def query_set_status(run_id, status_id):
         )
     db.commit()
     db.close()
+
+
+def query_clear_prior_retraining(run_id):
+    """Clears out history of retraining"""
+    # TODO: Fill this in. 1. Clear prior retraining runs 2. Go back to retrain and adjust query_set_status accordingly
+    db = get_db()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'DELETE FROM status '
+            'WHERE run_id = %s '
+            'AND status_id BETWEEN 11 AND 15', (run_id,)
+        )
+        cursor.execute(
+            'DELETE FROM status '
+            'WHERE run_id = %s '
+            'AND status_id BETWEEN 11 AND 15', (run_id,)
+        )
+    db.commit()
+
+
+def query_incr_retrains(run_id):
+    """Increments number of retrains in run table by 1 and returns this value"""
+    db = get_db()
+
+    with db.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(
+            'SELECT num_retrains '
+            'FROM run '
+            'WHERE id = %s', (run_id,)
+        )
+        result = cursor.fetchone()
+
+    with db.cursor() as cursor:
+        cursor.execute(
+            'UPDATE run '
+            'SET num_retrains = %s '
+            'WHERE id = %s', (str(result['num_retrains'] + 1), run_id)
+        )
+    db.commit()
+
+    return result['num_retrains'] + 1
 
 
 def query_delete_run(run_id):
