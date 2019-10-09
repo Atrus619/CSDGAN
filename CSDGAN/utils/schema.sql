@@ -61,7 +61,7 @@ insert into status_info
   (12, 'Retrain 1/4'),
   (13, 'Retrain 2/4'),
   (14, 'Retrain 3/4'),
-  (15, 'Retraining Complete'),
+  (15, 'Retraining Complete - Data available'),
   (98, 'Forcefully exited early by user'),
   (99, 'Error - Run failed'),
   (100, 'No Longer Available');
