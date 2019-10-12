@@ -48,7 +48,7 @@ create TABLE status (
 insert into status_info
   values
   (1, 'Not started'),
-  (2, 'Kicked off'),
+  (2, 'Training kicked off'),
   (3, 'Preprocessing data'),
   (4, 'Benchmarking'),
   (5, 'Training in progress...0/4'),
@@ -57,11 +57,12 @@ insert into status_info
   (8, 'Training in progress...3/4'),
   (9, 'Training complete - Generating data'),
   (10, 'Complete - Data available'),
-  (11, 'Retrain 0/4'),
-  (12, 'Retrain 1/4'),
-  (13, 'Retrain 2/4'),
-  (14, 'Retrain 3/4'),
-  (15, 'Retraining Complete - Data available'),
+  (11, 'Retraining kicked off'),
+  (12, 'Retrain 0/4'),
+  (13, 'Retrain 1/4'),
+  (14, 'Retrain 2/4'),
+  (15, 'Retrain 3/4'),
+  (16, 'Retraining Complete - Data available'),
   (98, 'Forcefully exited early by user'),
   (99, 'Error - Run failed'),
   (100, 'No Longer Available');

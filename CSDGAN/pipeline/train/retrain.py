@@ -34,13 +34,15 @@ def retrain(run_id, username, title, num_epochs):
                            print_freq=cs.TABULAR_DEFAULT_PRINT_FREQ,
                            eval_freq=cs.TABULAR_DEFAULT_EVAL_FREQ,
                            run_id=run_id,
-                           logger=logging.getLogger('train_info'))
+                           logger=logging.getLogger('train_info'),
+                           retrain=True)
         elif type(CGAN).__name__ == 'ImageCGAN':
             CGAN.train_gan(num_epochs=num_epochs,
                            print_freq=cs.IMAGE_DEFAULT_PRINT_FREQ,
                            eval_freq=cs.IMAGE_DEFAULT_EVAL_FREQ,
                            run_id=run_id,
-                           logger=logging.getLogger('train_info'))
+                           logger=logging.getLogger('train_info'),
+                           retrain=True)
         else:
             raise Exception('Invalid CGAN class object loaded')
 

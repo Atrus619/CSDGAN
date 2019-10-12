@@ -35,7 +35,10 @@
         If left blank, a default value of {{ default_num_epochs }} will be used.</i></p>
     <input name="num_epochs" type="number" min="1" max="{{ max_num_epochs }}" id="num_epochs" value="{{ request.form['num_epochs'] }}">
     <br>
-    <input type="submit" value="Next">
+    <input type="submit" name="advanced_options" value="Advanced Settings">
+    <input type="submit" name="specify_output" value="Skip Advanced Settings">
+
 </form>
+<form method=post><input type="submit" name="back" value="Back"></form>
 <form method=post><input type="submit" name="cancel" value="Cancel"></form>
 {% endblock %}

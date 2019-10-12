@@ -116,6 +116,7 @@ def continue_training():
     if 'train' in request.form.keys():
         db.query_clear_prior_retraining(run_id=session['run_id'])  # run_id/status_id combination is primary key in status table
         db.query_incr_retrains(run_id=session['run_id'])
+        db.query_set_status(run_id=session['run_id'], status_id=cs.STATUS_DICT['Retraining kicked off'])
         retrain = current_app.task_queue.enqueue('CSDGAN.pipeline.train.retrain.retrain',
                                                  args=(session['run_id'], g.user['username'], session['title'], int(request.form['num_epochs'])),
                                                  job_timeout=-1)

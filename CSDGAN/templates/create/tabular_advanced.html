@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}New Run - {{ title }} - Advanced Settings{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<form method=post>
+    <h2>Information</h2>
+    <p><i>
+        This section allows the user to control fine details concerning training the tabular CGAN.
+        If left blank, defaults will be used. Defaults will be noted throughout.
+    </i></p>
+    <hr>
+
+    <h2>Learning Rates</h2>
+    <p><i>
+        Specify the learning rates for both the generator and discriminator networks.
+        The default for the generator is {{ default_params.netG_lr }} and the default for the discriminator is {{ default_params.netD_lr }}.
+    </i></p>
+    <b>Generator: </b><input name="netG_lr" id="netG_lr" value="{{ request.form['netG_lr'] }}"><br>
+    <b>Discriminator: </b><input name="netD_lr" id="netD_lr" value="{{ request.form['netD_lr'] }}"><br>
+    <hr>
+
+    <h2>Adam Optimizer Beta1 and Beta2</h2>
+    <p><i>
+        Specify beta1 and beta2 for the generator and discriminator networks.
+        The default for both networks is beta1 = {{ default_params.netG_beta1 }} and beta2 = {{ default_params.netG_beta2 }}.
+    </i></p>
+    <b>Generator Beta1: </b><input name="netG_beta1" id="netG_beta1" type="number" min="0" max="1" step="0.1" value="{{ request.form['netG_beta1'] }}"><br>
+    <b>Generator Beta2: </b><input name="netG_beta2" id="netG_beta2" type="number" min="0" max="1" step="0.001" value="{{ request.form['netG_beta2'] }}"><br>
+    <b>Discriminator Beta1: </b><input name="netD_beta1" id="netD_beta1" type="number" min="0" max="1" step="0.1" value="{{ request.form['netD_beta1'] }}"><br>
+    <b>Discriminator Beta2: </b><input name="netD_beta2" id="netD_beta2" type="number" min="0" max="1" step="0.001" value="{{ request.form['netD_beta2'] }}"><br>
+    <hr>
+
+    <h2>Weight Decay</h2>
+    <p><i>
+        Specify the amount of weight decay to apply to each network.
+        The default amount of weight decay for both networks is {{ default_params.netG_wd }}.
+    </i></p>
+    <b>Generator: </b><input name="netG_wd" id="netG_wd" type="number" min="0" step="0.01" value="{{ request.form['netG_wd'] }}"><br>
+    <b>Discriminator: </b><input name="netD_wd" id="netD_wd" type="number" min="0" step="0.01" value="{{ request.form['netD_wd'] }}"><br>
+    <hr>
+
+    <h2>Label Noise</h2>
+    <p><i>
+        With probability label_noise, the labels for the discriminator's training (real or fake) are randomly flipped.
+        For example, when training the discriminator, we traditionally feed it an entire batch of real data (labeled real),
+        followed by an entire batch of fake data (labeled fake), and then update it based on how well it performed.
+        In this case, when we feed it an entire batch of real data, we flip a percent of the labels to fake,
+        so that we are feeding the discriminator some incorrect information (we do this for the fake data as well, labeling them as real).
+        This results in inhibiting the discriminator's training process and tries to prevent the discriminator from learning simple tricks to
+        detect whether an image is real or fake. The default for this value is {{ default_params.label_noise }}.
+    </i></p>
+    <b>Label Noise: </b><input name="label_noise" id="label_noise" type="number" min="0" max="1" step="0.01" value="{{ request.form['label_noise'] }}"><br>
+    <hr>
+
+    <h2>Linearly Anneal Label Noise</h2>
+    <p><i>
+        Linearly annealing label noise will decrease the label noise to 0 linearly as the network trains.
+        The default for this value is {{ default_params.label_noise_linear_anneal }}.
+    </i></p>
+    <input type="radio" name="label_noise_linear_anneal" id="label_noise_linear_anneal" value="True">Yes, linearly anneal label noise</input><br>
+    <input type="radio" name="label_noise_linear_anneal" id="label_noise_linear_anneal" value="False">No, do not linearly anneal label noise</input><br>
+    <hr>
+
+    <h2>Discriminator Noise</h2>
+    <p><i>
+        This value is the standard deviation of normally distributed noise (with mean zero) added to the discriminator's input data each time it evaluates
+        real or fake data. This is a general trick employed in deep learning to improve robustness of models to noise, but also further prevents the
+        discriminator from getting too good at discriminating real data from fake data based on trivial inconsistencies.
+        The default for this value is {{ default_params.discrim_noise }}.
+    </i></p>
+    <b>Label Noise: </b><input name="discrim_noise" id="discrim_noise" type="number" min="0" step="0.01" value="{{ request.form['discrim_noise'] }}"><br>
+    <hr>
+
+    <h2>Linearly Anneal Discriminator Noise</h2>
+    <p><i>
+        Linearly annealing discriminator noise will decrease the discriminator noise to 0 linearly as the network trains.
+        The default for this value is {{ default_params.discrim_noise_linear_anneal }}.
+    </i></p>
+    <input type="radio" name="discrim_noise_linear_anneal" id="discrim_noise_linear_anneal" value="True">Yes, linearly anneal disriminator noise</input><br>
+    <input type="radio" name="discrim_noise_linear_anneal" id="discrim_noise_linear_anneal" value="False">No, do not linearly anneal disriminator noise</input><br>
+    <hr>
+
+    <h2>Size of Noise Vector</h2>
+    <p><i>
+        The noise vector is a vector of specified length of random values generated from the standard normal distribution that is fed to the generator in order to produce
+        outputs. While the length is an important value, as long as the correct general range is used, the results shouldn't be overly sensitive to the specific value chosen.
+        The default for this value is {{ default_params.nz }}.
+    </i></p>
+    <b>Noise Vector Length: </b><input name="nz" id="nz" type="number" min="0" step="1" value="{{ request.form['nz'] }}"><br>
+    <hr>
+
+    <h2>Training Schedule</h2>
+    <p><i>
+        A recurring problem with training GANs is that the discriminator dominates the generator and thus the generator is unable to receive a useful training signal.
+        This value represents the number of batches to train the generator with for each set of batches the discriminator is trained with. Note that a value of 1 means
+        that the discriminator is trained on twice as much data, since the discriminator receives a full batch each of real and fake data (for each set of data generated by
+        the generator). The default for this value is {{ default_params.sched_netG }}.
+    </i></p>
+    <b>Training Schedule: </b><input name="sched_netG" id="sched_netG" type="number" min="1" step="1" value="{{ request.form['sched_netG'] }}"><br>
+    <hr>
+
+    <h2>Number of Hidden Units Per Layer</h2>
+    <p><i>
+        Specify the number of hidden units to use per layer in each network (essentially the width of the network).
+        The default for the generator is {{ default_params.netG_H }} units and the default for the discriminator is {{ default_params.netD_H }} units.
+    </i></p>
+    <b>Generator Hidden Units Per Layer: </b><input name="netG_H" id="netG_H" type="number" min="0" step="1" value="{{ request.form['netG_H'] }}"><br>
+    <b>Discriminator Hidden Units Per Layer: </b><input name="netD_H" id="netD_H" type="number" min="0" step="1" value="{{ request.form['netD_H'] }}"><br>
+    <hr>
+
+    <h2>Test Set Size (Proportion of data)</h2>
+    <p><i>
+        Specify the proportion of data to use in the held-out test set. The default for this value is {{ default_test_size }}.
+    </i></p>
+    <b>Test Set Size: </b><input name="ts" id="ts" type="number" min="0" max="1" step="0.01" value="{{ request.form['ts'] }}"><br>
+    <hr>
+
+    <h2>Batch Size</h2>
+    <p><i>
+        Specify the batch size to use in training the CGAN. The default for this value is {{ default_batch_size }}.
+    </i></p>
+    <b>Batch Size: </b><input name="bs" id="bs" type="number" min="0" step="1" value="{{ request.form['bs'] }}"><br>
+    <hr>
+
+    <h2>Evaluator Parameters</h2>
+    <p><i>
+        Currently the tabular evaluator is set as a logistic regression. You can specify the parameters for the training of the evaluator here.
+        The default value for these arguments are: Tolerance - {{ default_eval_param.tol }}, C - {{ default_eval_param.C }}, L1_ratio - {{ default_eval_param.l1_ratio }},
+        and number of CV folds - {{ default_eval_folds }}.
+    </i></p>
+    <b>Tolerance: </b><input name="tol" id="tol" value="{{ request.form['tol'] }}"><br>
+    <b>C: </b><input name="C" id="C" type="number" min="0" max="1" step="0.1" value="{{ request.form['C'] }}"><br>
+    <b>L1 Ratio: </b><input name="l1_ratio" id="l1_ratio" type="number" min="0" max="1" step="0.1" value="{{ request.form['l1_ratio'] }}"><br>
+    <b>Number of Cross-Validation Folds for Evaluator: </b><input name="cv" id="cv" type="number" min="2" step="1" value="{{ request.form['cv'] }}"><br>
+    <br>
+
+    <input type="submit" name="next" value="Next">
+</form>
+<form method=post><input type="submit" name="back" value="Back"></form>
+<form method=post><input type="submit" name="cancel" value="Cancel"></form>
+{% endblock %}

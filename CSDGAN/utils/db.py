@@ -258,19 +258,13 @@ def query_set_status(run_id, status_id):
 
 def query_clear_prior_retraining(run_id):
     """Clears out history of retraining"""
-    # TODO: Fill this in. 1. Clear prior retraining runs 2. Go back to retrain and adjust query_set_status accordingly
     db = get_db()
 
     with db.cursor() as cursor:
         cursor.execute(
             'DELETE FROM status '
             'WHERE run_id = %s '
-            'AND status_id BETWEEN 11 AND 15', (run_id,)
-        )
-        cursor.execute(
-            'DELETE FROM status '
-            'WHERE run_id = %s '
-            'AND status_id BETWEEN 11 AND 15', (run_id,)
+            'AND status_id BETWEEN 11 AND 16', (run_id,)
         )
     db.commit()
 

@@ -11,7 +11,7 @@ import pickle as pkl
 from torch.utils import data
 
 
-def train_tabular_model(run_id, username, title, num_epochs, bs):
+def train_tabular_model(run_id, username, title, num_epochs, bs, tabular_init_params, tabular_eval_params, tabular_eval_folds):
     """
     Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions.
     """
@@ -38,12 +38,12 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
                            device=device,
                            path=run_dir,
                            seed=None,
-                           eval_param_grid=cs.TABULAR_EVAL_PARAM_GRID,
-                           eval_folds=cs.TABULAR_EVAL_FOLDS,
+                           eval_param_grid=tabular_eval_params,
+                           eval_folds=tabular_eval_folds,
                            test_ranges=[dataset.x_train.shape[0] * 2 ** x for x in range(5)],
                            eval_stratify=dataset.eval_stratify,
                            nc=len(dataset.labels_list),
-                           **cs.TABULAR_CGAN_INIT_PARAMS)
+                           **tabular_init_params)
 
         # Benchmark and store
         logger.info('Successfully instantiated CGAN object. Beginning benchmarking...')
@@ -52,8 +52,8 @@ def train_tabular_model(run_id, username, title, num_epochs, bs):
                                                y_train=CGAN.data_gen.dataset.y_train.cpu().detach().numpy(),
                                                x_test=CGAN.data_gen.dataset.x_test.cpu().detach().numpy(),
                                                y_test=CGAN.data_gen.dataset.y_test.cpu().detach().numpy(),
-                                               param_grid=cs.TABULAR_EVAL_PARAM_GRID,
-                                               cv=cs.TABULAR_EVAL_FOLDS,
+                                               param_grid=tabular_eval_params,
+                                               cv=tabular_eval_folds,
                                                labels_list=dataset.labels_list,
                                                verbose=False)
         db.query_update_benchmark(run_id=run_id, benchmark=benchmark)
