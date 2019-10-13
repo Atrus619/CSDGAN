@@ -15,31 +15,36 @@
 
     <h2>Learning Rates</h2>
     <p><i>
-        Specify the learning rates for both the generator and discriminator networks.
-        The default for the generator is {{ default_params.netG_lr }} and the default for the discriminator is {{ default_params.netD_lr }}.
+        Specify the learning rates for the generator, discriminator, and evaluator networks.
+        The default for the generator is {{ default_params.netG_lr }} the default for the discriminator is {{ default_params.netD_lr }},
+        and the default for the evaluator is {{ default_params.netE_lr }}.
     </i></p>
     <b>Generator: </b><input name="netG_lr" id="netG_lr" value="{{ request.form['netG_lr'] }}"><br>
     <b>Discriminator: </b><input name="netD_lr" id="netD_lr" value="{{ request.form['netD_lr'] }}"><br>
+    <b>Evaluator: </b><input name="netE_lr" id="netE_lr" value="{{ request.form['netE_lr'] }}"><br>
     <hr>
 
     <h2>Adam Optimizer Beta1 and Beta2</h2>
     <p><i>
-        Specify beta1 and beta2 for the generator and discriminator networks.
-        The default for both networks is beta1 = {{ default_params.netG_beta1 }} and beta2 = {{ default_params.netG_beta2 }}.
+        Specify beta1 and beta2 for the generator discriminator, and evaluator networks.
+        The default for all networks is beta1 = {{ default_params.netG_beta1 }} and beta2 = {{ default_params.netG_beta2 }}.
     </i></p>
     <b>Generator Beta1: </b><input name="netG_beta1" id="netG_beta1" type="number" min="0" max="1" step="0.1" value="{{ request.form['netG_beta1'] }}"><br>
     <b>Generator Beta2: </b><input name="netG_beta2" id="netG_beta2" type="number" min="0" max="1" step="0.001" value="{{ request.form['netG_beta2'] }}"><br>
     <b>Discriminator Beta1: </b><input name="netD_beta1" id="netD_beta1" type="number" min="0" max="1" step="0.1" value="{{ request.form['netD_beta1'] }}"><br>
     <b>Discriminator Beta2: </b><input name="netD_beta2" id="netD_beta2" type="number" min="0" max="1" step="0.001" value="{{ request.form['netD_beta2'] }}"><br>
+    <b>Evaluator Beta1: </b><input name="netE_beta1" id="netE_beta1" type="number" min="0" max="1" step="0.1" value="{{ request.form['netE_beta1'] }}"><br>
+    <b>Evaluator Beta2: </b><input name="netE_beta2" id="netE_beta2" type="number" min="0" max="1" step="0.001" value="{{ request.form['netE_beta2'] }}"><br>
     <hr>
 
     <h2>Weight Decay</h2>
     <p><i>
         Specify the amount of weight decay to apply to each network.
-        The default amount of weight decay for both networks is {{ default_params.netG_wd }}.
+        The default amount of weight decay for all networks is {{ default_params.netG_wd }}.
     </i></p>
     <b>Generator: </b><input name="netG_wd" id="netG_wd" type="number" min="0" step="0.01" value="{{ request.form['netG_wd'] }}"><br>
     <b>Discriminator: </b><input name="netD_wd" id="netD_wd" type="number" min="0" step="0.01" value="{{ request.form['netD_wd'] }}"><br>
+    <b>Evaluator: </b><input name="netE_wd" id="netE_wd" type="number" min="0" step="0.01" value="{{ request.form['netE_wd'] }}"><br>
     <hr>
 
     <h2>Label Noise</h2>
@@ -102,47 +107,38 @@
     <b>Training Schedule: </b><input name="sched_netG" id="sched_netG" type="number" min="1" step="1" value="{{ request.form['sched_netG'] }}"><br>
     <hr>
 
-    <h2>Number of Hidden Units Per Layer</h2>
+    <h2>Maximum Feature Map Size</h2>
     <p><i>
-        Specify the number of hidden units to use per layer in each network (essentially the width of the network).
-        The default for the generator is {{ default_params.netG_H }} units and the default for the discriminator is {{ default_params.netD_H }} units.
+        Specify the maximum number of feature maps to use per layer in each network (essentially the width of the network).
+        The number of feature maps per layer will scale similarly to high-performing architectures like ResNet.
+        The default for the generator is {{ default_params.netG_nf }} feature maps and the default for the discriminator is {{ default_params.netD_nf }} feature maps.
     </i></p>
-    <b>Generator Hidden Units Per Layer: </b><input name="netG_H" id="netG_H" type="number" min="0" step="1" value="{{ request.form['netG_H'] }}"><br>
-    <b>Discriminator Hidden Units Per Layer: </b><input name="netD_H" id="netD_H" type="number" min="0" step="1" value="{{ request.form['netD_H'] }}"><br>
+    <b>Generator Max Feature Maps: </b><input name="netG_nf" id="netG_nf" type="number" min="0" step="1" value="{{ request.form['netG_nf'] }}"><br>
+    <b>Discriminator Max Feature Maps: </b><input name="netD_nf" id="netD_nf" type="number" min="0" step="1" value="{{ request.form['netD_nf'] }}"><br>
     <hr>
 
-    <h2>Batch Size</h2>
+    <h2>Generated Data Set Size</h2>
     <p><i>
-        Specify the batch size to use in training the CGAN. The default for this value is {{ default_batch_size }}.
+    Specify the size of the generated data set to use for training the evaluator. The default for this value is {{ default_params.fake_data_set_size }}.
     </i></p>
-    <b>Batch Size: </b><input name="bs" id="bs" type="number" min="0" step="1" value="{{ request.form['bs'] }}"><br>
-    <hr>
-
-    <h2>Test Set Size (Proportion of data)</h2>
-    <p><i>
-    Specify the proportion of data to use in the held-out test set. The default for this value is {{ default_test_size }}.
-    </i></p>
-    <b>Test Set Size: </b><input name="ts" id="ts" type="number" min="0" max="1" step="0.01" value="{{ request.form['ts'] }}"><br>
+    <b>Generated Data Set Size: </b><input name="fake_data_set_size" id="fake_data_set_size" type="number" min="0" max="1" step="0.01" value="{{ request.form['fake_data_set_size'] }}"><br>
     <hr>
 
     <h2>Evaluator Frequency</h2>
     <p><i>
-        Specify how often the evaluator should be trained. The units of this value is epochs. For example, specifying 250 would result in the evaluator being trained every
-        250 epochs. Additionally, an evaluator will always be trained after the final epoch. The default for this value is {{ default_eval_freq }} epochs.
+        Specify how often the evaluator should be trained. The units of this value is epochs. For example, specifying 40 would result in the evaluator being trained every
+        40 epochs. Additionally, an evaluator will always be trained after the final epoch. The default for this value is {{ default_eval_freq }} epochs.
     </i></p>
-    <b>Evaluator Frequency: </b><input name="tabular_eval_freq" id="tabular_eval_freq" type="number" min="0" step="1" value="{{ request.form['tabular_eval_freq'] }}"><br>
+    <b>Evaluator Frequency: </b><input name="image_eval_freq" id="image_eval_freq" type="number" min="0" step="1" value="{{ request.form['image_eval_freq'] }}"><br>
     <hr>
 
     <h2>Evaluator Parameters</h2>
     <p><i>
-        Currently the tabular evaluator is set as a logistic regression. You can specify the parameters for the training of the evaluator here.
-        The default value for these are: Tolerance - {{ default_eval_param.tol }}, C - {{ default_eval_param.C }}, L1_ratio - {{ default_eval_param.l1_ratio }},
-        and number of CV folds - {{ default_eval_folds }}.
+        Specify various training parameters for the evaluator here.
+        The default value for these are: Number of evaluator epochs - {{ default_params.eval_num_epochs }}, Early stopping patience - {{ default_params.early_stopping_patience }}.
     </i></p>
-    <b>Tolerance: </b><input name="tol" id="tol" value="{{ request.form['tol'] }}"><br>
-    <b>C: </b><input name="C" id="C" type="number" min="0" max="1" step="0.1" value="{{ request.form['C'] }}"><br>
-    <b>L1 Ratio: </b><input name="l1_ratio" id="l1_ratio" type="number" min="0" max="1" step="0.1" value="{{ request.form['l1_ratio'] }}"><br>
-    <b>Number of Cross-Validation Folds for Evaluator: </b><input name="cv" id="cv" type="number" min="2" step="1" value="{{ request.form['cv'] }}"><br>
+    <b>Evaluator Epochs: </b><input name="eval_num_epochs" id="eval_num_epochs" type="number" min="1" step="1" value="{{ request.form['eval_num_epochs'] }}"><br>
+    <b>Early Stopping Patience: </b><input name="early_stopping_patience" id="early_stopping_patience" type="number" min="1" step="1" value="{{ request.form['early_stopping_patience'] }}"><br>
     <br>
 
     <input type="submit" name="next" value="Next">

@@ -10,6 +10,7 @@
     <p><i>If you would like to override the default dependent variable title of {{ default_dep_var }}, please enter in a title below.</i></p>
     <input name="dep_var" id="dep_var" value="{{ request.form['dep_var'] }}">
     <hr>
+
     <h2>Image Dimensions</h2>
     <p><i>
         Please specify the width and height of the images. Note that all images will be cropped to the same size.
@@ -21,6 +22,7 @@
     <span class="nobr">Height: </span>
     <input name="x_dim_length" type="number" min="1" max="{{ max_x_dim }}" step="1" id="x_dim_length" value="{{ request.form['x_dim_length'] }}">
     <hr>
+
     <h2>Batch Size</h2>
     <p><i>
         The number of images to train the algorithm on simultaneously. Higher batch size means faster training,
@@ -29,6 +31,7 @@
     </i></p>
     <input name="bs" type="number" min="1" max="{{ max_bs }}" id="bs" value="{{ request.form['bs'] }}">
     <hr>
+
     <h2>Train/Validation/Test Splits</h2>
     <p><i>
         The proportion of the images to be used for training versus validation versus testing. If left blank,
@@ -42,13 +45,17 @@
     <span class="nobr">Test: </span>
     <input name="splits_2" type="number" min="0" max="1" step="0.05" id="splits_2" value="{{ request.form['splits_2'] }}">
     <hr>
+
     <h2>Number of Epochs</h2>
     <p><i>This represents the number of times to iterate over the data set when training. Higher values mean training will take longer, but could yield better results.
         If left blank, a default value of {{ default_num_epochs }} will be used.</i></p>
     <input name="num_epochs" type="number" min="1" max="{{ max_num_epochs }}" id="num_epochs" value="{{ request.form['num_epochs'] }}">
     <br>
-    <input type="submit" value="Next">
+
+    <input type="submit" name="advanced_options" value="Advanced Settings">
+    <input type="submit" name="specify_output" value="Skip Advanced Settings">
 </form>
+
 <form method=post><input type="submit" name="back" value="Back"></form>
 <form method=post><input type="submit" name="cancel" value="Cancel"></form>
 {% endblock %}

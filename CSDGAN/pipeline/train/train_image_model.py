@@ -9,7 +9,7 @@ import torch
 import pickle as pkl
 
 
-def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels):
+def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels, image_init_params, image_eval_freq):
     """
     Trains an Image CGAN on the data preprocessed by make_image_dataset.py. Loads best generator and pickles CGAN for predictions.
     """
@@ -37,14 +37,14 @@ def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels)
                          le=le,
                          ohe=ohe,
                          fake_bs=bs,
-                         **cs.IMAGE_CGAN_INIT_PARAMS)
+                         **image_init_params)
 
         # Benchmark and store
         logger.info('Successfully instantiated CGAN object. Beginning benchmarking...')
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Benchmarking'])
 
-        benchmark, real_netE = CGAN.eval_on_real_data(num_epochs=cs.IMAGE_CGAN_INIT_PARAMS['eval_num_epochs'],
-                                                      es=cs.IMAGE_CGAN_INIT_PARAMS['early_stopping_patience'])
+        benchmark, real_netE = CGAN.eval_on_real_data(num_epochs=image_init_params['eval_num_epochs'],
+                                                      es=image_init_params['early_stopping_patience'])
 
         db.query_update_benchmark(run_id=run_id, benchmark=benchmark)
 
@@ -56,7 +56,7 @@ def train_image_model(run_id, username, title, num_epochs, bs, nc, num_channels)
         db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Train 0/4'])
         CGAN.train_gan(num_epochs=num_epochs,
                        print_freq=cs.IMAGE_DEFAULT_PRINT_FREQ,
-                       eval_freq=cs.IMAGE_DEFAULT_EVAL_FREQ,
+                       eval_freq=image_eval_freq,
                        run_id=run_id,
                        logger=logging.getLogger('train_info'))
 

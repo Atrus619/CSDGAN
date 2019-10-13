@@ -14,6 +14,7 @@
         {% endfor %}
     </select>
     <hr>
+
     <h2>Numeric Features</h2>
     <p><i>You can select multiple by holding ctrl/cmd.</i></p>
     <select name="cont_inputs" multiple size="5">
@@ -22,6 +23,7 @@
         {% endfor %}
     </select>
     <hr>
+
     <h2>Integer Features</h2>
     <p><i>This should be a subset of your numeric features. Again, you can select multiple by holding ctrl/cmd.</i></p>
     <select name="int_inputs" multiple size="5">
@@ -30,15 +32,17 @@
         {% endfor %}
     </select>
     <hr>
+
     <h2>Number of Epochs</h2>
     <p><i>This represents the number of times to iterate over the data set when training. Higher values mean training will take longer, but could yield better results.
         If left blank, a default value of {{ default_num_epochs }} will be used.</i></p>
     <input name="num_epochs" type="number" min="1" max="{{ max_num_epochs }}" id="num_epochs" value="{{ request.form['num_epochs'] }}">
     <br>
+
     <input type="submit" name="advanced_options" value="Advanced Settings">
     <input type="submit" name="specify_output" value="Skip Advanced Settings">
-
 </form>
+
 <form method=post><input type="submit" name="back" value="Back"></form>
 <form method=post><input type="submit" name="cancel" value="Cancel"></form>
 {% endblock %}

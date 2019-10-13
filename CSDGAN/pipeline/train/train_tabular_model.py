@@ -11,7 +11,7 @@ import pickle as pkl
 from torch.utils import data
 
 
-def train_tabular_model(run_id, username, title, num_epochs, bs, tabular_init_params, tabular_eval_params, tabular_eval_folds):
+def train_tabular_model(run_id, username, title, num_epochs, bs, tabular_init_params, tabular_eval_freq, tabular_eval_params, tabular_eval_folds):
     """
     Trains a Tabular CGAN on the data preprocessed by make_tabular_dataset.py. Loads best generator and pickles CGAN for predictions.
     """
@@ -64,7 +64,7 @@ def train_tabular_model(run_id, username, title, num_epochs, bs, tabular_init_pa
         CGAN.train_gan(num_epochs=num_epochs,
                        cadence=cs.TABULAR_DEFAULT_CADENCE,
                        print_freq=cs.TABULAR_DEFAULT_PRINT_FREQ,
-                       eval_freq=cs.TABULAR_DEFAULT_EVAL_FREQ,
+                       eval_freq=tabular_eval_freq,
                        run_id=run_id,
                        logger=logging.getLogger('train_info'))
 
