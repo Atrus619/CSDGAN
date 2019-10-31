@@ -49,6 +49,14 @@ While all of the code is yours to explore, I recommend starting out by checking 
 3. From there, you are free to dive into the model architectures themselves (contained in the models folder), as well as the various helper functions used to visualize and better understand the training process and model quality.
 
 ## How to run the app?
+The app utilizes redis and mysql. Install with:
+
+`sudo apt-get install redis-server`
+
+and
+
+`sudo apt-get install mysql-server`
+
 The app has been decomposed into Docker containers, and these containers are all available on Docker's cloud service.
 If you wish to expose the web app to the internet, you will need to install ngrok:
 
