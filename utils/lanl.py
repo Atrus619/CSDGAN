@@ -104,7 +104,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         return samples, labels
 
 
-class One_Sample_Only_DataGenerator(tf.keras.utils.Sequence):
+class OneSampleOnlyDataGenerator(tf.keras.utils.Sequence):
     def __init__(self, data, targets, lookback):
         self.data = data
         self.targets = targets

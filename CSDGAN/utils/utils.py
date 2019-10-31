@@ -184,7 +184,7 @@ def parse_image_folder(username, title, file):
 def setup_run_logger(name, username, title, filename='run_log', level=logging.INFO):
     log_setup = logging.getLogger(name)
 
-    os.path.exists(os.path.join(cs.RUN_FOLDER, username, title)), 'Path does not exist: ' + os.path.join(cs.RUN_FOLDER, username, title)
+    assert os.path.exists(os.path.join(cs.RUN_FOLDER, username, title)), 'Path does not exist: ' + os.path.join(cs.RUN_FOLDER, username, title)
 
     fileHandler = logging.FileHandler(os.path.join(cs.RUN_FOLDER, username, title, filename + '.log'), mode='a')
     formatter = logging.Formatter('%(levelname)s: %(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')

@@ -10,6 +10,7 @@ import torchvision.transforms as t
 
 
 def img_dataset_preprocessor(x, y, splits, seed=None):
+    """Min-max scales an image data set so that all values lie between 0 and 1. Also splits data into train/val/test partitions."""
     y, le, ohe = uu.encode_y(y)
 
     x = x.astype('float32')
