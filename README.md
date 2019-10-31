@@ -57,6 +57,11 @@ and
 
 `sudo apt-get install mysql-server`
 
+If you have never used mysql before, you will want to set up a login that corresponds to your .env file. If you have not already done so, copy over the sample.env file to a new file named .env. Feel free to customize some of the settings, and then take the values for DB_USER, DB_PW, and APP_NAME and run them through the following steps:
+1. In terminal, run: `mysql -u root` to log into mysql as root
+2. Create user and pw for app: `GRANT ALL PRIVILEGES ON *.* TO 'DB_USER_GOES_HERE'@'localhost' IDENTIFIED BY 'DB_PW_GOES_HERE';`
+3. Create a databse for app: `CREATE DATABASE APP_NAME_GOES_HERE;`
+
 The app has been decomposed into Docker containers, and these containers are all available on Docker's cloud service.
 If you wish to expose the web app to the internet, you will need to install ngrok:
 
