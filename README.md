@@ -43,8 +43,8 @@ The code contains helper functions to automatically download the data sets and s
 Add information about virtual environment and loading dependencies
 
 ## How to use the framework?
-While all of the code is yours to explore, I recommend starting out by checking out the notebooks included in the scripts folder. 
-1. The Exploration Notebooks walk through the EDA of each data set, as well as some of the cleaning/preprocessing involved before training the models. (Note: If you are trying to use either data set from kaggle (titanic/LANL), you will need to set up an API key. See https://adityashrm21.github.io/Setting-Up-Kaggle/ for a step-by-step walkthrough of how to do this).
+While all of the code is yours to explore, I recommend starting out by checking out the notebooks included in the scripts folder.
+1. The Exploration Notebooks walk through the EDA of each data set, as well as some of the cleaning/preprocessing involved before training the models. More detail on the notebooks can be found [here](notebooks).
 2. The CGAN Notebooks walk through how to train the successful GAN models. 
 3. From there, you are free to dive into the model architectures themselves (contained in the models folder), as well as the various helper functions used to visualize and better understand the training process and model quality.
 
