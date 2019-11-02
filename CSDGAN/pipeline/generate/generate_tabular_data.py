@@ -59,9 +59,9 @@ def generate_tabular_data(run_id, username, title, aug=None):
 
         # Output data
         if aug is not None:
-            cu.export_tabular_to_zip(df=df, username=username, title=title + ' Additional Data ' + str(aug))
+            cu.export_tabular_to_zip(df=df, username=username, run_title=title, zip_title=title + ' Additional Data ' + str(aug))
         else:
-            cu.export_tabular_to_zip(df=df, username=username, title=title)
+            cu.export_tabular_to_zip(df=df, username=username, run_title=title, zip_title=title)
 
         if aug is None:
             db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Complete'])

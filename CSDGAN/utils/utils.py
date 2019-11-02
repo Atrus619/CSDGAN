@@ -225,16 +225,16 @@ def clean_filename(filename, replace=' '):
     return cleaned_filename[:char_limit]
 
 
-def export_tabular_to_zip(df, username, title):
+def export_tabular_to_zip(df, username, run_title, zip_title):
     """Exports a dataframe of generated data to an appropriate zip file"""
-    full_path = os.path.join(cs.OUTPUT_FOLDER, username, title)
+    full_path = os.path.join(cs.OUTPUT_FOLDER, username, run_title)
     os.makedirs(full_path, exist_ok=True)
     og_dir = os.getcwd()
     os.chdir(full_path)
-    df.to_csv(title + '.txt', index=False)
-    with ZipFile(title + '.zip', 'w') as z:
-        z.write(title + '.txt')
-    os.remove(title + '.txt')
+    df.to_csv(zip_title + '.txt', index=False)
+    with ZipFile(zip_title + '.zip', 'w') as z:
+        z.write(zip_title + '.txt')
+    os.remove(zip_title + '.txt')
     os.chdir(og_dir)
 
 
