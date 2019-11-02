@@ -31,7 +31,8 @@ class TabularDataset(data.Dataset):
 
         # Split data into train/test
         x_train_arr, x_test_arr, y_train_arr, y_test_arr = uu.train_test_split(df.drop(columns=dep_var), df[dep_var],
-                                                                               test_size=test_size, stratify=df[dep_var],
+                                                                               test_size=test_size,
+                                                                               stratify=df[dep_var],
                                                                                random_state=seed)
 
         # Convert all categorical variables to dummies, and save two-way transformation
@@ -46,12 +47,16 @@ class TabularDataset(data.Dataset):
         if len(self.cont_inputs) == 0:
             self.scaler = None
         else:
-            x_train_arr, self.scaler = uu.scale_cont_inputs(arr=x_train_arr, preprocessed_cat_mask=self.preprocessed_cat_mask)
-            x_test_arr, _ = uu.scale_cont_inputs(arr=x_test_arr, preprocessed_cat_mask=self.preprocessed_cat_mask, scaler=self.scaler)
+            x_train_arr, self.scaler = uu.scale_cont_inputs(arr=x_train_arr,
+                                                            preprocessed_cat_mask=self.preprocessed_cat_mask)
+            x_test_arr, _ = uu.scale_cont_inputs(arr=x_test_arr, preprocessed_cat_mask=self.preprocessed_cat_mask,
+                                                 scaler=self.scaler)
 
         # Convert to tensor-friendly format
-        self.x_train, self.x_test, self.y_train, self.y_test = self.preprocess_data(x_train_arr=x_train_arr, y_train_arr=y_train_arr,
-                                                                                    x_test_arr=x_test_arr, y_test_arr=y_test_arr)
+        self.x_train, self.x_test, self.y_train, self.y_test = self.preprocess_data(x_train_arr=x_train_arr,
+                                                                                    y_train_arr=y_train_arr,
+                                                                                    x_test_arr=x_test_arr,
+                                                                                    y_test_arr=y_test_arr)
         self.out_dim = self.x_train.shape[1]
         self.eval_stratify = list(self.y_train.mean(0).detach().cpu().numpy())
 
@@ -80,7 +85,8 @@ class TabularDataset(data.Dataset):
 
     def to_dev(self, device):
         """Moves entire data set to specified device. Can be helpful in speeding up training times for small data sets (~60-100x improvement in speed)."""
-        self.x_train, self.y_train, self.x_test, self.y_test = self.x_train.to(device), self.y_train.to(device), self.x_test.to(device), self.y_test.to(device)
+        self.x_train, self.y_train, self.x_test, self.y_test = self.x_train.to(device), self.y_train.to(
+            device), self.x_test.to(device), self.y_test.to(device)
         self.device = device
 
     def get_dev(self):

@@ -1,4 +1,3 @@
-import kaggle
 import torchvision
 import os
 import pandas as pd
@@ -27,7 +26,6 @@ def load_raw_dataset(name):
     assert name in VALID_NAMES, 'Invalid data set requested. Please make sure name is one of ' + ', '.join(VALID_NAMES) + '.'
 
     os.makedirs('downloads', exist_ok=True)
-    kaggle.api.authenticate()
     path = os.path.join('downloads', name)
     path_raw = os.path.join(path, 'raw')
 
@@ -57,6 +55,7 @@ def load_raw_dataset(name):
                                                                        'proline'])
 
     elif name == 'titanic':
+        import kaggle; kaggle.api.authenticate()
         prep_path(path)
         if len(os.listdir(path_raw)) == 0:
             kaggle.api.competition_download_files('titanic', path_raw)
@@ -65,6 +64,7 @@ def load_raw_dataset(name):
         return titanic, titanic_test
 
     elif name == 'lanl':
+        import kaggle; kaggle.api.authenticate()
         prep_path(path)
         if len(os.listdir(path)) == 0:
             kaggle.api.competition_download_files('LANL-Earthquake-Prediction', path_raw)
@@ -115,3 +115,34 @@ def load_processed_dataset(name):
         training = torch.load(os.path.join(path_processed, 'training.pt'))
         test = torch.load(os.path.join(path_processed, 'test.pt'))
         return training, test
+
+
+def save_processed_dataset(name, df):
+    """Save processed dataset to correct location"""
+    assert name in VALID_NAMES, 'Invalid data set requested. Please make sure name is one of ' + ', '.join(
+        VALID_NAMES) + '.'
+    path = os.path.join('downloads', name)
+    path_processed = os.path.join(path, 'processed')
+
+    if name == 'iris':
+        df.to_csv(os.path.join(path_processed, 'iris.csv'), index=False)
+        return
+
+    elif name == 'wine':
+        df.to_csv(os.path.join(path_processed, 'wine.csv'), index=False)
+        return
+
+    elif name == 'titanic':
+        df.to_csv(os.path.join(path_processed, 'titanic.csv'), index=False)
+        return
+
+    elif name == 'lanl':
+        with open(os.path.join(path_processed, 'train_data.pkl'), 'wb') as f:
+            pkl.dump(df, f)
+        with open(os.path.join(path_processed, 'train_targets.pkl'), 'wb') as f:
+            pkl.dump(df, f)
+        return
+
+    elif name == 'MNIST' or name == 'FashionMNIST':
+        print('Already handled in notebook.')
+        return

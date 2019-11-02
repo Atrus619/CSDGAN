@@ -51,7 +51,7 @@ def init_db_command():
 def clear_runs_command():
     """Delete all stored run files. Does not remove runs from database. Does not delete daily logs."""
     for directory in [cs.UPLOAD_FOLDER, cs.RUN_FOLDER, cs.OUTPUT_FOLDER, cs.VIZ_FOLDER]:
-        shutil.rmtree(directory)
+        shutil.rmtree(directory, ignore_errors=True)
         os.makedirs(directory)
 
     click.echo('Cleared runs.')
@@ -332,8 +332,7 @@ def query_verify_live_run(run_id):
 
     if result[0] == 0:
         query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Early Exit'])
-        import sys;
-        sys.exit()
+        import sys; sys.exit()
 
 
 def query_username_title(run_id):
