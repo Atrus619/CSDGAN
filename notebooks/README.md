@@ -4,3 +4,5 @@ Tips:
   
     1. Add conda-forge to your channels: `conda config --add channels conda-forge`
     2. Install CatBoost: `conda install catboost`
+3. In order to get the architecture plots working, run the following:
+  `sudo apt-get install graphviz`
