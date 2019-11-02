@@ -43,9 +43,9 @@ The code contains helper functions to automatically download the data sets and s
 Add information about virtual environment and loading dependencies
 
 ## How to use the framework?
-While all of the code is yours to explore, I recommend starting out by checking out the notebooks included in the scripts folder. 
-1. The Exploration Notebooks walk through the EDA of each data set, as well as some of the cleaning/preprocessing involved before training the models.
-2. The CGAN Notebooks walk through how to train the successful GAN models. 
+While all of the code is yours to explore, I recommend starting by checking out the notebooks included in the scripts folder.
+1. The Exploration Notebooks walk through the EDA of each data set, as well as some of the cleaning/preprocessing involved before training the models. More detail on the notebooks can be found [here](notebooks).
+2. The Report Notebooks walk through how to train the successful GAN models. 
 3. From there, you are free to dive into the model architectures themselves (contained in the models folder), as well as the various helper functions used to visualize and better understand the training process and model quality.
 
 ## How to run the app?
@@ -57,16 +57,21 @@ and
 
 `sudo apt-get install mysql-server`
 
+If you have never used mysql before, you will want to set up a login that corresponds to your .env file. If you have not already done so, copy over the sample.env file to a new file named .env. Feel free to customize some of the settings, and then take the values for DB_USER, DB_PW, and APP_NAME and run them through the following steps:
+1. In terminal, run: `mysql -u root` to log into mysql as root
+2. Create user and pw for app: `GRANT ALL PRIVILEGES ON *.* TO 'DB_USER_GOES_HERE'@'localhost' IDENTIFIED BY 'DB_PW_GOES_HERE';`
+3. Create a databse for app: `CREATE DATABASE APP_NAME_GOES_HERE;`
+
 The app has been decomposed into Docker containers, and these containers are all available on Docker's cloud service.
 If you wish to expose the web app to the internet, you will need to install ngrok:
 
 `make install ngrok` OR `sudo snap install ngrok`
 
-With ngrok installed, to run the app in a single line of code:
+With ngrok installed, to run the app in a single line of code (make sure DOCKERIZED=1 in your .env file):
 
 `./deploy.sh`
 
-To run the app locally in a dev environment (not containerized), you can run (you may want to change DOCKERIZED in CSDGAN/utils/constants.py to FALSE to do this):
+To run the app locally in a dev environment (not containerized), you can run (make sure DOCKERIZED=0 in your .env file):
 
 `./dev_deploy.sh`
 
