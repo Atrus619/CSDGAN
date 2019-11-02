@@ -57,6 +57,7 @@ def generate_image_data(run_id, username, title, aug=None):
                 CGAN.gen_data(size=size, path=class_path, stratify=stratify, label=dep_class)
 
         _ = shutil.make_archive(output_path, 'zip', output_path)
+        shutil.rmtree(output_path)
 
         if aug is None:
             db.query_set_status(run_id=run_id, status_id=cs.STATUS_DICT['Complete'])

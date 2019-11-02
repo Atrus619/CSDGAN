@@ -99,7 +99,7 @@ def gen_more_data():
             generate_tabular_data(run_id=session['run_id'], username=username, title=title, aug=aug)
         else:  # Image
             generate_image_data(run_id=session['run_id'], username=username, title=title, aug=aug)
-        file = os.path.join(cs.OUTPUT_FOLDER, username, title + ' Additional Data ' + str(aug) + '.zip')
+        file = os.path.join(cs.OUTPUT_FOLDER, username, title, title + ' Additional Data ' + str(aug) + '.zip')
         return send_file(file, mimetype='zip', as_attachment=True)
 
 
