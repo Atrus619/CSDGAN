@@ -67,11 +67,11 @@ If you wish to expose the web app to the internet, you will need to install ngro
 
 `make install ngrok` OR `sudo snap install ngrok`
 
-With ngrok installed, to run the app in a single line of code:
+With ngrok installed, to run the app in a single line of code (make sure DOCKERIZED=1 in your .env file):
 
 `./deploy.sh`
 
-To run the app locally in a dev environment (not containerized), you can run (you may want to change DOCKERIZED in CSDGAN/utils/constants.py to FALSE to do this):
+To run the app locally in a dev environment (not containerized), you can run (make sure DOCKERIZED=0 in your .env file):
 
 `./dev_deploy.sh`
 
