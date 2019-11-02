@@ -87,6 +87,10 @@ Feel free to check out the Makefile for other relevant commands:
 
 `make help`
 
+## Troubleshooting
+If you experience issues with permissions of shutting down docker containers, try disabling apparmor. The following link can be helpful: https://stackoverflow.com/questions/49104733/docker-on-ubuntu-16-04-error-when-killing-container
+Or the following command: `sudo aa-remove-unknown`
+
 ## How to Contribute
 I would love to hear from users who were able to modify the architectures or training hyperparameters to produce better performing models. Additionally, proposing new data sets and even uploading implementations that are successful would be a great contribution!
 
