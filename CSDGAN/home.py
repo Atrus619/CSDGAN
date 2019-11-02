@@ -68,7 +68,7 @@ def download_data():
     runs = db.query_all_runs(user_id=session['user_id'])
     run_id = int(runs[int(request.form['index']) - 1]['id'])
     username, title = db.query_username_title(run_id=run_id)
-    file = os.path.join(cs.OUTPUT_FOLDER, username, title + '.zip')
+    file = os.path.join(cs.OUTPUT_FOLDER, username, title, title + '.zip')
     logger.info('User #{} ({}) downloaded the originally generated data from Run #{} ({})'.format(session['user_id'], username, run_id, title))
     return send_file(file, mimetype='zip', as_attachment=True)
 
