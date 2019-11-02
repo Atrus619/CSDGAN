@@ -63,11 +63,17 @@ If you have never used mysql before, you will want to set up a login that corres
 3. Create a databse for app: `CREATE DATABASE APP_NAME_GOES_HERE;`
 
 The app has been decomposed into Docker containers, and these containers are all available on Docker's cloud service.
-If you wish to expose the web app to the internet, you will need to install nginx and ngrok:
+If you wish to expose the web app to the internet, you will need to install nginx, ngrok, and docker/docker-compose:
 
 Nginx: `sudo apt-get install nginx`
 
 Ngrok: `make install ngrok` OR `sudo snap install ngrok`
+
+Docker: `sudo snap install docker`
+
+Docker-Compose: `pip install docker-compose`
+
+Nvidia-Docker: See this link for help: https://cnvrg.io/how-to-setup-docker-and-nvidia-docker-2-0-on-ubuntu-18-04/
 
 With ngrok installed, to run the app in a single line of code (make sure DOCKERIZED=1 in your .env file):
 
