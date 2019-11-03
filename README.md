@@ -63,9 +63,17 @@ If you have never used mysql before, you will want to set up a login that corres
 3. Create a databse for app: `CREATE DATABASE APP_NAME_GOES_HERE;`
 
 The app has been decomposed into Docker containers, and these containers are all available on Docker's cloud service.
-If you wish to expose the web app to the internet, you will need to install ngrok:
+If you wish to expose the web app to the internet, you will need to install nginx, ngrok, and docker/docker-compose:
 
-`make install ngrok` OR `sudo snap install ngrok`
+Nginx: `sudo apt-get install nginx`
+
+Ngrok: `make install ngrok` OR `sudo snap install ngrok`
+
+Docker: `sudo snap install docker`
+
+Docker-Compose: `pip install docker-compose`
+
+Nvidia-Docker: See this link for help: https://cnvrg.io/how-to-setup-docker-and-nvidia-docker-2-0-on-ubuntu-18-04/
 
 With ngrok installed, to run the app in a single line of code (make sure DOCKERIZED=1 in your .env file):
 
@@ -78,6 +86,11 @@ To run the app locally in a dev environment (not containerized), you can run (ma
 Feel free to check out the Makefile for other relevant commands:
 
 `make help`
+
+## Troubleshooting
+If you experience issues with permissions of shutting down docker containers, try disabling apparmor. The following link can be helpful: https://stackoverflow.com/questions/49104733/docker-on-ubuntu-16-04-error-when-killing-container
+
+Or the following command: `sudo aa-remove-unknown`
 
 ## How to Contribute
 I would love to hear from users who were able to modify the architectures or training hyperparameters to produce better performing models. Additionally, proposing new data sets and even uploading implementations that are successful would be a great contribution!

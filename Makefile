@@ -11,8 +11,8 @@ export $(shell sed 's/=.*//' $(env))
 build: ## Build the container locally
 	sudo docker build -t csdgan:latest .
 
-up: ## Run the container. If issue about address already in use, run sudo nginx -s stop
-	sudo nginx -s stop
+up: ## Build the container. If issue about address already in use, run sudo nginx -s stop
+# 	sudo nginx -s stop
 	sudo docker-compose up -d
 
 serve: ## Serve the container on ngrok
