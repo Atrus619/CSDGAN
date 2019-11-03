@@ -5,9 +5,7 @@ export FLASK_ENV=development
 redis-server --daemonize yes
 
 # Check if database needs to be initialized by parsing .env file for value of reload.
-RELOAD=$(grep RELOAD .env | xargs)
-IFS='=' read -ra RELOAD <<< "$RELOAD"
-RELOAD=${RELOAD[1]}
+source .env
 
 # if reload is empty string, then init-db
 if [$RELOAD == '']

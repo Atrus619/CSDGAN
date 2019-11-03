@@ -82,11 +82,13 @@ def gen_more_data():
         session['title'] = runs[int(request.form['index']) - 1]['title']
         session['dep_var'] = runs[int(request.form['index']) - 1]['depvar']
         session['format'] = runs[int(request.form['index']) - 1]['format']
+
         if session['format'] == 'Tabular':
             dep_choices = cu.parse_tabular_dep(run_id=session['run_id'], dep_var=session['dep_var'])
         else:  # Image
             folder = os.listdir(os.path.join(cs.RUN_FOLDER, g.user['username'], session['title']))[0]
             dep_choices = sorted(os.listdir(os.path.join(cs.RUN_FOLDER, g.user['username'], session['title'], folder, 'train')))
+
         return render_template('home/gen_more_data.html', title=session['title'], dep_var=session['dep_var'],
                                dep_choices=dep_choices, max_examples_per_class='{:,d}'.format(cs.MAX_EXAMPLE_PER_CLASS))
 
@@ -95,10 +97,12 @@ def gen_more_data():
         username, title = db.query_username_title(run_id=session['run_id'])
         cu.create_gen_dict(request_form=request.form, directory=cs.RUN_FOLDER, username=username, title=title, aug=aug)
         logger.info('User #{} ({}) downloaded additionally generated data ({}) from Run #{} ({})'.format(session['user_id'], username, str(aug), session['run_id'], title))
+
         if session['format'] == 'Tabular':
             generate_tabular_data(run_id=session['run_id'], username=username, title=title, aug=aug)
         else:  # Image
             generate_image_data(run_id=session['run_id'], username=username, title=title, aug=aug)
+
         file = os.path.join(cs.OUTPUT_FOLDER, username, title, title + ' Additional Data ' + str(aug) + '.zip')
         return send_file(file, mimetype='zip', as_attachment=True)
 
@@ -111,8 +115,10 @@ def continue_training():
         session['run_id'] = int(runs[int(request.form['index']) - 1]['id'])
         session['title'] = runs[int(request.form['index']) - 1]['title']
         return render_template('home/continue_training.html', title=session['title'])
+
     if 'cancel' in request.form.keys():
         return redirect(url_for('index'))
+
     if 'train' in request.form.keys():
         db.query_clear_prior_retraining(run_id=session['run_id'])  # run_id/status_id combination is primary key in status table
         db.query_incr_retrains(run_id=session['run_id'])

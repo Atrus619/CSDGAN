@@ -20,6 +20,7 @@ def register():
         username = request.form['username']
         password = request.form['password']
         error = None
+
         if not username:
             error = 'Username is required.'
         elif not password:

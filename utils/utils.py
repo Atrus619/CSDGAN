@@ -15,7 +15,7 @@ import os
 
 def fix_wd():
     """Helper function to set working directory to the primary one"""
-    while os.path.basename(os.getcwd()) != 'Synthetic_Data_GAN_Capstone':
+    while os.path.basename(os.getcwd()) != 'CSDGAN':
         os.chdir('..')
 
 

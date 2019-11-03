@@ -163,22 +163,27 @@ AVAILABLE_BASIC_VIZ = [
     {
         'title': FILENAME_TRAINING_PLOT,
         'pretty_title': 'Training Plot',
-        'description': 'training_plot_descr'
+        'description': 'Series of diagnostic plots describing the progression of the generator and discriminator over training. '
+                       'Plots include generator and discriminator loss by epoch, average discriminator outputs during training, '
+                       'and gradient and weight norm history.'
     },
     {
         'title': FILENAME_PLOT_PROGRESS,
         'pretty_title': 'Training Curve',
-        'description': 'Evaluation over training evaluations descr'
+        'description': 'Single plot describing the performance of the evaluator trained on generated data each time it is evaluated over the course of training. '
+                       'Compared against a benchmark performance of a model trained on real data.'
     },
     {
         'title': FILENAME_netG_LAYER_SCATTERS,
         'pretty_title': 'Generator Network Layer Scatter Plots',
-        'description': 'netG_layer_scatters_descr'
+        'description': 'Series of diagnostic plots displaying the progression of various attributes of the generator network. '
+                       'Plots include weight norms and gradient norms for the weights and biases of each layer.'
     },
     {
         'title': FILENAME_netD_LAYER_SCATTERS,
         'pretty_title': 'Discriminator Network Layer Scatter Plots',
-        'description': 'netD_layer_scatters_descr'
+        'description': 'Series of diagnostic plots displaying the progression of various attributes of the discriminator network. '
+                       'Plots include weight norms and gradient norms for the weights and biases of each layer.'
     }
 ]
 
@@ -186,13 +191,15 @@ AVAILABLE_HIST_VIZ = [
     {
         'title': FILENAME_HIST_SCATTERS,
         'pretty_title': 'Network Layer Weights/Biases Histograms',
-        'description': 'Insert_Description_Here',
+        'description': 'Allows the user to generate a histogram of layer weights/biases at a specified epoch for either the generator or discriminator networks.',
         'url_func': 'viz.gen_histograms'
     },
     {
         'title': FILENAME_HIST_GIF,
         'pretty_title': 'Histogram GIF',
-        'description': 'GIF of Histograms for specified network',
+        'description': 'Allows the user to generate a GIF of histograms of layer weights/biases across specified epochs for either the generator or discriminator '
+                       'networks. Can specify starting and ending epochs, interval frequency to generate images, frames per second of GIF, and how long to display '
+                       'the final image before repeating the loop.',
         'url_func': 'viz.gen_histogram_gif'
     }
 ]
@@ -201,7 +208,8 @@ AVAILABLE_TABULAR_VIZ = OrderedDict()
 AVAILABLE_TABULAR_VIZ['scatter_matrix'] = {
         'title': FILENAME_SCATTER_MATRIX,
         'pretty_title': 'Scatter Matrix',
-        'description': 'INSERT_DESCRIPTION_HERE',
+        'description': 'Generates a scatter-plot matrix of data, to be compared against the same scatter-plot matrix of real data. User can specify '
+                       'how large of a data set to generate.',
         'url_func': 'viz.gen_scatter_matrix',
         'fake_title': 'Fake Data',
         'real_title': 'Real Data'
@@ -209,19 +217,19 @@ AVAILABLE_TABULAR_VIZ['scatter_matrix'] = {
 AVAILABLE_TABULAR_VIZ['compare_cats'] = {
         'title': FILENAME_COMPARE_CATS,
         'pretty_title': 'Categorical Feature Comparison',
-        'description': 'INSERT_DESCRIPTION_HERE',
+        'description': 'Generates a conditional bar plot for user specified features to compare distributions.',
         'url_func': 'viz.gen_compare_cats'
 }
 AVAILABLE_TABULAR_VIZ['conditional_scatter'] = {
         'title': FILENAME_CONDITIONAL_SCATTER,
         'pretty_title': 'Conditional Scatter Plot',
-        'description': 'INSERT_DESCRIPTION_HERE',
+        'description': 'Generates a conditional scatter plot for user specified features to compare distributions.',
         'url_func': 'viz.gen_conditional_scatter'
 }
 AVAILABLE_TABULAR_VIZ['conditional_density'] = {
         'title': FILENAME_CONDITIONAL_DENSITY,
         'pretty_title': 'Conditional Density Plot',
-        'description': 'INSERT_DESCRIPTION_HERE',
+        'description': 'Generates a conditional density plot for user specified features to compare distributions.',
         'url_func': 'viz.gen_conditional_density'
 }
 
@@ -229,24 +237,27 @@ AVAILABLE_IMAGE_VIZ = OrderedDict()
 AVAILABLE_IMAGE_VIZ['img_grid'] = {
     'title': FILENAME_IMG_GRIDS,
     'pretty_title': 'Image Grid',
-    'description': 'Grid of Generated Images at Specified Epoch',
+    'description': 'Generates a grid containing a number of specified images for specified classes at a specified epoch. '
+                   'Can be used to better understand the training process.',
     'url_func': 'viz.gen_img_grid'
 }
 AVAILABLE_IMAGE_VIZ['img_gif'] = {
     'title': FILENAME_IMG_GIF,
     'pretty_title': 'Image GIF',
-    'description': 'GIF of Generated Images Over Specified Epochs',
+    'description': 'Generates a GIF of a specified number of images for specified classes over specified epochs. Great visualization tool to '
+                   'better understand the training process.',
     'url_func': 'viz.gen_img_gif'
 }
 AVAILABLE_IMAGE_VIZ['troubleshoot_plot'] = {
     'title': FILENAME_TROUBLESHOOT_PLOT,
     'pretty_title': 'Troubleshoot Plot',
-    'description': 'Visually Inspect Mistakes by Discriminator/Evaluator',
+    'description': 'Generates a plot of example images showing mistakes made by a specified network. Great for troubleshooting poor network performance, '
+                   'or understanding the strengths and weaknesses of the current approach.',
     'url_func': 'viz.gen_troubleshoot_plot'
 }
 AVAILABLE_IMAGE_VIZ['grad_cam'] = {
     'title': FILENAME_GRAD_CAM,
     'pretty_title': 'Gradient Class Activation Matrix (GradCAM)',
-    'description': 'Visualization of how image-based neural networks make their decisions',
+    'description': 'Utilizes GradCAM to highlight regions of the image that the neural network uses to make its decisions.',
     'url_func': 'viz.gen_grad_cam'
 }

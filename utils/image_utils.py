@@ -59,8 +59,14 @@ def pow_2(n, first):
 
 
 def find_pow_2_arch(dim):
+    """
+    For a specified dimension length of an image (number of pixels length or width),
+    calculates the minimum number of pixels to crop in order to construct a reasonable neural network architecture.
+    """
     firsts = {3, 5, 7, 9, 11}
+    # Initialize to something basic
     best_crop = 999
+    best_first = 3
     for first in firsts:
         crop = dim - pow(2, pow_2(dim, first)) * first
         if crop < best_crop:
