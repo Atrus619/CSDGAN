@@ -1,4 +1,4 @@
-# Synthetic Data GAN Capstone
+# Conditional Synthetic Data Generative Adversarial Network (CSDGAN)
 This project can be broken down into two primary pieces:
 
 1. Analyze a variety of well-known data sets and design Generative Adversarial Networks (GANs) capable of generating realistic looking data from them.
