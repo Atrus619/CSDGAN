@@ -9,8 +9,6 @@ The goal is to be able to train generative models with a deep enough understandi
 
 2. Build a containerized web app that can employ these flexible GANs to generate data for a user from any data set.
 
-So far the web app is only capable of handling tabular data sets, but functionality for image data sets is coming soon, and a stretch goal is to incorporate NLP functionality.
-
 ## Motivation
 The three most important applications of generating synthetic data are as follows:
 
